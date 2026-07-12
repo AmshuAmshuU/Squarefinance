@@ -1,0 +1,6 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="4" fill="#26467a"/>
+  <rect x="1" y="1" width="30" height="30" rx="3" fill="white"/>
+  <rect x="2" y="2" width="28" height="28" rx="2" stroke="#26467a" stroke-width="1.5"/>
+  <text x="50%" y="21" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="16" fill="#26467a">SF</text>
+</svg>
