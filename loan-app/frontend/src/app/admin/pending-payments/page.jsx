@@ -76,7 +76,7 @@ const PendingPaymentsPage = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const params = { page: currentPage, limit, status: "Pending" };
+      const params = { page: 1, limit, status: "Pending" };
       if (searchQuery.trim()) {
         params.loanNumber = searchQuery;
       }
