@@ -530,6 +530,8 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
 });
 
 const exportAllData = asyncHandler(async (req, res, next) => {
+  const InterestEMI = require("../models/InterestEMI");
+
   const [
     monthlyLoans,
     dailyLoans,
@@ -544,11 +546,67 @@ const exportAllData = asyncHandler(async (req, res, next) => {
     Expense.find().sort({ date: -1 }).lean(),
   ]);
 
+  // Enhance monthly loans with computed fields from EMI records
+  const enhancedMonthly = await Promise.all(monthlyLoans.map(async (loan) => {
+    const emis = await EMI.find({ loanId: loan._id, loanModel: "Loan" }).lean();
+    const paidEmis = emis.filter(e => e.status === "Paid").length;
+    const unpaidEmis = emis.filter(e => e.status !== "Paid");
+    const remainingTenure = unpaidEmis.length;
+    const nextEmi = unpaidEmis.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
+    const nextEmiDueDate = nextEmi ? nextEmi.dueDate : null;
+
+    // Calculate remaining principal from paid EMIs
+    const emiAmount = loan.monthlyEMI || 0;
+    const interestRate = (loan.annualInterestRate || 0) / 100;
+    const principal = loan.principalAmount || 0;
+    const remainingPrincipal = loan.status === "Closed"
+      ? (loan.foreclosureAmount ? 0 : loan.soldDetails?.totalAmount ? 0 : 0)
+      : Math.max(0, Math.round(principal - (paidEmis * emiAmount * interestRate / (1 - Math.pow(1 + interestRate, -(loan.tenureMonths || 1))))));
+
+    // Total collected from Payment records
+    const payments = await Payment.find({ loanId: loan._id, loanModel: "Loan", status: "Success" }).lean();
+    const totalCollected = payments.reduce((s, p) => s + (p.amount || 0), 0);
+
+    // Client response
+    const clientResponse = loan.status?.clientResponse || loan.clientResponse || "";
+
+    return {
+      ...loan,
+      paidEmisCount: paidEmis,
+      remainingTenure,
+      nextEmiDueDate,
+      totalCollected,
+      clientResponse,
+      remainingPrincipal: loan.status === "Closed" ? 0 : (loan.remainingPrincipal || 0),
+    };
+  }));
+
+  // Enhance weekly/daily loans with client response field
+  const enhancedWeekly = weeklyLoans.map(loan => ({
+    ...loan,
+    clientResponse: loan.status?.clientResponse || loan.clientResponse || "",
+  }));
+
+  const enhancedDaily = dailyLoans.map(loan => ({
+    ...loan,
+    clientResponse: loan.status?.clientResponse || loan.clientResponse || "",
+  }));
+
+  // Enhance interest loans with total collected
+  const enhancedInterest = await Promise.all(interestLoans.map(async (loan) => {
+    const emis = await InterestEMI.find({ interestLoanId: loan._id }).lean();
+    const totalCollected = emis.reduce((s, e) => {
+      return s + (e.paymentHistory || []).reduce((ps, p) => ps + (p.amount || 0), 0);
+    }, 0) + (loan.processingFee || 0);
+    const clientResponse = loan.status?.clientResponse || loan.clientResponse || "";
+    return { ...loan, totalCollected, clientResponse };
+  }));
+
   sendResponse(res, 200, "success", "Export data fetched successfully", null, {
-    monthlyLoans,
-    dailyLoans,
-    weeklyLoans,
-    interestLoans,
+    monthlyLoans: enhancedMonthly,
+    dailyLoans: enhancedDaily,
+    weeklyLoans: enhancedWeekly,
+    interestLoans: enhancedInterest,
     expenses
   });
 });

@@ -135,7 +135,7 @@ const AnalyticsPage = () => {
           loan.monthlyEMI || 0,
           loan.odAmount || 0,
           loan.remainingTenure || 0,
-          loan.remainingPrincipal || 0,
+          loan.remainingPrincipal || loan.remainingPrincipalAmount || 0,
           loan.nextEmiDueDate ? new Date(loan.nextEmiDueDate).toLocaleDateString("en-IN") : "-",
           loan.vehicleNumber || "-",
           loan.chassisNumber || "-",
@@ -155,8 +155,8 @@ const AnalyticsPage = () => {
           loan.docChecklist || "-",
           Array.isArray(loan.rtoWorkPending) ? loan.rtoWorkPending.join(", ") : loan.rtoWorkPending || "-",
           "-",
-          { formula: `AH${rowNumber}*O${rowNumber}+P${rowNumber}+J${rowNumber}` },
-          loan.remarks || "-"
+          loan.totalCollected || 0,
+          loan.clientResponse || loan.status?.clientResponse || "-"
         ]);
       });
       autoFit(monthlySheet);
@@ -176,11 +176,15 @@ const AnalyticsPage = () => {
             loan.disbursementAmount || 0, loan.processingFee || 0,
             loan.startDate ? new Date(loan.startDate).toLocaleDateString("en-IN") : "-",
             loan.emiEndDate ? new Date(loan.emiEndDate).toLocaleDateString("en-IN") : "-",
-            loan.totalEmis || 0, loan.emiAmount || 0, loan.paidEmis || 0, loan.remainingEmis || 0,
-            stats.totalCollected || loan.totalCollected || 0, stats.overdueAmount || 0,
+            loan.totalEmis || 0, loan.emiAmount || 0,
+            loan.paidEmis || 0,
+            loan.remainingEmis || (loan.totalEmis - loan.paidEmis) || 0,
+            loan.totalCollected || 0,
+            loan.odAmount || 0,
             loan.remainingPrincipalAmount || 0,
-            stats.nextEmiDate ? new Date(stats.nextEmiDate).toLocaleDateString("en-IN") : (loan.nextEmiDate ? new Date(loan.nextEmiDate).toLocaleDateString("en-IN") : "-"),
-            loan.status || "", loan.remarks || ""
+            loan.nextEmiDate ? new Date(loan.nextEmiDate).toLocaleDateString("en-IN") : "-",
+            typeof loan.status === "string" ? loan.status : (loan.status?.loanStatus || "Active"),
+            loan.clientResponse || loan.status?.clientResponse || ""
           ]);
         });
         autoFit(sheet);
@@ -190,7 +194,7 @@ const AnalyticsPage = () => {
 
       // 4. Interest
       const interestSheet = workbook.addWorksheet("Interest Loans");
-      const intHeaders = ["Loan No.", "Status", "Customer Name", "Address", "Own/Rent", "Mobile Numbers", "Guarantor Name", "Guar. Mobile", "PAN Number", "Aadhar Number", "Initial Principal", "Remaining Principal", "Interest Rate (%)", "Processing Fee", "Start Date", "EMI Start Date", "Remarks"];
+      const intHeaders = ["Loan No.", "Status", "Customer Name", "Address", "Own/Rent", "Mobile Numbers", "Guarantor Name", "Guar. Mobile", "PAN Number", "Aadhar Number", "Initial Principal", "Remaining Principal", "Interest Rate (%)", "Processing Fee", "Start Date", "EMI Start Date", "Client Response", "Total Collected"];
       formatHeader(interestSheet, intHeaders, "INTEREST LOANS REPORT");
       interestLoans.forEach(loan => {
         interestSheet.addRow([
@@ -202,7 +206,8 @@ const AnalyticsPage = () => {
           loan.interestRate || 0, loan.processingFee || 0,
           loan.startDate ? new Date(loan.startDate).toLocaleDateString("en-IN") : "-",
           loan.emiStartDate ? new Date(loan.emiStartDate).toLocaleDateString("en-IN") : "-",
-          loan.remarks || "-"
+          loan.clientResponse || loan.status?.clientResponse || "-",
+          loan.totalCollected || 0
         ]);
       });
       autoFit(interestSheet);
