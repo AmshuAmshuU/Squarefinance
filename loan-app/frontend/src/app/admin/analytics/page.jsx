@@ -281,59 +281,221 @@ const AnalyticsPage = () => {
 
               {/* Stats Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                <StatsCard
-                  title="Total Disbursed"
-                  value={`₹${stats?.cards?.totalLoanAmount?.toLocaleString("en-IN") || "0"}`}
-                  icon={<IndianRupee className="w-6 h-6" />}
-                  color="primary"
-                  breakdown={[
-                    { label: "Monthly", value: stats?.cards?.disbursementBreakdown?.monthly || 0 },
-                    { label: "Weekly", value: stats?.cards?.disbursementBreakdown?.weekly || 0 },
-                    { label: "Daily", value: stats?.cards?.disbursementBreakdown?.daily || 0 },
-                    { label: "Interest", value: stats?.cards?.disbursementBreakdown?.interest || 0 },
-                  ]}
-                />
-                <StatsCard
-                  title="Total Collected"
-                  value={`₹${stats?.cards?.totalCollectedAmount?.toLocaleString("en-IN") || "0"}`}
-                  icon={<TrendingUp className="w-6 h-6" />}
-                  color="success"
-                  breakdown={[
-                    { label: "Monthly", value: stats?.cards?.collectedBreakdown?.monthly || 0 },
-                    { label: "Weekly", value: stats?.cards?.collectedBreakdown?.weekly || 0 },
-                    { label: "Daily", value: stats?.cards?.collectedBreakdown?.daily || 0 },
-                    { label: "Interest", value: stats?.cards?.collectedBreakdown?.interest || 0 },
-                  ]}
-                />
+                {/* Total Disbursed - All Time + Active */}
+                <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-3 rounded-2xl bg-blue-50 text-blue-600">
+                      <IndianRupee className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total Disbursed</h3>
+                      <p className="text-2xl font-black text-slate-900">₹{(stats?.cards?.totalLoanAmount || 0).toLocaleString("en-IN")}</p>
+                    </div>
+                  </div>
+                  <table className="w-full text-[10px]">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="text-left font-black text-slate-400 uppercase tracking-widest pb-1.5">Type</th>
+                        <th className="text-right font-black text-slate-400 uppercase tracking-widest pb-1.5">All Time</th>
+                        <th className="text-right font-black text-blue-400 uppercase tracking-widest pb-1.5">Active</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {[
+                        { label: "Vehicle", key: "monthly", color: "bg-purple-400" },
+                        { label: "Weekly", key: "weekly", color: "bg-blue-400" },
+                        { label: "Daily", key: "daily", color: "bg-orange-400" },
+                        { label: "Interest", key: "interest", color: "bg-green-400" },
+                      ].map(row => {
+                        const allTime = stats?.cards?.disbursementBreakdown?.[row.key] || 0;
+                        const active = stats?.cards?.activeDisbursed?.[row.key] || 0;
+                        return (
+                          <tr key={row.key}>
+                            <td className="py-1.5 flex items-center gap-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${row.color}`}></span>
+                              <span className="font-bold text-slate-600">{row.label}</span>
+                            </td>
+                            <td className="py-1.5 text-right font-black text-slate-700">₹{allTime.toLocaleString("en-IN")}</td>
+                            <td className="py-1.5 text-right font-black text-blue-600">₹{active.toLocaleString("en-IN")}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-slate-200">
+                        <td className="pt-2 font-black text-slate-700 uppercase">Total</td>
+                        <td className="pt-2 text-right font-black text-slate-900">₹{(stats?.cards?.totalLoanAmount || 0).toLocaleString("en-IN")}</td>
+                        <td className="pt-2 text-right font-black text-blue-600">₹{(stats?.cards?.activeDisbursed?.total || 0).toLocaleString("en-IN")}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                {/* Total Collected + Future Expected */}
+                <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600">
+                      <TrendingUp className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total Collected</h3>
+                      <p className="text-2xl font-black text-slate-900">₹{(stats?.cards?.totalCollectedAmount || 0).toLocaleString("en-IN")}</p>
+                    </div>
+                  </div>
+                  <table className="w-full text-[10px]">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="text-left font-black text-slate-400 uppercase tracking-widest pb-1.5">Type</th>
+                        <th className="text-right font-black text-emerald-500 uppercase tracking-widest pb-1.5">Collected</th>
+                        <th className="text-right font-black text-amber-500 uppercase tracking-widest pb-1.5">Expected</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {[
+                        { label: "Vehicle", key: "monthly", color: "bg-purple-400" },
+                        { label: "Weekly", key: "weekly", color: "bg-blue-400" },
+                        { label: "Daily", key: "daily", color: "bg-orange-400" },
+                        { label: "Interest", key: "interest", color: "bg-green-400" },
+                      ].map(row => {
+                        const collected = stats?.cards?.collectedBreakdown?.[row.key] || 0;
+                        const future = stats?.cards?.futureIncome?.[row.key] || 0;
+                        return (
+                          <tr key={row.key}>
+                            <td className="py-1.5 flex items-center gap-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${row.color}`}></span>
+                              <span className="font-bold text-slate-600">{row.label}</span>
+                            </td>
+                            <td className="py-1.5 text-right font-black text-emerald-600">₹{collected.toLocaleString("en-IN")}</td>
+                            <td className="py-1.5 text-right font-black text-amber-600">₹{future.toLocaleString("en-IN")}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-slate-200">
+                        <td className="pt-2 font-black text-slate-700 uppercase">Total</td>
+                        <td className="pt-2 text-right font-black text-emerald-600">₹{(stats?.cards?.totalCollectedAmount || 0).toLocaleString("en-IN")}</td>
+                        <td className="pt-2 text-right font-black text-amber-600">₹{(stats?.cards?.futureIncome?.total || 0).toLocaleString("en-IN")}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {stats?.cards?.futureIncome?.interest > 0 && (
+                    <p className="text-[9px] text-slate-400 mt-2 italic">* Interest expected includes ₹{(stats?.cards?.futureIncome?.interestPrincipal || 0).toLocaleString("en-IN")} remaining principal</p>
+                  )}
+                </div>
                 <StatsCard
                   title="Total Expenses"
                   value={`₹${stats?.cards?.totalExpenses?.toLocaleString("en-IN") || "0"}`}
                   icon={<Wallet className="w-6 h-6" />}
                   color="danger"
                 />
-                <StatsCard
-                  title="Pending Payments"
-                  value={stats?.cards?.pendingLoansCount || "0"}
-                  icon={<AlertCircle className="w-6 h-6" />}
-                  color="danger"
-                />
+                {/* Pending Payments Mini Table */}
+                <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 rounded-2xl bg-rose-50 text-rose-600">
+                      <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Pending Payments</h3>
+                      <p className="text-2xl font-black text-slate-900">{stats?.cards?.pendingEmisCount || stats?.cards?.pendingLoansCount || "0"} <span className="text-xs font-bold text-slate-400">EMIs</span></p>
+                    </div>
+                  </div>
+                  <table className="w-full text-[10px]">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="text-left font-black text-slate-400 uppercase tracking-widest pb-1.5">Type</th>
+                        <th className="text-center font-black text-slate-400 uppercase tracking-widest pb-1.5">Loans</th>
+                        <th className="text-center font-black text-rose-400 uppercase tracking-widest pb-1.5">EMIs</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {[
+                        { label: "Vehicle", key: "monthly", color: "bg-purple-400" },
+                        { label: "Weekly", key: "weekly", color: "bg-blue-400" },
+                        { label: "Daily", key: "daily", color: "bg-orange-400" },
+                        { label: "Interest", key: "interest", color: "bg-green-400" },
+                      ].map(row => {
+                        const loans = stats?.cards?.pendingBreakdown?.[row.key]?.loans || 0;
+                        const emis = stats?.cards?.pendingBreakdown?.[row.key]?.emis || 0;
+                        return (
+                          <tr key={row.key} className={emis > 0 ? "" : "opacity-40"}>
+                            <td className="py-1.5 flex items-center gap-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${row.color}`}></span>
+                              <span className="font-bold text-slate-600">{row.label}</span>
+                            </td>
+                            <td className="py-1.5 text-center font-black text-slate-700">{loans}</td>
+                            <td className="py-1.5 text-center font-black text-rose-500">{emis}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-slate-200">
+                        <td className="pt-2 font-black text-slate-700 uppercase">Total</td>
+                        <td className="pt-2 text-center font-black text-slate-900">{stats?.cards?.pendingLoansCount || 0}</td>
+                        <td className="pt-2 text-center font-black text-rose-500">{stats?.cards?.pendingEmisCount || 0}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
                 <StatsCard
                   title="Partial Payments"
                   value={stats?.cards?.partialLoansCount || "0"}
                   icon={<Clock className="w-6 h-6" />}
                   color="warning"
                 />
-                <StatsCard
-                  title="Loan Portfolio"
-                  value={stats?.cards?.totalLoansGiven || "0"}
-                  icon={<CheckCircle className="w-6 h-6" />}
-                  color="primary"
-                  breakdown={[
-                    { label: "Active", value: stats?.cards?.activeLoansCount || 0, isCount: true },
-                    { label: "Closed", value: stats?.cards?.closedLoansCount || 0, isCount: true },
-                  ]}
-                  subtitle="Total Loans Given"
-                />
+                {/* Loan Portfolio Mini Table */}
+                <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 rounded-2xl bg-blue-50 text-blue-600">
+                      <CheckCircle className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Loan Portfolio</h3>
+                      <p className="text-2xl font-black text-slate-900">{stats?.cards?.totalLoansGiven || "0"}</p>
+                    </div>
+                  </div>
+                  <table className="w-full text-[10px]">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="text-left font-black text-slate-400 uppercase tracking-widest pb-1.5">Type</th>
+                        <th className="text-center font-black text-slate-400 uppercase tracking-widest pb-1.5">Total</th>
+                        <th className="text-center font-black text-emerald-500 uppercase tracking-widest pb-1.5">Active</th>
+                        <th className="text-center font-black text-rose-400 uppercase tracking-widest pb-1.5">Closed</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {[
+                        { label: "Vehicle", key: "monthly", color: "bg-purple-400" },
+                        { label: "Weekly", key: "weekly", color: "bg-blue-400" },
+                        { label: "Daily", key: "daily", color: "bg-orange-400" },
+                        { label: "Interest", key: "interest", color: "bg-green-400" },
+                      ].map(row => {
+                        const total = stats?.cards?.totalLoansBreakdown?.[row.key] || 0;
+                        const active = stats?.cards?.activeByType?.[row.key] || 0;
+                        const closed = stats?.cards?.closedByType?.[row.key] || 0;
+                        return (
+                          <tr key={row.key}>
+                            <td className="py-1.5 flex items-center gap-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${row.color}`}></span>
+                              <span className="font-bold text-slate-600">{row.label}</span>
+                            </td>
+                            <td className="py-1.5 text-center font-black text-slate-700">{total}</td>
+                            <td className="py-1.5 text-center font-black text-emerald-600">{active}</td>
+                            <td className="py-1.5 text-center font-black text-rose-500">{closed}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-slate-200">
+                        <td className="pt-2 font-black text-slate-700 uppercase">Total</td>
+                        <td className="pt-2 text-center font-black text-slate-900">{stats?.cards?.totalLoansGiven || 0}</td>
+                        <td className="pt-2 text-center font-black text-emerald-600">{stats?.cards?.activeLoansCount || 0}</td>
+                        <td className="pt-2 text-center font-black text-rose-500">{stats?.cards?.closedLoansCount || 0}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
                 <StatsCard
                   title="Monthly EMI Expected"
                   value={`₹${(stats?.cards?.totalMonthlyEmiExpected || 0).toLocaleString("en-IN")}`}

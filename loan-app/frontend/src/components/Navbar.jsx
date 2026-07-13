@@ -26,26 +26,14 @@ const Navbar = () => {
 
   return (
     <nav className="sticky top-0 z-40 w-full h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
-      {/* 🛺 Auto-rickshaw Easter egg */}
-      <style>{`
-        @keyframes autoRide {
-          0%   { right: -100px; }
-          100% { right: calc(100% + 100px); }
-        }
-        .auto-rickshaw {
-          position: absolute;
-          top: 2px;
-          width: 95px;
-          height: 70px;
-          object-fit: contain;
-          animation: autoRide 4s linear infinite;
-          pointer-events: none;
-          z-index: 50;
-          transform: scaleX(-1);
-          filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.15));
-        }
-      `}</style>
-      <img src="/auto.png" alt="" className="auto-rickshaw" />
+      {/* 🛺 Auto-rickshaw static mascot */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+        <img
+          src="/auto.png"
+          alt="Square Finance Auto"
+          style={{ width: "52px", height: "40px", objectFit: "contain", filter: "drop-shadow(1px 1px 2px rgba(0,0,0,0.12))" }}
+        />
+      </div>
       <div className="h-full flex items-center justify-between px-4 sm:px-8">
         <div className="flex items-center gap-4">
           <button

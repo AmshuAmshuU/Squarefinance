@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
@@ -34,6 +34,8 @@ const PendingPaymentsPage = () => {
     mobileNumber: "",
     nextFollowUpDate: "",
   });
+  const [loanTypeFilter, setLoanTypeFilter] = useState("All");
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null); // Contact Details Modal
   const [activeContactMenu, setActiveContactMenu] = useState(null); // { number, name, type, x, y }
   const [showSeizeModal, setShowSeizeModal] = useState(false);
@@ -46,6 +48,20 @@ const PendingPaymentsPage = () => {
   const [limit] = useState(25);
   const { showToast } = useToast();
   const [selectedRowId, setSelectedRowId] = useState(null);
+
+  // Client-side filter by loan type
+  const filteredData = loanTypeFilter === "All" ? data : data.filter(item => {
+    if (loanTypeFilter === "Monthly") return item.loanType === "Monthly";
+    if (loanTypeFilter === "Weekly") return item.loanType === "Weekly";
+    if (loanTypeFilter === "Daily") return item.loanType === "Daily";
+    if (loanTypeFilter === "Interest") return item.loanType === "Interest";
+    return true;
+  });
+
+  // Client-side pagination on filtered data
+  const clientLimit = 25;
+  const clientTotalPages = Math.ceil(filteredData.length / clientLimit);
+  const paginatedData = filteredData.slice((currentPage - 1) * clientLimit, currentPage * clientLimit);
 
   const toggleHighlight = (e, id) => {
     // Don't toggle if clicking a button (like call/WhatsApp) or internal interactive element
@@ -75,7 +91,7 @@ const PendingPaymentsPage = () => {
       setLoading(true);
       const res = await getSeizedPending({
         ...params,
-        limit,
+        limit: 9999, // Load all records at once so client-side filter+pagination works correctly
       });
       if (res.data) {
         if (res.data.payments) {
@@ -163,7 +179,7 @@ const PendingPaymentsPage = () => {
                     Pending Payments
                   </h1>
                   <p className="text-slate-400 font-bold text-[9px] sm:text-sm uppercase tracking-[0.15em] mt-1.5">
-                    {totalRecords} RECORDS FOUND
+                    {filteredData.length} RECORDS FOUND
                   </p>
                 </div>
               </div>
@@ -184,25 +200,38 @@ const PendingPaymentsPage = () => {
                     />
                   </form>
                 </div>
-                <button
-                  onClick={() => setIsFilterOpen(true)}
-                  className="flex-none w-[46px] h-[46px] bg-white border border-slate-200 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
-                  title="Advanced Filter"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {/* Loan Type Filter Dropdown */}
+                <div className="relative loan-type-dropdown">
+                  <button
+                    onClick={() => setIsTypeDropdownOpen(prev => !prev)}
+                    className="flex items-center gap-2 px-3 h-[46px] bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm min-w-[110px] justify-between"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2.5"
-                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                    />
-                  </svg>
-                </button>
+                    <span className={`w-2 h-2 rounded-full ${loanTypeFilter === "All" ? "bg-slate-300" : loanTypeFilter === "Monthly" ? "bg-purple-400" : loanTypeFilter === "Weekly" ? "bg-blue-400" : loanTypeFilter === "Daily" ? "bg-orange-400" : "bg-green-400"}`}></span>
+                    <span>{loanTypeFilter === "Monthly" ? "Loans" : loanTypeFilter}</span>
+                    <span className="text-slate-300">▾</span>
+                  </button>
+                  {isTypeDropdownOpen && (
+                    <div className="absolute top-[50px] left-0 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden min-w-[140px]">
+                      {[
+                        { label: "All Types", value: "All", color: "bg-slate-300" },
+                        { label: "Loans", value: "Monthly", color: "bg-purple-400" },
+                        { label: "Weekly", value: "Weekly", color: "bg-blue-400" },
+                        { label: "Daily", value: "Daily", color: "bg-orange-400" },
+                        { label: "Interest", value: "Interest", color: "bg-green-400" },
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setLoanTypeFilter(opt.value); setIsTypeDropdownOpen(false); }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-slate-50 ${loanTypeFilter === opt.value ? "bg-blue-50 text-primary" : "text-slate-600"}`}
+                        >
+                          <span className={`w-2.5 h-2.5 rounded-full ${opt.color}`}></span>
+                          {opt.label}
+                          {loanTypeFilter === opt.value && <span className="ml-auto text-primary">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={resetFilters}
                   className="flex-none px-6 h-[46px] bg-red-50 border border-red-100 text-red-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all flex items-center justify-center gap-2 shadow-sm"
@@ -278,7 +307,7 @@ const PendingPaymentsPage = () => {
                           </td>
                         </tr>
                       ) : (
-                        data.map((item) => {
+                        paginatedData.map((item) => {
                           const today = new Date();
                           today.setHours(0,0,0,0);
                           const hasFollowUp = item.nextFollowUpDate && new Date(item.nextFollowUpDate) >= today;
@@ -477,9 +506,9 @@ const PendingPaymentsPage = () => {
 
               <Pagination
                 currentPage={currentPage}
-                totalPages={totalPages}
+                totalPages={clientTotalPages}
                 onPageChange={handlePageChange}
-                totalRecords={totalRecords}
+                totalRecords={filteredData.length}
                 limit={limit}
               />
             </div>

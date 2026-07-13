@@ -52,6 +52,7 @@ const getCollectionReport = asyncHandler(async (req, res, next) => {
         $or: [
           { "paymentType": "Foreclosure" },
           { "paymentType": "Processing Fee" },
+          { "paymentType": "Interest" },
           { "emiId": { $exists: false } },
           { "emiId": null },
           {
@@ -221,6 +222,7 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
         $or: [
           { "paymentType": "Foreclosure" },
           { "paymentType": "Processing Fee" },
+          { "paymentType": "Interest" },
           { "emiId": { $exists: false } },
           { "emiId": null },
           {

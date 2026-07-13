@@ -22,10 +22,12 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
     interestMetrics,
     expenseStats,
     userStats,
-    pendingMetrics,
+    pendingMetricsArr,
     partialMetrics,
     totalLoanCounts,
     monthlyEmiExpected,
+    activeDisbursements,
+    futureIncomeData,
   ] = await Promise.all([
     // 1. Monthly Loan Metrics
     Loan.aggregate([
@@ -91,8 +93,49 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
     // 6. User Roles
     User.aggregate([{ $group: { _id: "$role", count: { $sum: 1 } } }]),
 
-    // 7. Pending Collections (Monthly + Daily + Weekly + Interest)
-    EMI.aggregate([{ $match: { status: "Pending" } }, { $group: { _id: "$loanId" } }, { $count: "count" }]),
+    // 7. Pending Collections - per type breakdown (loans count + EMIs count)
+    Promise.all([
+      // Vehicle loans pending — only from active loans, only past due date
+      EMI.aggregate([
+        { $match: { status: "Pending", loanModel: "Loan", dueDate: { $lte: new Date() } } },
+        { $lookup: { from: "loans", localField: "loanId", foreignField: "_id", as: "loan" } },
+        { $match: { "loan.status": { $ne: "Closed" } } },
+        { $facet: {
+          loanCount: [{ $group: { _id: "$loanId" } }, { $count: "count" }],
+          emiCount: [{ $count: "count" }]
+        }}
+      ]),
+      // Weekly loans pending — only from active loans, only past due date
+      EMI.aggregate([
+        { $match: { status: "Pending", loanModel: "WeeklyLoan", dueDate: { $lte: new Date() } } },
+        { $lookup: { from: "weeklyloans", localField: "loanId", foreignField: "_id", as: "loan" } },
+        { $match: { "loan.status": { $ne: "Closed" } } },
+        { $facet: {
+          loanCount: [{ $group: { _id: "$loanId" } }, { $count: "count" }],
+          emiCount: [{ $count: "count" }]
+        }}
+      ]),
+      // Daily loans pending — only from active loans, only past due date
+      EMI.aggregate([
+        { $match: { status: "Pending", loanModel: "DailyLoan", dueDate: { $lte: new Date() } } },
+        { $lookup: { from: "dailyloans", localField: "loanId", foreignField: "_id", as: "loan" } },
+        { $match: { "loan.status": { $ne: "Closed" } } },
+        { $facet: {
+          loanCount: [{ $group: { _id: "$loanId" } }, { $count: "count" }],
+          emiCount: [{ $count: "count" }]
+        }}
+      ]),
+      // Interest loans pending — only from active loans, only past due date
+      InterestEMI.aggregate([
+        { $match: { status: "Pending", dueDate: { $lte: new Date() } } },
+        { $lookup: { from: "interestloans", localField: "interestLoanId", foreignField: "_id", as: "loan" } },
+        { $match: { "loan.status": { $ne: "Closed" } } },
+        { $facet: {
+          loanCount: [{ $group: { _id: "$interestLoanId" } }, { $count: "count" }],
+          emiCount: [{ $count: "count" }]
+        }}
+      ]),
+    ]),
     
     // 8. Partial Counts
     EMI.aggregate([{ $match: { status: "Partially Paid", loanModel: "Loan" } }, { $group: { _id: "$loanId" } }, { $count: "count" }]),
@@ -128,6 +171,56 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
         { $group: { _id: null, total: { $sum: { $multiply: [{ $ifNull: ["$remainingPrincipalAmount", 0] }, { $divide: [{ $ifNull: ["$interestRate", 0] }, 100] }] } } } }
       ]),
     ]),
+
+    // 11. Active loan disbursement totals (currently active only)
+    Promise.all([
+      Loan.aggregate([
+        { $match: { status: { $ne: "Closed" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$principalAmount", 0] } } } }
+      ]),
+      WeeklyLoan.aggregate([
+        { $match: { status: { $ne: "Closed" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$disbursementAmount", 0] } } } }
+      ]),
+      DailyLoan.aggregate([
+        { $match: { status: { $ne: "Closed" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$disbursementAmount", 0] } } } }
+      ]),
+      InterestLoan.aggregate([
+        { $match: { status: { $ne: "Closed" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$initialPrincipalAmount", 0] } } } }
+      ]),
+    ]),
+
+    // 12. Future expected income (unpaid EMIs from active loans only)
+    Promise.all([
+      EMI.aggregate([
+        { $match: { loanModel: "Loan", status: { $ne: "Paid" } } },
+        { $lookup: { from: "loans", localField: "loanId", foreignField: "_id", as: "loan" } },
+        { $match: { "loan.status": { $ne: "Closed" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$emiAmount", 0] } } } }
+      ]),
+      EMI.aggregate([
+        { $match: { loanModel: "WeeklyLoan", status: { $ne: "Paid" } } },
+        { $lookup: { from: "weeklyloans", localField: "loanId", foreignField: "_id", as: "loan" } },
+        { $match: { "loan.status": { $ne: "Closed" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$emiAmount", 0] } } } }
+      ]),
+      EMI.aggregate([
+        { $match: { loanModel: "DailyLoan", status: { $ne: "Paid" } } },
+        { $lookup: { from: "dailyloans", localField: "loanId", foreignField: "_id", as: "loan" } },
+        { $match: { "loan.status": { $ne: "Closed" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$emiAmount", 0] } } } }
+      ]),
+      require("../models/InterestEMI").aggregate([
+        { $match: { status: { $ne: "Paid" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$interestAmount", 0] } } } }
+      ]),
+      InterestLoan.aggregate([
+        { $match: { status: { $ne: "Closed" } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$remainingPrincipalAmount", 0] } } } }
+      ]),
+    ]),
   ]);
 
   // Safe extraction helper for facet results
@@ -154,28 +247,74 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
   // 2. Collection Breakdown
   const [emiMonthlyArr, emiInterestArr, expenseResultsArr] = expenseStats || [[], [], []];
   
-  const monthlyCollected = Math.round(
-    getAggSum(emiMonthlyArr) + 
-    getSum(loanMetrics, "foreclosure") + 
-    getSum(loanMetrics, "sold") + 
-    getSum(loanMetrics, "processingFees")
-  );
-  // Read daily and weekly collected directly from totalCollected field on each loan document
-  const [emiDailyArr, emiWeeklyArr] = await Promise.all([
-    DailyLoan.aggregate([
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$totalCollected", 0] } } } }
+  // monthlyCollected will be calculated after Payment aggregates are ready below
+  // For daily and weekly: sum EMI payments from Payment records + processing fees from loan documents
+  // (processing fees are not stored as Payment records for daily/weekly loans)
+  const [emiDailyPayArr, emiWeeklyPayArr, emiMonthlyPayArr, emiInterestPayArr,
+         dailyProcFeeArr] = await Promise.all([
+    Payment.aggregate([
+      { $match: { loanModel: "DailyLoan", status: "Success" } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$amount", 0] } } } }
     ]),
-    WeeklyLoan.aggregate([
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$totalCollected", 0] } } } }
+    Payment.aggregate([
+      { $match: { loanModel: "WeeklyLoan", status: "Success" } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$amount", 0] } } } }
+    ]),
+    // Vehicle loans: sum EMI paymentHistory + OD + processing fees directly
+    Promise.all([
+      EMI.aggregate([
+        { $match: { loanModel: "Loan" } },
+        { $unwind: { path: "$paymentHistory", preserveNullAndEmptyArrays: false } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$paymentHistory.amount", 0] } } } }
+      ]),
+      EMI.aggregate([
+        { $match: { loanModel: "Loan" } },
+        { $unwind: { path: "$overdue", preserveNullAndEmptyArrays: false } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$overdue.amount", 0] } } } }
+      ]),
+      Loan.aggregate([
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } }
+      ]),
+      // Foreclosure amounts from Loan documents
+      Loan.aggregate([
+        { $match: { status: "Closed", foreclosureAmount: { $gt: 0 } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureAmount", 0] } } } }
+      ]),
+      // Sold vehicle amounts
+      Loan.aggregate([
+        { $match: { "soldDetails.totalAmount": { $exists: true, $gt: 0 } } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$soldDetails.totalAmount", 0] } } } }
+      ]),
+    ]),
+    // Interest loan: sum from InterestEMI paymentHistory (Payment records may have duplicates)
+    require("../models/InterestEMI").aggregate([
+      { $unwind: { path: "$paymentHistory", preserveNullAndEmptyArrays: false } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$paymentHistory.amount", 0] } } } }
+    ]),
+    // Daily loan processing fees are NOT in Payment records — read from loan documents
+    DailyLoan.aggregate([
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } }
     ]),
   ]);
-  const dailyCollected = Math.round(getAggSum(emiDailyArr));
-  const weeklyCollected = Math.round(getAggSum(emiWeeklyArr));
-  const interestCollected = Math.round(
-    getAggSum(emiInterestArr) + 
-    getSum(interestMetrics, "principalCollected") + 
-    getSum(interestMetrics, "disbursement", "processingFees")
+
+  // Weekly: Payment records include processing fees — use them directly
+  const weeklyCollected = Math.round(getAggSum(emiWeeklyPayArr));
+
+  // Daily: Processing fees NOT stored as Payment records — add from loan documents
+  const dailyCollected = Math.round(getAggSum(emiDailyPayArr)) + Math.round(getAggSum(dailyProcFeeArr));
+
+  // Monthly collected: EMI payments + OD + processing fees + foreclosure + sold amounts
+  const [loanEmiPayArr, loanOdArr, loanProcFeeArr, loanForeclosureArr, loanSoldArr] = emiMonthlyPayArr || [[], [], [], [], []];
+  const monthlyCollected = Math.round(
+    getAggSum(loanEmiPayArr) +
+    getAggSum(loanOdArr) +
+    getAggSum(loanProcFeeArr) +
+    getAggSum(loanForeclosureArr) +
+    getAggSum(loanSoldArr)
   );
+
+  // Interest collected from InterestEMI paymentHistory (most accurate — avoids duplicate Payment records)
+  const interestCollected = Math.round(getAggSum(emiInterestPayArr));
   const totalCollectedAmount = monthlyCollected + dailyCollected + weeklyCollected + interestCollected;
 
   // 3. Global Counts
@@ -249,6 +388,47 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
     else collByMode.cash += Math.round(m.total);
   });
 
+  // Pending breakdown per type
+  const [vPend, wPend, dPend, iPend] = pendingMetricsArr || [[], [], [], []];
+  const pendingBreakdown = {
+    monthly: {
+      loans: vPend[0]?.loanCount?.[0]?.count || 0,
+      emis: vPend[0]?.emiCount?.[0]?.count || 0,
+    },
+    weekly: {
+      loans: wPend[0]?.loanCount?.[0]?.count || 0,
+      emis: wPend[0]?.emiCount?.[0]?.count || 0,
+    },
+    daily: {
+      loans: dPend[0]?.loanCount?.[0]?.count || 0,
+      emis: dPend[0]?.emiCount?.[0]?.count || 0,
+    },
+    interest: {
+      loans: iPend[0]?.loanCount?.[0]?.count || 0,
+      emis: iPend[0]?.emiCount?.[0]?.count || 0,
+    },
+  };
+  const totalPendingLoans = pendingBreakdown.monthly.loans + pendingBreakdown.weekly.loans + pendingBreakdown.daily.loans + pendingBreakdown.interest.loans;
+  const totalPendingEmis = pendingBreakdown.monthly.emis + pendingBreakdown.weekly.emis + pendingBreakdown.daily.emis + pendingBreakdown.interest.emis;
+
+  // Future expected income breakdown
+  const [futVehicleArr, futWeeklyArr, futDailyArr, futInterestEmiArr, futInterestPrinArr] = futureIncomeData || [[], [], [], [], []];
+  const futureMonthly = Math.round(getAggSum(futVehicleArr));
+  const futureWeekly = Math.round(getAggSum(futWeeklyArr));
+  const futureDaily = Math.round(getAggSum(futDailyArr));
+  const futureInterestEmi = Math.round(getAggSum(futInterestEmiArr));
+  const futureInterestPrincipal = Math.round(getAggSum(futInterestPrinArr));
+  const futureInterest = futureInterestEmi + futureInterestPrincipal;
+  const totalFutureIncome = futureMonthly + futureWeekly + futureDaily + futureInterest;
+
+  // Active loan disbursement breakdown
+  const [actMonthlyArr, actWeeklyArr, actDailyArr, actInterestArr] = activeDisbursements || [[], [], [], []];
+  const activeDisbursedMonthly = Math.round(actMonthlyArr[0]?.total || 0);
+  const activeDisbursedWeekly = Math.round(actWeeklyArr[0]?.total || 0);
+  const activeDisbursedDaily = Math.round(actDailyArr[0]?.total || 0);
+  const activeDisbursedInterest = Math.round(actInterestArr[0]?.total || 0);
+  const totalActiveDisbursed = activeDisbursedMonthly + activeDisbursedWeekly + activeDisbursedDaily + activeDisbursedInterest;
+
   // Total loans given
   const [totalMonthly, totalDaily, totalWeekly, totalInterest] = totalLoanCounts || [0, 0, 0, 0];
   const totalLoansGiven = totalMonthly + totalDaily + totalWeekly + totalInterest;
@@ -291,16 +471,46 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
           total: totalCollectedAmount 
         }
       },
-      pendingLoansCount: pendingMetrics[0]?.count || 0,
+      pendingLoansCount: totalPendingLoans,
+      pendingEmisCount: totalPendingEmis,
+      pendingBreakdown,
       partialLoansCount: partialMetrics[0]?.count || 0,
       activeLoansCount,
       closedLoansCount,
       totalLoansGiven,
+      futureIncome: {
+        monthly: futureMonthly,
+        weekly: futureWeekly,
+        daily: futureDaily,
+        interest: futureInterest,
+        interestEmi: futureInterestEmi,
+        interestPrincipal: futureInterestPrincipal,
+        total: totalFutureIncome,
+      },
+      activeDisbursed: {
+        monthly: activeDisbursedMonthly,
+        weekly: activeDisbursedWeekly,
+        daily: activeDisbursedDaily,
+        interest: activeDisbursedInterest,
+        total: totalActiveDisbursed,
+      },
       totalLoansBreakdown: {
         monthly: totalMonthly,
         daily: totalDaily,
         weekly: totalWeekly,
         interest: totalInterest,
+      },
+      activeByType: {
+        monthly: getCount(loanMetrics, "active"),
+        daily: getCount(dailyMetrics, "active"),
+        weekly: getCount(weeklyMetrics, "active"),
+        interest: getCount(interestMetrics, "active"),
+      },
+      closedByType: {
+        monthly: getCount(loanMetrics, "closed"),
+        daily: getCount(dailyMetrics, "closed"),
+        weekly: getCount(weeklyMetrics, "closed"),
+        interest: getCount(interestMetrics, "closed"),
       },
       totalMonthlyEmiExpected,
       monthlyEmiBreakdown: {

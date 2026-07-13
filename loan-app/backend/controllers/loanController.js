@@ -1186,13 +1186,16 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
       }
     }
 
+    const emiColl = modelName === "InterestLoan" ? "interestemis" : "emis";
+    const emiForeignField = modelName === "InterestLoan" ? "interestLoanId" : "loanId";
+
     let pipeline = [
       { $match: matchQuery },
       {
         $lookup: {
-          from: "emis",
+          from: emiColl,
           localField: "_id",
-          foreignField: "loanId",
+          foreignField: emiForeignField,
           as: "emis",
         },
       },
@@ -1214,8 +1217,6 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
               cond: {
                 $and: [
                   { $ne: ["$$emi.status", "Paid"] },
-                  // For "Partially Paid" status, we include them even if dueDate is in the future
-                  // because they are already "Partial" records. For others (Pending/Overdue), we check dueDate.
                   {
                     $or: [
                       { $eq: ["$$emi.status", "Partially Paid"] },
@@ -1270,7 +1271,7 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
                   "$$value",
                   {
                     $subtract: [
-                      { $toDouble: "$$this.emiAmount" },
+                      { $toDouble: { $ifNull: ["$$this.emiAmount", { $ifNull: ["$$this.interestAmount", 0] }] } },
                       { $toDouble: { $ifNull: ["$$this.amountPaid", 0] } },
                     ],
                   },
@@ -1341,10 +1342,16 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
     promises.push(Promise.resolve([]));
   }
 
-  const [monthlyResult, dailyResult, weeklyResult] =
+  if (!queryLoanType || queryLoanType.toLowerCase() === "interest") {
+    promises.push(getResultsWithCollation(InterestLoan, getPipeline("InterestLoan", "Interest")));
+  } else {
+    promises.push(Promise.resolve([]));
+  }
+
+  const [monthlyResult, dailyResult, weeklyResult, interestResult] =
     await Promise.all(promises);
 
-  let allResults = [...monthlyResult, ...dailyResult, ...weeklyResult].sort(
+  let allResults = [...monthlyResult, ...dailyResult, ...weeklyResult, ...interestResult].sort(
     (a, b) => {
       if (loanNumber) {
         // Numeric sort by loanNumber
@@ -1592,12 +1599,16 @@ const getFollowupLoans = asyncHandler(async (req, res, next) => {
       }
     }
 
+    const emiCollection = modelName === "InterestLoan" ? "interestemis" : "emis";
+    const emiLocalField = modelName === "InterestLoan" ? "interestLoanId" : "loanId";
+    const emiAmountField = modelName === "InterestLoan" ? "interestAmount" : "emiAmount";
+
     pipeline.push(
       {
         $lookup: {
-          from: "emis",
+          from: emiCollection,
           localField: "_id",
-          foreignField: "loanId",
+          foreignField: emiLocalField,
           as: "emis",
         },
       },
@@ -1620,12 +1631,7 @@ const getFollowupLoans = asyncHandler(async (req, res, next) => {
             $filter: {
               input: "$emis",
               as: "emi",
-              cond: {
-                $and: [
-                  { $ne: ["$$emi.status", "Paid"] },
-                  { $eq: ["$$emi.loanModel", modelName] },
-                ],
-              },
+              cond: { $ne: ["$$emi.status", "Paid"] },
             },
           },
         },
