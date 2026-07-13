@@ -541,7 +541,11 @@ const LoanForm = ({
   return (
     <div className="bg-white w-full max-w-4xl mx-auto rounded-3xl shadow-sm overflow-hidden border border-slate-200 flex flex-col">
       <div className="p-8">
-        <form onSubmit={formik.handleSubmit} className="space-y-8">
+        <form
+          onSubmit={formik.handleSubmit}
+          onKeyDown={(e) => { if (e.key === "Enter" && e.target.tagName !== "TEXTAREA" && e.target.type !== "submit") e.preventDefault(); }}
+          className="space-y-8"
+        >
           {/* Header Bar: Status & Meta Info */}
           <div className="space-y-4 relative">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-primary/10 pb-4 md:pb-2">

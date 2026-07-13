@@ -228,6 +228,7 @@ const WeeklyLoanForm = ({
   return (
     <form
       onSubmit={formik.handleSubmit}
+          onKeyDown={(e) => { if (e.key === "Enter" && e.target.tagName !== "TEXTAREA" && e.target.type !== "submit") e.preventDefault(); }}
       className="space-y-8 animate-in fade-in duration-500 pb-20"
     >
       {/* Customer Info */}
