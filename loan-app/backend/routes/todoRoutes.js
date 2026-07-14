@@ -13,7 +13,7 @@ router.use(isAuthenticated);
 router
   .route("/")
   .get(getTodos)
-  .post(authorizeRoles("SUPER_ADMIN", "ADMIN"), createTodo);
+  .post(authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"), createTodo);
 
 router
   .route("/:id")
