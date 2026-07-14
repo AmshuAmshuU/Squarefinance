@@ -95,9 +95,7 @@ const Navbar = () => {
                 {userInitial}
               </div>
               <span className="text-[9px] font-black text-primary uppercase tracking-wider">
-                {user?.role === "SUPER_ADMIN"
-                  ? "Super Admin"
-                  : user?.role || "User"}
+                {user?.name || "User"}
               </span>
             </button>
 
