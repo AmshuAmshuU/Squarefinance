@@ -543,7 +543,10 @@ exports.updateWeeklyLoan = asyncHandler(async (req, res, next) => {
   const totalAmount = Math.ceil(
     emiAmount * currentPaidEmis + (weeklyLoan.odAmount || 0),
   );
-  // totalCollected not recalculated on edit — managed by payment records
+  // totalCollected: use value from request body (set by frontend from DB) or keep existing
+  const totalCollected = req.body.totalCollected !== undefined
+    ? req.body.totalCollected
+    : weeklyLoan.totalCollected;
   const remainingEmis = totalWeeks - currentPaidEmis;
   const remainingPrincipalAmount = Math.ceil(
     amount - emiAmount * currentPaidEmis,
