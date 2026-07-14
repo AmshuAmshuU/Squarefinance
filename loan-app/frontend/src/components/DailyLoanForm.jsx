@@ -113,18 +113,14 @@ const DailyLoanForm = ({
     validateOnBlur: true,
     enableReinitialize: true,
     onSubmit: (values) => {
-      const submitProcessingFee = Math.ceil((parseFloat(values.disbursementAmount) || 0) * ((parseFloat(values.processingFeeRate) || 10) / 100));
-      const submitTotalCollected = initialData?.totalCollected != null
-        ? initialData.totalCollected
-        : Math.ceil(submitProcessingFee);
-
       onSubmit({
         ...values,
         emiAmount,
         processingFee,
         remainingEmis,
         totalAmount,
-        totalCollected: submitTotalCollected,
+        // Don't send totalCollected for existing loans - backend preserves its own value
+        ...(initialData?._id ? {} : { totalCollected: Math.ceil((parseFloat(values.disbursementAmount) || 0) * ((parseFloat(values.processingFeeRate) || 10) / 100)) }),
         nextEmiDate,
         emiEndDate: values.emiEndDate,
         remainingPrincipalAmount,
