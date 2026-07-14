@@ -472,7 +472,10 @@ exports.updateDailyLoan = asyncHandler(async (req, res, next) => {
   updateData.emiEndDate = eEndDate;
 
   const totalAmount = Math.ceil(emiAmount * currentPaidEmis + (dailyLoan.odAmount || 0));
-  const totalCollected = Math.ceil(processingFee); // starts at processing fee only
+  // totalCollected: use value from request body or keep existing — managed by payment records
+  const totalCollected = req.body.totalCollected !== undefined
+    ? req.body.totalCollected
+    : dailyLoan.totalCollected;
   const remainingEmis = totalDays - currentPaidEmis;
   const remainingPrincipalAmount = Math.ceil(amount - dailyPrincipal * currentPaidEmis);
 
