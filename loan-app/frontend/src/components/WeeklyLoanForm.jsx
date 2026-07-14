@@ -114,13 +114,19 @@ const WeeklyLoanForm = ({
     validateOnBlur: true,
     enableReinitialize: true,
     onSubmit: (values) => {
+      // Recalculate totalCollected at submission time to avoid stale closure
+      const submitProcessingFee = Math.ceil((parseFloat(values.disbursementAmount) || 0) * ((parseFloat(values.processingFeeRate) || 10) / 100));
+      const submitTotalCollected = initialData?.totalCollected != null
+        ? initialData.totalCollected
+        : Math.ceil(submitProcessingFee);
+
       onSubmit({
         ...values,
         emiAmount,
         processingFee,
         remainingEmis,
         totalAmount,
-        totalCollected,
+        totalCollected: submitTotalCollected,
         nextEmiDate,
         emiEndDate: values.emiEndDate,
         remainingPrincipalAmount,
