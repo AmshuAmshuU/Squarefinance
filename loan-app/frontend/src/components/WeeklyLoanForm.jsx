@@ -645,14 +645,7 @@ const WeeklyLoanForm = ({
                   {remainingEmis}
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                  Total Paid Amount (Auto)
-                </label>
-                <div className="w-full bg-slate-100/50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-500">
-                  {totalAmount}
-                </div>
-              </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
                   Next EMI Date (Auto)
