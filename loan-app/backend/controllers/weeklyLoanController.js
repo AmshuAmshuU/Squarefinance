@@ -436,6 +436,18 @@ exports.updateWeeklyLoan = asyncHandler(async (req, res, next) => {
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
 
+    // Always save clientResponse and nextFollowUpDate directly (no approval needed)
+    const clientDirectUpdate = {};
+    if (req.body.clientResponse !== undefined) clientDirectUpdate.clientResponse = req.body.clientResponse;
+    if (req.body.nextFollowUpDate !== undefined) clientDirectUpdate.nextFollowUpDate = req.body.nextFollowUpDate;
+    if (Object.keys(clientDirectUpdate).length > 0) {
+      clientDirectUpdate.updatedBy = req.user._id;
+      clientDirectUpdate.clientResponseUpdatedBy = req.user._id;
+      clientDirectUpdate.clientResponseUpdatedAt = new Date();
+      const WeeklyLoanDirect = require("../models/WeeklyLoan");
+      await WeeklyLoanDirect.findByIdAndUpdate(req.params.id, { $set: clientDirectUpdate });
+    }
+
     const changes = computeLoanDiff(weeklyLoan, req.body);
     if (changes.length === 0) {
       return sendResponse(res, 200, "success", "No changes detected", null, weeklyLoan);

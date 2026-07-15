@@ -28,6 +28,8 @@ const LOAN_FIELDS = {
   insuranceDate: "Insurance Date",
   rtoWorkPending: "RTO Work Pending",
   remarks: "Remarks",
+  // NOTE: clientResponse and nextFollowUpDate are intentionally excluded
+  // They are handled freely by employees via the updateFollowup endpoint
 };
 
 const formatValue = (val) => {

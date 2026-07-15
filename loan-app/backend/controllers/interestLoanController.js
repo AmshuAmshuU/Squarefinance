@@ -769,6 +769,15 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
 
+    // Always save clientResponse and nextFollowUpDate directly
+    const clientDirectUpdate = {};
+    if (req.body.clientResponse !== undefined) clientDirectUpdate.clientResponse = req.body.clientResponse;
+    if (req.body.nextFollowUpDate !== undefined) clientDirectUpdate.nextFollowUpDate = req.body.nextFollowUpDate;
+    if (Object.keys(clientDirectUpdate).length > 0) {
+      clientDirectUpdate.updatedBy = req.user._id;
+      await InterestLoan.findByIdAndUpdate(req.params.id, { $set: clientDirectUpdate });
+    }
+
     const changes = computeLoanDiff(loan, req.body);
     if (changes.length === 0) {
       return sendResponse(res, 200, "success", "No changes detected", null, loan);

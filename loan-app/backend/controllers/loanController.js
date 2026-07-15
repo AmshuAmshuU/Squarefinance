@@ -795,6 +795,17 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
 
+    // Always save clientResponse and nextFollowUpDate directly
+    const clientDirectUpdate = {};
+    if (req.body.status?.clientResponse !== undefined) clientDirectUpdate["status.clientResponse"] = req.body.status.clientResponse;
+    if (req.body.status?.nextFollowUpDate !== undefined) clientDirectUpdate["status.nextFollowUpDate"] = req.body.status.nextFollowUpDate;
+    if (req.body.clientResponse !== undefined) clientDirectUpdate.clientResponse = req.body.clientResponse;
+    if (req.body.nextFollowUpDate !== undefined) clientDirectUpdate.nextFollowUpDate = req.body.nextFollowUpDate;
+    if (Object.keys(clientDirectUpdate).length > 0) {
+      clientDirectUpdate.updatedBy = req.user._id;
+      await Loan.findByIdAndUpdate(req.params.id, { $set: clientDirectUpdate });
+    }
+
     // Flatten customerDetails for diff comparison
     const flatBody = { ...req.body, ...req.body.customerDetails, ...req.body.loanTerms, ...req.body.vehicleDetails };
     const changes = computeLoanDiff(loan, flatBody);
