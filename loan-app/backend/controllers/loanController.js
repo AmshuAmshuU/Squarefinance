@@ -1222,14 +1222,10 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
     let matchQuery = { ...query };
 
     if (mobileNumber) {
-      if (modelName === "Loan") {
-        matchQuery.$or = [
-          { mobileNumbers: { $regex: mobileNumber, $options: "i" } },
-          { guarantorMobileNumbers: { $regex: mobileNumber, $options: "i" } },
-        ];
-      } else {
-        matchQuery.mobileNumber = { $regex: mobileNumber, $options: "i" };
-      }
+      matchQuery.$or = [
+        { mobileNumbers: { $regex: mobileNumber, $options: "i" } },
+        { guarantorMobileNumbers: { $regex: mobileNumber, $options: "i" } },
+      ];
     }
 
     const emiColl = modelName === "InterestLoan" ? "interestemis" : "emis";
@@ -1297,8 +1293,8 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
           customerName: 1,
           guarantorName: modelName === "Loan" ? 1 : { $literal: "—" },
           status: 1,
-          mobileNumbers: modelName === "Loan" ? 1 : ["$mobileNumber"],
-          guarantorMobileNumbers: modelName === "Loan" ? 1 : { $literal: [] },
+          mobileNumbers: 1,
+          guarantorMobileNumbers: 1,
           vehicleNumber: 1,
           model: 1,
           principalAmount: {
@@ -1689,8 +1685,8 @@ const getFollowupLoans = asyncHandler(async (req, res, next) => {
           customerName: 1,
           guarantorName: modelName === "Loan" ? 1 : { $literal: "—" },
           status: 1,
-          mobileNumbers: modelName === "Loan" ? 1 : ["$mobileNumber"],
-          guarantorMobileNumbers: modelName === "Loan" ? 1 : { $literal: [] },
+          mobileNumbers: 1,
+          guarantorMobileNumbers: 1,
           vehicleNumber: 1,
           model: 1,
           loanType: { $literal: loanType },
