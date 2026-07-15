@@ -429,24 +429,20 @@ exports.updateWeeklyLoan = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Weekly loan not found", 404));
   }
 
-  // If employee (not super admin), create approval request instead of saving directly
+  // If employee (not super admin), save clientResponse directly then check other changes
   const isSuperAdmin = req.user.role === "SUPER_ADMIN";
   if (!isSuperAdmin) {
     const { computeLoanDiff } = require("../utils/loanDiff");
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
 
-    // Always save clientResponse and nextFollowUpDate directly (no approval needed)
-    const clientDirectUpdate = {};
-    if (req.body.clientResponse !== undefined) clientDirectUpdate.clientResponse = req.body.clientResponse;
-    if (req.body.nextFollowUpDate !== undefined) clientDirectUpdate.nextFollowUpDate = req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null;
-    if (Object.keys(clientDirectUpdate).length > 0) {
-      clientDirectUpdate.updatedBy = req.user._id;
-      clientDirectUpdate.clientResponseUpdatedBy = req.user._id;
-      clientDirectUpdate.clientResponseUpdatedAt = new Date();
-      const WeeklyLoanDirect = require("../models/WeeklyLoan");
-      await WeeklyLoanDirect.findByIdAndUpdate(req.params.id, { $set: clientDirectUpdate });
-    }
+    // Save clientResponse and nextFollowUpDate directly — employees can always update these
+    weeklyLoan.clientResponse = req.body.clientResponse !== undefined ? req.body.clientResponse : weeklyLoan.clientResponse;
+    weeklyLoan.nextFollowUpDate = req.body.nextFollowUpDate !== undefined ? (req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null) : weeklyLoan.nextFollowUpDate;
+    weeklyLoan.updatedBy = req.user._id;
+    weeklyLoan.clientResponseUpdatedBy = req.user._id;
+    weeklyLoan.clientResponseUpdatedAt = new Date();
+    await weeklyLoan.save();
 
     const changes = computeLoanDiff(weeklyLoan, req.body);
     if (changes.length === 0) {

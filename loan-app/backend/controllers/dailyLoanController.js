@@ -393,17 +393,13 @@ exports.updateDailyLoan = asyncHandler(async (req, res, next) => {
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
 
-    // Always save clientResponse and nextFollowUpDate directly (no approval needed)
-    const clientDirectUpdate = {};
-    if (req.body.clientResponse !== undefined) clientDirectUpdate.clientResponse = req.body.clientResponse;
-    if (req.body.nextFollowUpDate !== undefined) clientDirectUpdate.nextFollowUpDate = req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null;
-    if (Object.keys(clientDirectUpdate).length > 0) {
-      clientDirectUpdate.updatedBy = req.user._id;
-      clientDirectUpdate.clientResponseUpdatedBy = req.user._id;
-      clientDirectUpdate.clientResponseUpdatedAt = new Date();
-      const DailyLoanDirect = require("../models/DailyLoan");
-      await DailyLoanDirect.findByIdAndUpdate(req.params.id, { $set: clientDirectUpdate });
-    }
+    // Save clientResponse and nextFollowUpDate directly — employees can always update these
+    dailyLoan.clientResponse = req.body.clientResponse !== undefined ? req.body.clientResponse : dailyLoan.clientResponse;
+    dailyLoan.nextFollowUpDate = req.body.nextFollowUpDate !== undefined ? (req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null) : dailyLoan.nextFollowUpDate;
+    dailyLoan.updatedBy = req.user._id;
+    dailyLoan.clientResponseUpdatedBy = req.user._id;
+    dailyLoan.clientResponseUpdatedAt = new Date();
+    await dailyLoan.save();
 
     const changes = computeLoanDiff(dailyLoan, req.body);
     if (changes.length === 0) {

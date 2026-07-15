@@ -795,14 +795,11 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
 
-    // Always save clientResponse and nextFollowUpDate directly (top-level fields in Loan model)
-    const clientDirectUpdate = {};
-    if (req.body.clientResponse !== undefined) clientDirectUpdate.clientResponse = req.body.clientResponse;
-    if (req.body.nextFollowUpDate !== undefined) clientDirectUpdate.nextFollowUpDate = req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null;
-    if (Object.keys(clientDirectUpdate).length > 0) {
-      clientDirectUpdate.updatedBy = req.user._id;
-      await Loan.findByIdAndUpdate(req.params.id, { $set: clientDirectUpdate });
-    }
+    // Save clientResponse and nextFollowUpDate directly — employees can always update these
+    loan.clientResponse = req.body.clientResponse !== undefined ? req.body.clientResponse : loan.clientResponse;
+    loan.nextFollowUpDate = req.body.nextFollowUpDate !== undefined ? (req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null) : loan.nextFollowUpDate;
+    loan.updatedBy = req.user._id;
+    await loan.save();
 
     // Flatten customerDetails for diff comparison
     const flatBody = { ...req.body, ...req.body.customerDetails, ...req.body.loanTerms, ...req.body.vehicleDetails };
