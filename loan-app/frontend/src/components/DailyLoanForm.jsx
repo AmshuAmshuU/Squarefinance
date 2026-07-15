@@ -616,15 +616,9 @@ const DailyLoanForm = ({
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
                 Paid EMIs
               </label>
-              <input
-                type="number"
-                name="paidEmis"
-                value={values.paidEmis ?? ""}
-                onChange={formik.handleChange}
-                onBlur={handleBlur}
-                disabled={isViewOnly}
-                className={getFieldClass("paidEmis")}
-              />
+              <div className="w-full bg-slate-100/50 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-500">
+                {values.paidEmis ?? 0}
+              </div>
               <ErrorMsg touched={touched} errors={errors} name="paidEmis" />
             </div>
           )}
