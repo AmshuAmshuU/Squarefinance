@@ -772,7 +772,7 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
     // Always save clientResponse and nextFollowUpDate directly
     const clientDirectUpdate = {};
     if (req.body.clientResponse !== undefined) clientDirectUpdate.clientResponse = req.body.clientResponse;
-    if (req.body.nextFollowUpDate !== undefined) clientDirectUpdate.nextFollowUpDate = req.body.nextFollowUpDate;
+    if (req.body.nextFollowUpDate !== undefined) clientDirectUpdate.nextFollowUpDate = req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null;
     if (Object.keys(clientDirectUpdate).length > 0) {
       clientDirectUpdate.updatedBy = req.user._id;
       await InterestLoan.findByIdAndUpdate(req.params.id, { $set: clientDirectUpdate });
