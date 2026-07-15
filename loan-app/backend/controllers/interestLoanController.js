@@ -762,6 +762,40 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Loan not found", 404));
   }
 
+  // If employee, create approval request instead of saving directly
+  const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+  if (!isSuperAdmin) {
+    const { computeLoanDiff } = require("../utils/loanDiff");
+    const Approval = require("../models/Approval");
+    const { notifyAdmins } = require("./notificationController");
+
+    const changes = computeLoanDiff(loan, req.body);
+    if (changes.length === 0) {
+      return sendResponse(res, 200, "success", "No changes detected", null, loan);
+    }
+
+    await Approval.create({
+      requestType: "LOAN_EDIT",
+      targetId: loan._id,
+      targetModel: "InterestLoan",
+      loanNumber: loan.loanNumber,
+      customerName: loan.customerName || "—",
+      requestedBy: req.user._id,
+      requestedData: { changes, newValues: req.body },
+      status: "Pending",
+    });
+
+    await notifyAdmins({
+      senderId: req.user._id,
+      type: "LOAN_EDIT_REQUEST",
+      title: "Loan Edit Approval Request",
+      message: `Employee ${req.user.name} requested changes to loan ${loan.loanNumber} (${loan.customerName || "—"}). ${changes.length} field(s) changed.`,
+      data: { loanNumber: loan.loanNumber, changes },
+    });
+
+    return sendResponse(res, 200, "success", "Changes submitted for approval", null, loan);
+  }
+
   const oldEmiStartDate = loan.emiStartDate ? new Date(loan.emiStartDate).toISOString().split("T")[0] : null;
   const newEmiStartDate = req.body.emiStartDate ? new Date(req.body.emiStartDate).toISOString().split("T")[0] : null;
   const dateChanged = newEmiStartDate && oldEmiStartDate && newEmiStartDate !== oldEmiStartDate;

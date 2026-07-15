@@ -386,6 +386,40 @@ exports.updateDailyLoan = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Daily loan not found", 404));
   }
 
+  // If employee, create approval request instead of saving directly
+  const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+  if (!isSuperAdmin) {
+    const { computeLoanDiff } = require("../utils/loanDiff");
+    const Approval = require("../models/Approval");
+    const { notifyAdmins } = require("./notificationController");
+
+    const changes = computeLoanDiff(dailyLoan, req.body);
+    if (changes.length === 0) {
+      return sendResponse(res, 200, "success", "No changes detected", null, dailyLoan);
+    }
+
+    await Approval.create({
+      requestType: "LOAN_EDIT",
+      targetId: dailyLoan._id,
+      targetModel: "DailyLoan",
+      loanNumber: dailyLoan.loanNumber,
+      customerName: dailyLoan.customerName || "—",
+      requestedBy: req.user._id,
+      requestedData: { changes, newValues: req.body },
+      status: "Pending",
+    });
+
+    await notifyAdmins({
+      senderId: req.user._id,
+      type: "LOAN_EDIT_REQUEST",
+      title: "Loan Edit Approval Request",
+      message: `Employee ${req.user.name} requested changes to loan ${dailyLoan.loanNumber} (${dailyLoan.customerName || "—"}). ${changes.length} field(s) changed.`,
+      data: { loanNumber: dailyLoan.loanNumber, changes },
+    });
+
+    return sendResponse(res, 200, "success", "Changes submitted for approval", null, dailyLoan);
+  }
+
   const {
     loanNumber,
     customerName,

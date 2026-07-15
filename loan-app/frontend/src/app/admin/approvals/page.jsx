@@ -115,6 +115,47 @@ const ApprovalsPage = () => {
                                                         return model || "N/A";
                                                     };
 
+                                                    // LOAN_EDIT: render diff card
+                                                    if (app.requestType === "LOAN_EDIT") {
+                                                      return (
+                                                        <tr key={app._id} className="border-b border-slate-50">
+                                                          <td colSpan={8} className="px-3 py-3">
+                                                            <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4">
+                                                              <div className="flex items-center justify-between mb-3">
+                                                                <div>
+                                                                  <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest bg-amber-100 px-2 py-1 rounded-lg">Loan Edit Request</span>
+                                                                  <p className="text-xs font-bold text-slate-700 mt-1">Loan {app.loanNumber} — {app.customerName}</p>
+                                                                  <p className="text-[10px] text-slate-400 mt-0.5">by {app.requestedBy?.name} • {new Date(app.createdAt).toLocaleString("en-IN")}</p>
+                                                                </div>
+                                                                <div className="flex gap-2">
+                                                                  <button onClick={() => handleAction(app._id, "Rejected")} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-rose-500 border border-rose-200 bg-white rounded-xl hover:bg-rose-50 transition-all">Reject</button>
+                                                                  <button onClick={() => handleAction(app._id, "Approved")} className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white bg-emerald-500 rounded-xl hover:bg-emerald-600 transition-all">Approve</button>
+                                                                </div>
+                                                              </div>
+                                                              <table className="w-full text-[10px]">
+                                                                <thead>
+                                                                  <tr className="border-b border-amber-100">
+                                                                    <th className="text-left font-black text-slate-400 uppercase tracking-widest pb-1.5 pr-4 w-1/3">Field</th>
+                                                                    <th className="text-left font-black text-rose-400 uppercase tracking-widest pb-1.5 pr-4 w-1/3">Current</th>
+                                                                    <th className="text-left font-black text-emerald-500 uppercase tracking-widest pb-1.5 w-1/3">Proposed</th>
+                                                                  </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-amber-50">
+                                                                  {(app.requestedData?.changes || []).map((change, idx) => (
+                                                                    <tr key={idx}>
+                                                                      <td className="py-1.5 pr-4 font-bold text-slate-600">{change.label}</td>
+                                                                      <td className="py-1.5 pr-4 text-rose-500">{change.oldValue}</td>
+                                                                      <td className="py-1.5 font-bold text-emerald-600">{change.newValue}</td>
+                                                                    </tr>
+                                                                  ))}
+                                                                </tbody>
+                                                              </table>
+                                                            </div>
+                                                          </td>
+                                                        </tr>
+                                                      );
+                                                    }
+
                                                     const getModeSplits = () => {
                                                         const data = app.requestedData;
                                                         const splits = {};

@@ -83,8 +83,13 @@ const EditDailyLoanPage = () => {
   const handleSubmit = async (formData) => {
     setSubmitting(true);
     try {
-      await updateDailyLoan(id, formData);
-      showToast("Daily loan updated successfully", "success");
+      const res = await updateDailyLoan(id, formData);
+      const msg = res?.message || "";
+      if (msg.toLowerCase().includes("approval")) {
+        showToast("Changes submitted for approval by Super Admin", "info");
+      } else {
+        showToast("Daily loan updated successfully", "success");
+      }
       await fetchData();
     } catch (err) {
       showToast(err.message || "Failed to update daily loan", "error");

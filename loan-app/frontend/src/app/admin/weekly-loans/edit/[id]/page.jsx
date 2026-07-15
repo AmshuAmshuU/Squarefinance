@@ -91,8 +91,13 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
   const handleSubmit = async (formData) => {
     setSubmitting(true);
     try {
-      await updateWeeklyLoan(params.id, formData);
-      showToast("Weekly loan record updated successfully", "success");
+      const res = await updateWeeklyLoan(params.id, formData);
+      const msg = res?.message || "";
+      if (msg.toLowerCase().includes("approval")) {
+        showToast("Changes submitted for approval by Super Admin", "info");
+      } else {
+        showToast("Weekly loan record updated successfully", "success");
+      }
       await fetchData();
     } catch (err) {
       showToast(err.message || "Failed to update weekly loan", "error");

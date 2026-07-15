@@ -55,8 +55,13 @@ const EditInterestLoanPage = () => {
   const handleSubmit = async (values) => {
     setSubmitting(true);
     try {
-      await interestLoanService.updateLoan(id, values);
-      showToast("Interest loan updated successfully", "success");
+      const res = await interestLoanService.updateLoan(id, values);
+      const msg = res?.message || "";
+      if (msg.toLowerCase().includes("approval")) {
+        showToast("Changes submitted for approval by Super Admin", "info");
+      } else {
+        showToast("Interest loan updated successfully", "success");
+      }
       await fetchLoan();
     } catch (err) {
       showToast(err.message || "Failed to update", "error");

@@ -788,6 +788,43 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Loan not found", 404));
   }
 
+  // If employee, create approval request instead of saving directly
+  const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+  if (!isSuperAdmin) {
+    const { computeLoanDiff } = require("../utils/loanDiff");
+    const Approval = require("../models/Approval");
+    const { notifyAdmins } = require("./notificationController");
+
+    // Flatten customerDetails for diff comparison
+    const flatBody = { ...req.body, ...req.body.customerDetails, ...req.body.loanTerms, ...req.body.vehicleDetails };
+    const changes = computeLoanDiff(loan, flatBody);
+
+    if (changes.length === 0) {
+      return sendResponse(res, 200, "success", "No changes detected", null, loan);
+    }
+
+    await Approval.create({
+      requestType: "LOAN_EDIT",
+      targetId: loan._id,
+      targetModel: "Loan",
+      loanNumber: loan.loanNumber,
+      customerName: loan.customerName || "—",
+      requestedBy: req.user._id,
+      requestedData: { changes, newValues: req.body },
+      status: "Pending",
+    });
+
+    await notifyAdmins({
+      senderId: req.user._id,
+      type: "LOAN_EDIT_REQUEST",
+      title: "Loan Edit Approval Request",
+      message: `Employee ${req.user.name} requested changes to loan ${loan.loanNumber} (${loan.customerName || "—"}). ${changes.length} field(s) changed.`,
+      data: { loanNumber: loan.loanNumber, changes },
+    });
+
+    return sendResponse(res, 200, "success", "Changes submitted for approval", null, loan);
+  }
+
   const {
     customerDetails,
     loanTerms,

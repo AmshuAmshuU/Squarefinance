@@ -119,8 +119,13 @@ const EditLoanPage = () => {
   const handleSubmit = async (formData) => {
     setSubmitting(true);
     try {
-      await updateLoan(id, formData);
-      showToast("Loan profile updated and EMIs synchronized", "success");
+      const res = await updateLoan(id, formData);
+      const msg = res?.message || "";
+      if (msg.toLowerCase().includes("approval")) {
+        showToast("Changes submitted for approval by Super Admin", "info");
+      } else {
+        showToast("Loan profile updated and EMIs synchronized", "success");
+      }
       await fetchLoanData();
     } catch (err) {
       showToast(err.message || "Failed to update loan", "error");

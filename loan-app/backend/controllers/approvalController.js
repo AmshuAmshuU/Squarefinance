@@ -331,6 +331,22 @@ const processApproval = asyncHandler(async (req, res, next) => {
           }
         }
       }
+    } else if (requestType === "LOAN_EDIT") {
+      // Apply the approved changes to the loan document
+      const { newValues } = approval.requestedData || {};
+      if (newValues && targetModel) {
+        let LoanModel;
+        if (targetModel === "Loan") LoanModel = require("../models/Loan");
+        else if (targetModel === "WeeklyLoan") LoanModel = require("../models/WeeklyLoan");
+        else if (targetModel === "DailyLoan") LoanModel = require("../models/DailyLoan");
+        else if (targetModel === "InterestLoan") LoanModel = require("../models/InterestLoan");
+
+        if (LoanModel) {
+          // Remove fields that shouldn't be directly set
+          const { _id, __v, createdAt, updatedAt, paidEmis, totalCollected, remainingPrincipalAmount, ...safeValues } = newValues;
+          await LoanModel.findByIdAndUpdate(targetId, { $set: safeValues });
+        }
+      }
     } else if (requestType === "PRINCIPAL_PAYMENT") {
       const loan = await InterestLoan.findById(targetId);
       if (loan) {
