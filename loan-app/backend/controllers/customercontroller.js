@@ -548,9 +548,11 @@ const updateEMI = asyncHandler(async (req, res, next) => {
           (weeklyLoan.disbursementAmount || 0) - weeklyEmiAmount * weeklyPaidCount
         ));
 
-        if (isAllPaid) {
+        // Auto-close only if ALL EMIs are paid AND remaining principal is 0
+        const shouldCloseWeekly = isAllPaid && weeklyLoan.remainingPrincipalAmount === 0;
+        if (shouldCloseWeekly) {
           weeklyLoan.status = "Closed";
-        } else if (weeklyLoan.status === "Closed") {
+        } else if (weeklyLoan.status === "Closed" && !shouldCloseWeekly) {
           weeklyLoan.status = "Active";
         }
         await weeklyLoan.save();
@@ -599,9 +601,11 @@ const updateEMI = asyncHandler(async (req, res, next) => {
           (dailyLoan.disbursementAmount || 0) - dailyEmiAmount * dailyPaidCount
         ));
 
-        if (isAllPaid) {
+        // Auto-close only if ALL EMIs are paid AND remaining principal is 0
+        const shouldCloseDaily = isAllPaid && dailyLoan.remainingPrincipalAmount === 0;
+        if (shouldCloseDaily) {
           dailyLoan.status = "Closed";
-        } else if (dailyLoan.status === "Closed") {
+        } else if (dailyLoan.status === "Closed" && !shouldCloseDaily) {
           dailyLoan.status = "Active";
         }
         await dailyLoan.save();
