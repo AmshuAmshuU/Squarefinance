@@ -24,6 +24,7 @@ import { useToast } from "../../../context/ToastContext";
 import CollectionTrendChart from "../../../components/analytics/CollectionTrendChart";
 import DistributionPieCharts from "../../../components/analytics/DistributionPieCharts";
 import PaymentModeTable from "../../../components/analytics/PaymentModeTable";
+import ProfitOverview from "../../../components/analytics/ProfitOverview";
 
 const AnalyticsPage = () => {
   const [stats, setStats] = useState(null);
@@ -660,6 +661,9 @@ const AnalyticsPage = () => {
               <div className="mt-10 min-h-[500px]">
                 <CollectionTrendChart isCumulative={true} initialInterval="yearly" />
               </div>
+
+              {/* Profit Overview */}
+              <ProfitOverview />
 
               {/* Footer Note */}
               <div className="mt-12 text-center">

@@ -84,5 +84,6 @@ const interestEmiSchema = new mongoose.Schema(
 interestEmiSchema.index({ interestLoanId: 1 });
 interestEmiSchema.index({ status: 1 });
 interestEmiSchema.index({ dueDate: 1 });
+interestEmiSchema.index({ status: 1, paymentDate: 1 });
 
 module.exports = mongoose.model("InterestEMI", interestEmiSchema);

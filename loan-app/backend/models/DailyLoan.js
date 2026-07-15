@@ -223,6 +223,7 @@ dailyLoanSchema.index({ customerName: 1 });
 dailyLoanSchema.index({ mobileNumbers: 1 });
 dailyLoanSchema.index({ guarantorMobileNumbers: 1 });
 dailyLoanSchema.index({ disbursementAmount: 1 });
+dailyLoanSchema.index({ dateLoanDisbursed: 1 });
 dailyLoanSchema.index({ nextFollowUpDate: 1 });
 
 module.exports = mongoose.model("DailyLoan", dailyLoanSchema);

@@ -105,5 +105,7 @@ emiSchema.virtual("paymentRecords", {
 emiSchema.index({ loanId: 1 });
 emiSchema.index({ amountPaid: 1 });
 emiSchema.index({ status: 1 });
+emiSchema.index({ status: 1, paymentDate: 1 });
+emiSchema.index({ "overdue.date": 1 });
 
 module.exports = mongoose.model("EMI", emiSchema);

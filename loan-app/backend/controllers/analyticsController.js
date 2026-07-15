@@ -737,8 +737,231 @@ const getTrendStats = asyncHandler(async (req, res, next) => {
   }
 });
 
+// Converts a requested interval into a concrete date range + a Mongo
+// $dateToString format for bucketing trend data. Mirrors the same
+// interval semantics used by getTrendStats, extended with 3-month and
+// 6-month options for the profit dashboard's dropdown.
+const getProfitDateRange = (interval, customStart, customEnd) => {
+  const now = new Date();
+  now.setHours(23, 59, 59, 999);
+  let startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+  let endDate = new Date(now);
+  let groupFormat = "%Y-%m";
+
+  if (interval === "weekly") {
+    startDate.setDate(now.getDate() - 7);
+    groupFormat = "%Y-%m-%d";
+  } else if (interval === "monthly") {
+    startDate.setDate(now.getDate() - 30);
+    groupFormat = "%Y-%m-%d";
+  } else if (interval === "3months") {
+    startDate.setMonth(now.getMonth() - 3);
+    groupFormat = "%Y-%m-%d";
+  } else if (interval === "6months") {
+    startDate.setMonth(now.getMonth() - 6);
+    groupFormat = "%Y-%m";
+  } else if (interval === "yearly") {
+    startDate.setFullYear(now.getFullYear() - 1);
+    groupFormat = "%Y-%m";
+  } else if (interval === "custom" && customStart && customEnd) {
+    startDate = new Date(customStart);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(customEnd);
+    endDate.setHours(23, 59, 59, 999);
+    const diffDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+    groupFormat = diffDays <= 60 ? "%Y-%m-%d" : "%Y-%m";
+  } else {
+    // "all" / default
+    startDate = new Date(0);
+    groupFormat = "%Y-%m";
+  }
+
+  return { startDate, endDate, groupFormat };
+};
+
+const sumTotal = (aggResult) => (aggResult[0] && aggResult[0].total) || 0;
+
+const getProfitStats = asyncHandler(async (req, res, next) => {
+  const { interval = "all", startDate: customStart, endDate: customEnd } = req.query;
+  const { startDate, endDate, groupFormat } = getProfitDateRange(interval, customStart, customEnd);
+
+  const interestPortionExpr = {
+    $multiply: [
+      { $ifNull: ["$loan.principalAmount", 0] },
+      { $divide: [{ $ifNull: ["$loan.annualInterestRate", 0] }, 100] },
+    ],
+  };
+
+  const [
+    // ---- Range totals (for the Total Profit card + breakdown table) ----
+    vehicleEmiInterest,
+    vehicleProcessingFee,
+    vehicleForeclosure,
+    vehicleOverdue,
+    weeklyProcessingFee,
+    dailyProcessingFee,
+    interestEmiProfit,
+
+    // ---- Trend (date-bucketed, for the Profit Trend chart) ----
+    vehicleEmiInterestTrend,
+    vehicleProcessingFeeTrend,
+    vehicleForeclosureTrend,
+    vehicleOverdueTrend,
+    weeklyProcessingFeeTrend,
+    dailyProcessingFeeTrend,
+    interestEmiProfitTrend,
+
+    // ---- Expected profit next month (range-independent) ----
+    expectedVehicle,
+    expectedInterestAgg,
+  ] = await Promise.all([
+    // Vehicle EMI interest portion of fully-paid EMIs
+    EMI.aggregate([
+      { $match: { loanModel: "Loan", status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
+      { $lookup: { from: "loans", localField: "loanId", foreignField: "_id", as: "loan" } },
+      { $unwind: "$loan" },
+      { $group: { _id: null, total: { $sum: interestPortionExpr } } },
+    ]),
+    // Vehicle processing fees, recognised on disbursement date
+    Loan.aggregate([
+      { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
+    ]),
+    // Vehicle foreclosure charge + misc fee, recognised on foreclosure date
+    Loan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $add: [{ $ifNull: ["$foreclosureChargeAmount", 0] }, { $ifNull: ["$miscellaneousFee", 0] }] } },
+        },
+      },
+    ]),
+    // Vehicle overdue amounts collected
+    EMI.aggregate([
+      { $match: { loanModel: "Loan" } },
+      { $unwind: "$overdue" },
+      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
+    ]),
+    // Weekly processing fees only
+    WeeklyLoan.aggregate([
+      { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
+    ]),
+    // Daily processing fees only
+    DailyLoan.aggregate([
+      { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
+    ]),
+    // Interest loans - full amount of fully-paid interest EMIs
+    InterestEMI.aggregate([
+      { $match: { status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: "$interestAmount" } } },
+    ]),
+
+    // Trend versions of the same 7 components, bucketed by date
+    EMI.aggregate([
+      { $match: { loanModel: "Loan", status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
+      { $lookup: { from: "loans", localField: "loanId", foreignField: "_id", as: "loan" } },
+      { $unwind: "$loan" },
+      { $group: { _id: { $dateToString: { format: groupFormat, date: "$paymentDate" } }, total: { $sum: interestPortionExpr } } },
+    ]),
+    Loan.aggregate([
+      { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: { $dateToString: { format: groupFormat, date: "$dateLoanDisbursed" } }, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
+    ]),
+    Loan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: groupFormat, date: "$foreclosureDate" } },
+          total: { $sum: { $add: [{ $ifNull: ["$foreclosureChargeAmount", 0] }, { $ifNull: ["$miscellaneousFee", 0] }] } },
+        },
+      },
+    ]),
+    EMI.aggregate([
+      { $match: { loanModel: "Loan" } },
+      { $unwind: "$overdue" },
+      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: { $dateToString: { format: groupFormat, date: "$overdue.date" } }, total: { $sum: "$overdue.amount" } } },
+    ]),
+    WeeklyLoan.aggregate([
+      { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: { $dateToString: { format: groupFormat, date: "$dateLoanDisbursed" } }, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
+    ]),
+    DailyLoan.aggregate([
+      { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: { $dateToString: { format: groupFormat, date: "$dateLoanDisbursed" } }, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
+    ]),
+    InterestEMI.aggregate([
+      { $match: { status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: { $dateToString: { format: groupFormat, date: "$paymentDate" } }, total: { $sum: "$interestAmount" } } },
+    ]),
+
+    // Expected profit next month - Vehicle: interest portion of every Active loan's EMI
+    Loan.aggregate([
+      { $match: { status: "Active" } },
+      { $group: { _id: null, total: { $sum: { $multiply: ["$principalAmount", { $divide: [{ $ifNull: ["$annualInterestRate", 0] }, 100] }] } } } },
+    ]),
+    // Expected profit next month - Interest: earliest unpaid EMI per active interest loan
+    InterestEMI.aggregate([
+      { $match: { status: { $in: ["Pending", "Overdue"] } } },
+      { $sort: { dueDate: 1 } },
+      { $group: { _id: "$interestLoanId", nextAmount: { $first: "$interestAmount" } } },
+      { $group: { _id: null, total: { $sum: "$nextAmount" } } },
+    ]),
+  ]);
+
+  const breakdown = {
+    monthly: Math.round(sumTotal(vehicleEmiInterest) + sumTotal(vehicleProcessingFee) + sumTotal(vehicleForeclosure) + sumTotal(vehicleOverdue)),
+    weekly: Math.round(sumTotal(weeklyProcessingFee)),
+    daily: Math.round(sumTotal(dailyProcessingFee)),
+    interest: Math.round(sumTotal(interestEmiProfit)),
+  };
+  const totalProfit = breakdown.monthly + breakdown.weekly + breakdown.daily + breakdown.interest;
+
+  const expectedNextMonth = {
+    breakdown: {
+      monthly: Math.round(sumTotal(expectedVehicle)),
+      interest: Math.round(sumTotal(expectedInterestAgg)),
+    },
+  };
+  expectedNextMonth.total = expectedNextMonth.breakdown.monthly + expectedNextMonth.breakdown.interest;
+
+  // Merge all 7 trend components into a single per-date total
+  const trendMap = {};
+  [
+    vehicleEmiInterestTrend,
+    vehicleProcessingFeeTrend,
+    vehicleForeclosureTrend,
+    vehicleOverdueTrend,
+    weeklyProcessingFeeTrend,
+    dailyProcessingFeeTrend,
+    interestEmiProfitTrend,
+  ].forEach((resultSet) => {
+    resultSet.forEach((item) => {
+      if (!item._id) return;
+      trendMap[item._id] = (trendMap[item._id] || 0) + item.total;
+    });
+  });
+
+  const trend = Object.keys(trendMap)
+    .sort()
+    .map((date) => ({ date, profit: Math.round(trendMap[date]) }));
+
+  sendResponse(res, 200, "success", "Profit stats fetched successfully", null, {
+    totalProfit,
+    breakdown,
+    expectedNextMonth,
+    trend,
+  });
+});
+
 module.exports = {
   getAnalyticsStats,
   exportAllData,
   getTrendStats,
+  getProfitStats,
 };

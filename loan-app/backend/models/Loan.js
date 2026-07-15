@@ -295,6 +295,8 @@ loanSchema.virtual("followupHistory", {
 
 // Additional indexes for analytics and faster searching
 loanSchema.index({ principalAmount: 1 });
+loanSchema.index({ dateLoanDisbursed: 1 });
+loanSchema.index({ foreclosureDate: 1 });
 loanSchema.index({ foreclosureAmount: 1 });
 loanSchema.index({ "soldDetails.totalAmount": 1 });
 loanSchema.index({ "soldDetails.sellAmount": 1 });

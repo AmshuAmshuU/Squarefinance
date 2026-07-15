@@ -29,4 +29,11 @@ router.get(
   analyticsController.getTrendStats
 );
 
+router.get(
+  "/profit",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  analyticsController.getProfitStats
+);
+
 module.exports = router;

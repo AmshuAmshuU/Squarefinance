@@ -14,3 +14,10 @@ export const getTrendStats = async (range, interval, startDate, endDate) => {
   if (endDate) url += `&endDate=${endDate}`;
   return await apiHandler(url);
 };
+
+export const getProfitStats = async (interval, startDate, endDate) => {
+  let url = `/api/analytics/profit?interval=${interval}`;
+  if (startDate) url += `&startDate=${startDate}`;
+  if (endDate) url += `&endDate=${endDate}`;
+  return await apiHandler(url);
+};
