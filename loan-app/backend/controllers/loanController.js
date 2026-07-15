@@ -795,9 +795,12 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
 
-    // Save clientResponse and nextFollowUpDate directly — employees can always update these
-    loan.clientResponse = req.body.clientResponse !== undefined ? req.body.clientResponse : loan.clientResponse;
-    loan.nextFollowUpDate = req.body.nextFollowUpDate !== undefined ? (req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null) : loan.nextFollowUpDate;
+    // Save clientResponse and nextFollowUpDate directly — for vehicle loans these are inside status object
+    const statusObj = req.body.status || {};
+    const newClientResponse = statusObj.clientResponse !== undefined ? statusObj.clientResponse : req.body.clientResponse;
+    const newNextFollowUpDate = statusObj.nextFollowUpDate !== undefined ? statusObj.nextFollowUpDate : req.body.nextFollowUpDate;
+    if (newClientResponse !== undefined) loan.clientResponse = newClientResponse;
+    if (newNextFollowUpDate !== undefined) loan.nextFollowUpDate = newNextFollowUpDate ? new Date(newNextFollowUpDate) : null;
     loan.updatedBy = req.user._id;
     await loan.save();
 
