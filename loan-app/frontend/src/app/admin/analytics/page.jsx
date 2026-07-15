@@ -14,6 +14,8 @@ import {
   Wallet,
   AlertCircle,
   Download,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { getAnalyticsStats, getExportData } from "../../../services/analytics.service";
 import ExcelJS from "exceljs";
@@ -28,7 +30,21 @@ const AnalyticsPage = () => {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
+  const [isDark, setIsDark] = useState(false);
   const { showToast } = useToast();
+
+  useEffect(() => {
+    const saved = localStorage.getItem("analyticsDarkMode");
+    if (saved === "true") setIsDark(true);
+  }, []);
+
+  const toggleDarkMode = () => {
+    setIsDark((prev) => {
+      const next = !prev;
+      localStorage.setItem("analyticsDarkMode", String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -244,11 +260,92 @@ const AnalyticsPage = () => {
 
   return (
     <AuthGuard>
+      <style jsx global>{`
+        /* Scoped analytics dark mode overrides.
+           Every rule below is prefixed with .analytics-dark-mode,
+           so nothing here can ever affect any other page or component. */
+        main.analytics-dark-mode {
+          background-color: #0f172a;
+          color: #cbd5e1;
+        }
+        .analytics-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .analytics-dark-mode .bg-white\/60 {
+          background-color: rgba(30, 41, 59, 0.6) !important;
+        }
+        .analytics-dark-mode .bg-slate-50,
+        .analytics-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .analytics-dark-mode .bg-slate-900 {
+          background-color: #475569 !important;
+        }
+        .analytics-dark-mode .hover\:bg-slate-50:hover,
+        .analytics-dark-mode .hover\:bg-slate-50\/50:hover,
+        .analytics-dark-mode .hover\:bg-slate-100\/50:hover {
+          background-color: #334155 !important;
+        }
+        .analytics-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .analytics-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .analytics-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .analytics-dark-mode .bg-rose-50 {
+          background-color: rgba(244, 63, 94, 0.15) !important;
+        }
+        .analytics-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .analytics-dark-mode .text-red-700 {
+          color: #fca5a5 !important;
+        }
+        .analytics-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .analytics-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .analytics-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .analytics-dark-mode .border-slate-100,
+        .analytics-dark-mode .border-slate-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .analytics-dark-mode tbody tr:not(:last-child),
+        .analytics-dark-mode thead tr {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .analytics-dark-mode svg line[stroke="#E2E8F0"] {
+          stroke: rgba(255, 255, 255, 0.08) !important;
+        }
+        .analytics-dark-mode svg text[fill="#475569"] {
+          fill: #cbd5e1 !important;
+        }
+        .analytics-dark-mode .recharts-default-tooltip {
+          background-color: #1e293b !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+          color: #e2e8f0 !important;
+        }
+        .analytics-dark-mode input,
+        .analytics-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
       <div className="min-h-screen bg-[#F8FAFC] flex">
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
-          <main className="py-8 px-4 sm:px-8">
+          <main
+            className={`py-8 px-4 sm:px-8 transition-colors duration-300 ${
+              isDark ? "analytics-dark-mode" : ""
+            }`}
+          >
             <div className="max-w-6xl mx-auto">
               {/* Header */}
               <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -263,6 +360,26 @@ const AnalyticsPage = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={toggleDarkMode}
+                    aria-label="Toggle dark mode"
+                    className={`relative w-14 h-8 rounded-full transition-colors duration-300 flex items-center px-1 shrink-0 ${
+                      isDark ? "bg-slate-700" : "bg-slate-200"
+                    }`}
+                  >
+                    <span
+                      className={`w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center transition-transform duration-300 ${
+                        isDark ? "translate-x-6" : "translate-x-0"
+                      }`}
+                    >
+                      {isDark ? (
+                        <Moon className="w-3.5 h-3.5 text-slate-700" />
+                      ) : (
+                        <Sun className="w-3.5 h-3.5 text-amber-500" />
+                      )}
+                    </span>
+                  </button>
                   <button
                     onClick={handleExport}
                     disabled={exporting}
