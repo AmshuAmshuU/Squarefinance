@@ -795,10 +795,8 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
 
-    // Always save clientResponse and nextFollowUpDate directly
+    // Always save clientResponse and nextFollowUpDate directly (top-level fields in Loan model)
     const clientDirectUpdate = {};
-    if (req.body.status?.clientResponse !== undefined) clientDirectUpdate["status.clientResponse"] = req.body.status.clientResponse;
-    if (req.body.status?.nextFollowUpDate !== undefined) clientDirectUpdate["status.nextFollowUpDate"] = req.body.status.nextFollowUpDate;
     if (req.body.clientResponse !== undefined) clientDirectUpdate.clientResponse = req.body.clientResponse;
     if (req.body.nextFollowUpDate !== undefined) clientDirectUpdate.nextFollowUpDate = req.body.nextFollowUpDate;
     if (Object.keys(clientDirectUpdate).length > 0) {
