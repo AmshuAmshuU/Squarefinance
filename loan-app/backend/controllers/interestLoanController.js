@@ -584,7 +584,7 @@ exports.payInterestEMI = asyncHandler(async (req, res, next) => {
     });
   }
 
-  if (overdue !== undefined) emi.overdue = overdue;
+  if (Array.isArray(overdue)) emi.overdue = overdue;
   if (remarks !== undefined) emi.remarks = remarks;
 
   if (Array.isArray(originalEmi.paymentHistory)) {

@@ -334,7 +334,7 @@ const updateEMI = asyncHandler(async (req, res, next) => {
   const oldOverdueSum = overdueArray.reduce((acc, ov) => acc + (parseFloat(ov.amount) || 0), 0);
 
   // Update properties on the document directly (before bucket logic)
-  if (overdue !== undefined) emi.overdue = overdue;
+  if (Array.isArray(overdue)) emi.overdue = overdue;
   if (remarks !== undefined) emi.remarks = remarks;
 
   // Process payments from dateGroups if provided
