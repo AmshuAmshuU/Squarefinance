@@ -1074,8 +1074,11 @@ const updateLoan = asyncHandler(async (req, res, next) => {
       }
 
       if (hasChanges) {
-        // Maintain audit trail
-        updates.updatedBy = req.user._id;
+        // Note: updatedBy is intentionally NOT set here. This is a schedule
+        // sync (dates/amounts recalculated after a loan edit), not an actual
+        // payment - the "Last Updated" column should only reflect real
+        // payment activity, which is stamped separately in the payment
+        // recording flow (customercontroller.js / approvalController.js).
         return EMI.findByIdAndUpdate(emi._id, updates);
       }
 
