@@ -8,7 +8,20 @@ const InterestLoan = require("../models/InterestLoan");
 const asyncHandler = require("../utils/asyncHandler");
 const ErrorHandler = require("../utils/ErrorHandler");
 const sendResponse = require("../utils/response");
+const { addMonths } = require("date-fns");
 const { sendNotification } = require("./notificationController");
+
+// Mirrors loanController.js's calculateEMI (flat interest) so approved
+// LOAN_EDIT changes can recompute monthlyEMI/totalInterestAmount the same way.
+const calculateEMI = (principal, roi, tenureMonths) => {
+  const p = parseFloat(principal);
+  const r = parseFloat(roi);
+  const n = parseInt(tenureMonths);
+  if (!p || !n) return 0;
+  const monthlyInterest = p * (r / 100);
+  const monthlyPrincipal = p / n;
+  return Math.ceil(monthlyPrincipal + monthlyInterest);
+};
 
 // List all pending approvals (Super Admin only)
 const getPendingApprovals = asyncHandler(async (req, res, next) => {
@@ -353,16 +366,184 @@ const processApproval = asyncHandler(async (req, res, next) => {
       // Apply the approved changes to the loan document
       const { newValues } = approval.requestedData || {};
       if (newValues && targetModel) {
-        let LoanModel;
-        if (targetModel === "Loan") LoanModel = require("../models/Loan");
-        else if (targetModel === "WeeklyLoan") LoanModel = require("../models/WeeklyLoan");
-        else if (targetModel === "DailyLoan") LoanModel = require("../models/DailyLoan");
-        else if (targetModel === "InterestLoan") LoanModel = require("../models/InterestLoan");
+        if (targetModel === "Loan") {
+          // Vehicle/Monthly loans submit a nested payload (customerDetails,
+          // loanTerms, vehicleInformation, status) - the same shape used by
+          // the direct-edit endpoint (loanController.updateLoan). This must
+          // be flattened onto the flat schema fields the same way that
+          // endpoint does it, otherwise Mongoose tries to cast whole nested
+          // objects onto flat fields (e.g. the "status" object onto the
+          // plain string "status" field), which throws a CastError.
+          const loan = await Loan.findById(targetId);
+          if (loan) {
+            const { customerDetails, loanTerms, vehicleInformation, status: statusObj } = newValues;
+            const foreclosureDetails = statusObj?.foreclosureDetails;
 
-        if (LoanModel) {
-          // Remove fields that shouldn't be directly set
-          const { _id, __v, createdAt, updatedAt, paidEmis, totalCollected, remainingPrincipalAmount, ...safeValues } = newValues;
-          await LoanModel.findByIdAndUpdate(targetId, { $set: safeValues });
+            const currentPrincipal = loanTerms?.principalAmount !== undefined ? loanTerms.principalAmount : loan.principalAmount;
+            const currentRoi = loanTerms?.annualInterestRate !== undefined ? loanTerms.annualInterestRate : loan.annualInterestRate;
+            const currentTenure = loanTerms?.tenureMonths !== undefined ? loanTerms.tenureMonths : loan.tenureMonths;
+
+            const monthlyEMI = calculateEMI(currentPrincipal, currentRoi, currentTenure);
+            const calculatedTotalInterest = Math.ceil(
+              parseFloat(currentPrincipal) * (parseFloat(currentRoi) / 100) * parseInt(currentTenure)
+            );
+
+            const extractIdValue = (val) => (val && typeof val === "object" ? val._id || val : val);
+
+            const updateData = {
+              ...(customerDetails && {
+                customerName: customerDetails.customerName,
+                address: customerDetails.address,
+                ownRent: customerDetails.ownRent,
+                mobileNumbers: customerDetails.mobileNumbers,
+                panNumber: customerDetails.panNumber,
+                aadharNumber: customerDetails.aadharNumber,
+                guarantorName: customerDetails.guarantorName,
+                guarantorMobileNumbers: customerDetails.guarantorMobileNumbers,
+              }),
+              ...(loanTerms && {
+                loanNumber: loanTerms.loanNumber,
+                principalAmount: loanTerms.disbursement?.length > 0
+                  ? loanTerms.disbursement.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0)
+                  : loanTerms.principalAmount,
+                processingFeeRate: loanTerms.processingFeeRate,
+                processingFee: loanTerms.processingFee,
+                tenureMonths: loanTerms.tenureMonths,
+                annualInterestRate: loanTerms.annualInterestRate,
+                dateLoanDisbursed: loanTerms.dateLoanDisbursed,
+                emiStartDate: loanTerms.emiStartDate,
+                emiEndDate: loanTerms.emiEndDate,
+                paymentMode: loanTerms.paymentMode,
+                chequeNumber: loanTerms.chequeNumber,
+                disbursement: loanTerms.disbursement || loan.disbursement,
+              }),
+              ...(vehicleInformation && {
+                vehicleNumber: vehicleInformation.vehicleNumber,
+                chassisNumber: vehicleInformation.chassisNumber,
+                engineNumber: vehicleInformation.engineNumber,
+                modelYear: vehicleInformation.modelYear,
+                typeOfVehicle: vehicleInformation.typeOfVehicle,
+                ywBoard: vehicleInformation.ywBoard,
+                dealerName: vehicleInformation.dealerName,
+                dealerNumber: vehicleInformation.dealerNumber,
+                fcDate: vehicleInformation.fcDate,
+                insuranceDate: vehicleInformation.insuranceDate,
+                rtoWorkPending: vehicleInformation.rtoWorkPending,
+                hpEntry: vehicleInformation.hpEntry || loan.hpEntry,
+              }),
+              status:
+                statusObj?.status ||
+                (foreclosureDetails?.foreclosureDate
+                  ? "Closed"
+                  : statusObj?.isSeized || loan.isSeized
+                    ? "Seized"
+                    : loan.status),
+              paymentStatus: statusObj?.paymentStatus || loan.paymentStatus,
+              isSeized: statusObj?.isSeized !== undefined ? statusObj.isSeized : loan.isSeized,
+              docChecklist: statusObj?.docChecklist || loan.docChecklist,
+              remarks: statusObj?.remarks || loan.remarks,
+              clientResponse: statusObj?.clientResponse !== undefined ? statusObj.clientResponse : loan.clientResponse,
+              nextFollowUpDate: statusObj?.nextFollowUpDate !== undefined ? (statusObj.nextFollowUpDate || null) : loan.nextFollowUpDate,
+              foreclosedBy: extractIdValue(foreclosureDetails?.foreclosedBy) || loan.foreclosedBy,
+              foreclosureDate: foreclosureDetails?.foreclosureDate || loan.foreclosureDate,
+              foreclosureAmount:
+                foreclosureDetails?.foreclosureAmount !== undefined && foreclosureDetails?.foreclosureAmount !== ""
+                  ? foreclosureDetails.foreclosureAmount
+                  : loan.foreclosureAmount,
+              monthlyEMI,
+              totalInterestAmount: calculatedTotalInterest,
+              updatedBy: req.user._id,
+            };
+
+            await Loan.findByIdAndUpdate(targetId, updateData, { runValidators: true });
+
+            // Synchronize the EMI schedule, same as the direct-edit path.
+            // This also covers the case where the loan has zero EMIs yet
+            // (e.g. it was created before principal/rate/tenure were filled
+            // in) - the "Tenure Increase" branch below generates the full
+            // schedule from scratch in that case.
+            if (loanTerms || customerDetails || (statusObj && statusObj.status)) {
+              const emis = await EMI.find({ loanId: targetId, loanModel: "Loan" }).sort({ emiNumber: 1 });
+              const oldTenure = emis.length;
+              const newTenure = parseInt(currentTenure);
+              const newEmiStartDate = loanTerms?.emiStartDate
+                ? new Date(loanTerms.emiStartDate)
+                : new Date(updateData.emiStartDate || loan.emiStartDate);
+              const finalCustomerName = updateData.customerName || loan.customerName;
+              const finalLoanNumber = updateData.loanNumber || loan.loanNumber;
+
+              // 1. Update existing EMIs
+              const updatePromises = emis.map((emi, index) => {
+                const emiNum = index + 1;
+                const updates = {};
+                let hasChanges = false;
+
+                if (emi.customerName !== finalCustomerName) {
+                  updates.customerName = finalCustomerName;
+                  hasChanges = true;
+                }
+                if (emi.loanNumber !== finalLoanNumber) {
+                  updates.loanNumber = finalLoanNumber;
+                  hasChanges = true;
+                }
+                if (emi.status !== "Paid" && emi.emiAmount !== monthlyEMI) {
+                  updates.emiAmount = monthlyEMI;
+                  hasChanges = true;
+                }
+                const newDueDate = addMonths(new Date(newEmiStartDate), emiNum - 1);
+                if (!emi.dueDate || new Date(emi.dueDate).getTime() !== new Date(newDueDate).getTime()) {
+                  updates.dueDate = newDueDate;
+                  hasChanges = true;
+                }
+
+                return hasChanges ? EMI.findByIdAndUpdate(emi._id, updates) : null;
+              });
+              await Promise.all(updatePromises.filter((p) => p !== null));
+
+              // 2. Handle Tenure Increase (also covers generating the
+              // schedule for the first time, when oldTenure is 0)
+              if (newTenure > oldTenure) {
+                const extraEmis = [];
+                for (let i = oldTenure + 1; i <= newTenure; i++) {
+                  extraEmis.push({
+                    loanId: targetId,
+                    loanModel: "Loan",
+                    loanNumber: finalLoanNumber,
+                    customerName: finalCustomerName,
+                    emiNumber: i,
+                    dueDate: addMonths(new Date(newEmiStartDate), i - 1),
+                    emiAmount: monthlyEMI,
+                    status: "Pending",
+                  });
+                }
+                if (extraEmis.length > 0) {
+                  await EMI.insertMany(extraEmis);
+                }
+              }
+              // 3. Handle Tenure Decrease
+              else if (newTenure < oldTenure) {
+                await EMI.deleteMany({
+                  loanId: targetId,
+                  loanModel: "Loan",
+                  emiNumber: { $gt: newTenure },
+                  status: "Pending",
+                });
+              }
+            }
+          }
+        } else {
+          // WeeklyLoan / DailyLoan / InterestLoan submit an already-flat
+          // payload, so the direct $set continues to work correctly here.
+          let LoanModel;
+          if (targetModel === "WeeklyLoan") LoanModel = require("../models/WeeklyLoan");
+          else if (targetModel === "DailyLoan") LoanModel = require("../models/DailyLoan");
+          else if (targetModel === "InterestLoan") LoanModel = require("../models/InterestLoan");
+
+          if (LoanModel) {
+            // Remove fields that shouldn't be directly set
+            const { _id, __v, createdAt, updatedAt, paidEmis, totalCollected, remainingPrincipalAmount, ...safeValues } = newValues;
+            await LoanModel.findByIdAndUpdate(targetId, { $set: safeValues });
+          }
         }
       }
     } else if (requestType === "PRINCIPAL_PAYMENT") {
