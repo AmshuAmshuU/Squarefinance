@@ -523,6 +523,7 @@ const updateEMI = asyncHandler(async (req, res, next) => {
       const weeklyLoan = await WeeklyLoan.findById(emi.loanId);
       if (weeklyLoan) {
         weeklyLoan.paidEmis = paidEmisCount;
+        weeklyLoan.remainingEmis = Math.max(0, (weeklyLoan.totalEmis || 0) - paidEmisCount);
         
         // Update odAmount
         const totalOdAmount = allEmis.reduce((acc, currentEmi) => {
@@ -576,6 +577,7 @@ const updateEMI = asyncHandler(async (req, res, next) => {
       const dailyLoan = await DailyLoan.findById(emi.loanId);
       if (dailyLoan) {
         dailyLoan.paidEmis = paidEmisCount;
+        dailyLoan.remainingEmis = Math.max(0, (dailyLoan.totalEmis || 0) - paidEmisCount);
 
         // Update odAmount
         const totalOdAmount = allEmis.reduce((acc, currentEmi) => {

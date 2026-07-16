@@ -158,7 +158,8 @@ const processApproval = asyncHandler(async (req, res, next) => {
         emi.approvedAt = Date.now();
         await emi.save();
 
-        // Sync totalCollected on WeeklyLoan/DailyLoan after approval
+        // Sync WeeklyLoan/DailyLoan counters after approval, derived from
+        // actual EMI records (ground truth) - not just totalCollected.
         if (emi.loanModel === "WeeklyLoan" || emi.loanModel === "DailyLoan") {
           const LoanModel = emi.loanModel === "WeeklyLoan" ? WeeklyLoan : DailyLoan;
           const allEmis = await EMI.find({ loanId: emi.loanId, loanModel: emi.loanModel });
@@ -167,11 +168,28 @@ const processApproval = asyncHandler(async (req, res, next) => {
             const emiOd = (e.overdue || []).reduce((s, ov) => s + (parseFloat(ov.amount) || 0), 0);
             return acc + emiPaid + emiOd;
           }, 0);
+          const paidEmisCount = allEmis.filter((e) => e.status === "Paid").length;
+          const isAllPaid = allEmis.length > 0 && allEmis.every((e) => e.status === "Paid");
           const parentLoan = await LoanModel.findById(emi.loanId);
-          const processingFee = parentLoan ? (parentLoan.processingFee || 0) : 0;
-          await LoanModel.findByIdAndUpdate(emi.loanId, {
-            totalCollected: Math.ceil(totalEmiCollected + processingFee)
-          });
+          if (parentLoan) {
+            const processingFee = parentLoan.processingFee || 0;
+            parentLoan.totalCollected = Math.ceil(totalEmiCollected + processingFee);
+            parentLoan.paidEmis = paidEmisCount;
+            parentLoan.remainingEmis = Math.max(0, (parentLoan.totalEmis || 0) - paidEmisCount);
+            const emiAmountForType = parentLoan.emiAmount || 0;
+            parentLoan.remainingPrincipalAmount = Math.max(
+              0,
+              Math.ceil((parentLoan.disbursementAmount || 0) - emiAmountForType * paidEmisCount)
+            );
+
+            const shouldClose = isAllPaid && parentLoan.remainingPrincipalAmount === 0;
+            if (shouldClose) {
+              parentLoan.status = "Closed";
+            } else if (parentLoan.status === "Closed" && !shouldClose) {
+              parentLoan.status = "Active";
+            }
+            await parentLoan.save();
+          }
         }
       }
     } else if (requestType === "INTEREST_PAYMENT") {
