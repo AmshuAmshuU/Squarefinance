@@ -8,8 +8,10 @@ import { useToast } from "../../../context/ToastContext";
 import { getCustomers, createCustomer } from "../../../services/customer";
 import { exportLoansToExcel } from "../../../utils/exportExcel";
 import { calculateEMI as fetchEMI } from "../../../services/loan.service";
+import { useUI } from "../../../context/UIContext";
 
 const CustomersPage = () => {
+  const { isDarkMode } = useUI();
   const { showToast } = useToast();
 
   const [customers, setCustomers] = useState([]);
@@ -208,7 +210,67 @@ const CustomersPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .customers-dark-mode {
+          background-color: #0f172a;
+        }
+        .customers-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .customers-dark-mode .bg-slate-50,
+        .customers-dark-mode .bg-slate-50\/50,
+        .customers-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .customers-dark-mode .hover\:bg-slate-50\/50:hover,
+        .customers-dark-mode .active\:bg-slate-50:hover,
+        .customers-dark-mode .group:active .group-active\:bg-slate-50,
+        .customers-dark-mode .hover\:bg-slate-200:hover {
+          background-color: #334155 !important;
+        }
+        .customers-dark-mode .bg-blue-50,
+        .customers-dark-mode .bg-blue-50\/50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .customers-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .customers-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .customers-dark-mode .text-slate-900,
+        .customers-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .customers-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .customers-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .customers-dark-mode .text-slate-500,
+        .customers-dark-mode .text-slate-400,
+        .customers-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .customers-dark-mode .placeholder\:text-slate-300::placeholder {
+          color: #64748b !important;
+        }
+        .customers-dark-mode .border-slate-200,
+        .customers-dark-mode .border-slate-100,
+        .customers-dark-mode .border-blue-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .customers-dark-mode .divide-slate-100 > * {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .customers-dark-mode input,
+        .customers-dark-mode textarea,
+        .customers-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "customers-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
@@ -339,7 +401,7 @@ const CustomersPage = () => {
                                         y: rect.bottom,
                                       });
                                     }}
-                                    className="hover:text-primary transition-colors text-left"
+                                    className="text-blue-500 hover:text-primary transition-colors text-left"
                                   >
                                     {num}
                                   </button>
@@ -513,7 +575,7 @@ const CustomersPage = () => {
                                       y: rect.bottom,
                                     });
                                   }}
-                                  className="hover:text-primary transition-colors"
+                                  className="text-blue-500 hover:text-primary transition-colors"
                                 >
                                   {num}
                                 </button>

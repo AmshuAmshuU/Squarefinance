@@ -7,6 +7,7 @@ import ClientResponseSection from "./ClientResponseSection";
 import { checkLoanNumberUniqueness } from "../services/loan.service";
 import DisbursementModal from "./DisbursementModal";
 import DisbursementList from "./DisbursementList";
+import { useUI } from "../context/UIContext";
 
 const ErrorMsg = ({ name, touched, errors }) => {
   const [section, field] = name.includes(".") ? name.split(".") : [null, name];
@@ -31,6 +32,7 @@ const WeeklyLoanForm = ({
 }) => {
   const user = getUserFromToken();
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const { isDarkMode } = useUI();
   const [isDisbursementModalOpen, setIsDisbursementModalOpen] = useState(false);
 
   const validationSchema = Yup.object().shape({
@@ -230,8 +232,48 @@ const WeeklyLoanForm = ({
     <form
       onSubmit={formik.handleSubmit}
           onKeyDown={(e) => { if (e.key === "Enter" && e.target.tagName !== "TEXTAREA" && e.target.type !== "submit") e.preventDefault(); }}
-      className="space-y-8 animate-in fade-in duration-500 pb-20"
+      className={`space-y-8 animate-in fade-in duration-500 pb-20 ${isDarkMode ? "weekly-loan-form-dark-mode" : ""}`}
     >
+      <style jsx global>{`
+        /* Scoped WeeklyLoanForm dark mode overrides. Shared by the Weekly
+           Loans view, edit, and add pages. Prefixed with
+           .weekly-loan-form-dark-mode so nothing here can affect any
+           other page. */
+        .weekly-loan-form-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .weekly-loan-form-dark-mode .bg-slate-50,
+        .weekly-loan-form-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .weekly-loan-form-dark-mode .bg-slate-100\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .weekly-loan-form-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .weekly-loan-form-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .weekly-loan-form-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .weekly-loan-form-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .weekly-loan-form-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .weekly-loan-form-dark-mode .border-slate-100,
+        .weekly-loan-form-dark-mode .border-slate-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .weekly-loan-form-dark-mode input,
+        .weekly-loan-form-dark-mode select,
+        .weekly-loan-form-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
       {/* Customer Info */}
       <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 relative">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 pb-4 md:pb-2 border-b border-primary/10">

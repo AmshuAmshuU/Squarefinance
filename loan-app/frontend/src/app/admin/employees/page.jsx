@@ -11,8 +11,10 @@ import {
   toggleEmployeeStatus,
   deleteEmployee,
 } from "../../../services/userService";
+import { useUI } from "../../../context/UIContext";
 
 const EmployeesPage = () => {
+  const { isDarkMode } = useUI();
   const router = useRouter();
   const user = getUserFromToken();
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
@@ -62,7 +64,56 @@ const EmployeesPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .employees-dark-mode {
+          background-color: #0f172a;
+        }
+        .employees-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .employees-dark-mode .bg-slate-50,
+        .employees-dark-mode .bg-slate-50\/50,
+        .employees-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .employees-dark-mode .hover\:bg-slate-50\/50:hover {
+          background-color: #334155 !important;
+        }
+        .employees-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .employees-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .employees-dark-mode .text-slate-900,
+        .employees-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .employees-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .employees-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .employees-dark-mode .text-slate-500,
+        .employees-dark-mode .text-slate-400,
+        .employees-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .employees-dark-mode .placeholder\:text-slate-300::placeholder {
+          color: #64748b !important;
+        }
+        .employees-dark-mode .border-slate-200,
+        .employees-dark-mode .border-slate-100,
+        .employees-dark-mode .border-blue-100,
+        .employees-dark-mode .border-emerald-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .employees-dark-mode .divide-slate-100 > * {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "employees-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

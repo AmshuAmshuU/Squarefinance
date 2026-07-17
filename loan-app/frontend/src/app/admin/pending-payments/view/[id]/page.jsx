@@ -17,8 +17,10 @@ import { updateEMI } from "../../../../../services/customer";
 import { format } from "date-fns";
 import { useToast } from "../../../../../context/ToastContext";
 import { hasPermission } from "../../../../../utils/auth";
+import { useUI } from "../../../../../context/UIContext";
 
 const LoanPendingViewPage = () => {
+  const { isDarkMode } = useUI();
   const { id } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -241,7 +243,67 @@ const LoanPendingViewPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .loan-pending-view-dark-mode {
+          background-color: #0f172a;
+        }
+        .loan-pending-view-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .loan-pending-view-dark-mode .bg-slate-50,
+        .loan-pending-view-dark-mode .bg-slate-50\/50,
+        .loan-pending-view-dark-mode .bg-slate-50\/30 {
+          background-color: #334155 !important;
+        }
+        .loan-pending-view-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .loan-pending-view-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .loan-pending-view-dark-mode .bg-orange-50 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .loan-pending-view-dark-mode .bg-green-50 {
+          background-color: rgba(34, 197, 94, 0.15) !important;
+        }
+        .loan-pending-view-dark-mode .text-slate-900,
+        .loan-pending-view-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .loan-pending-view-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .loan-pending-view-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .loan-pending-view-dark-mode .text-slate-500,
+        .loan-pending-view-dark-mode .text-slate-400,
+        .loan-pending-view-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .loan-pending-view-dark-mode .placeholder\:text-slate-300::placeholder {
+          color: #64748b !important;
+        }
+        .loan-pending-view-dark-mode .border-slate-200,
+        .loan-pending-view-dark-mode .border-slate-100,
+        .loan-pending-view-dark-mode .border-slate-50,
+        .loan-pending-view-dark-mode .border-dashed.border-slate-200,
+        .loan-pending-view-dark-mode .border-orange-100,
+        .loan-pending-view-dark-mode .border-red-100,
+        .loan-pending-view-dark-mode .border-orange-200,
+        .loan-pending-view-dark-mode .border-red-200,
+        .loan-pending-view-dark-mode .border-green-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .loan-pending-view-dark-mode input[type="date"],
+        .loan-pending-view-dark-mode input[type="number"],
+        .loan-pending-view-dark-mode input[type="text"],
+        .loan-pending-view-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "loan-pending-view-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0 pb-20 sm:pb-0">
           <Navbar />
@@ -306,7 +368,7 @@ const LoanPendingViewPage = () => {
                                   y: rect.bottom,
                                 });
                               }}
-                              className="hover:text-primary transition-colors"
+                              className="text-blue-500 hover:text-primary transition-colors"
                             >
                               {num}
                             </button>
@@ -336,7 +398,7 @@ const LoanPendingViewPage = () => {
                                     y: rect.bottom,
                                   });
                                 }}
-                                className="hover:text-primary transition-colors"
+                                className="text-blue-500 hover:text-primary transition-colors"
                               >
                                 {num}
                               </button>

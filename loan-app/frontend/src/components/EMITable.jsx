@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { updateEMI } from "../services/customer";
 import interestLoanService from "../services/interestLoanService";
 import { useToast } from "../context/ToastContext";
+import { useUI } from "../context/UIContext";
 import PaymentModeSelector from "./PaymentModeSelector";
 
 const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "standard" }) => {
@@ -10,6 +11,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const { showToast } = useToast();
+  const { isDarkMode } = useUI();
   const [dateGroups, setDateGroups] = useState([]);
   const [selectedRowId, setSelectedRowId] = useState(null);
 
@@ -311,7 +313,113 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
   );
 
   return (
-    <div className="mt-8">
+    <div className={`mt-8 ${isDarkMode ? "emi-table-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped EMI schedule table dark mode overrides. EMITable is
+           shared by every loan type's detail/view page, so this one
+           conversion covers all of them. Prefixed with
+           .emi-table-dark-mode so nothing here can affect any other page.
+           (The Edit Payment popup has its own separate .emi-modal-dark-mode
+           styling below, only injected while the popup is open.) */
+        .emi-table-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .emi-table-dark-mode .bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .emi-table-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .emi-table-dark-mode .bg-blue-100 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .emi-table-dark-mode .bg-green-100 {
+          background-color: rgba(34, 197, 94, 0.15) !important;
+        }
+        .emi-table-dark-mode .bg-orange-100 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .emi-table-dark-mode .bg-red-100 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .emi-table-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .emi-table-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .emi-table-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .emi-table-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .emi-table-dark-mode .border-slate-100,
+        .emi-table-dark-mode .border-slate-200,
+        .emi-table-dark-mode .border-slate-300 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        /* Scoped EMI update popup dark mode overrides. Same recipe as the
+           shared Modal component, plus the payment-status/overdue color
+           tints specific to this form. Scoped under .emi-modal-dark-mode
+           so it can't affect anything else. Merged into this single style
+           tag (rather than a second one inside the popup's conditional
+           render) because styled-jsx does not allow more than one
+           <style jsx> tag per component - see nested-styled-jsx-tags. */
+        .emi-modal-dark-mode {
+          background-color: #1e293b !important;
+          border-color: rgba(255, 255, 255, 0.08) !important;
+          color: #cbd5e1;
+        }
+        .emi-modal-dark-mode .bg-white,
+        .emi-modal-dark-mode .bg-slate-50,
+        .emi-modal-dark-mode .bg-slate-50\/50 {
+          background-color: #334155 !important;
+        }
+        .emi-modal-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #475569 !important;
+        }
+        .emi-modal-dark-mode .border-slate-100,
+        .emi-modal-dark-mode .border-slate-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .emi-modal-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .emi-modal-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .emi-modal-dark-mode .text-slate-400,
+        .emi-modal-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .emi-modal-dark-mode .bg-green-50 {
+          background-color: rgba(34, 197, 94, 0.15) !important;
+        }
+        .emi-modal-dark-mode .bg-orange-50 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .emi-modal-dark-mode .bg-red-50,
+        .emi-modal-dark-mode .bg-red-50\/20,
+        .emi-modal-dark-mode .hover\:bg-red-50\/50:hover {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .emi-modal-dark-mode .border-green-200 {
+          border-color: rgba(34, 197, 94, 0.3) !important;
+        }
+        .emi-modal-dark-mode .border-orange-200 {
+          border-color: rgba(249, 115, 22, 0.3) !important;
+        }
+        .emi-modal-dark-mode .border-red-100,
+        .emi-modal-dark-mode .border-red-50 {
+          border-color: rgba(239, 68, 68, 0.2) !important;
+        }
+        .emi-modal-dark-mode input,
+        .emi-modal-dark-mode select,
+        .emi-modal-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
       <div className="overflow-x-auto bg-white rounded-3xl border border-slate-200 shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50 border-b border-slate-200">
@@ -520,7 +628,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
       {/* Pop-up Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className={`bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 transition-colors duration-300 ${isDarkMode ? "emi-modal-dark-mode" : ""}`}>
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>
                 <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">

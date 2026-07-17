@@ -9,9 +9,11 @@ import { useToast } from "@/context/ToastContext";
 import TableActionMenu from "./TableActionMenu";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "../utils/auth";
+import { useUI } from "@/context/UIContext";
 
 const InterestPendingList = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,7 +58,54 @@ const InterestPendingList = () => {
   }, [searchQuery, currentPage]);
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className={`max-w-7xl mx-auto ${isDarkMode ? "interest-pending-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped interest pending payments dark mode overrides. Prefixed
+           with .interest-pending-dark-mode so nothing here can affect any
+           other page. */
+        .interest-pending-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .interest-pending-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .interest-pending-dark-mode .bg-slate-50,
+        .interest-pending-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .interest-pending-dark-mode .hover\:bg-slate-50:hover,
+        .interest-pending-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .interest-pending-dark-mode .bg-orange-100 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .interest-pending-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .interest-pending-dark-mode .bg-red-100 {
+          background-color: rgba(239, 68, 68, 0.2) !important;
+        }
+        .interest-pending-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .interest-pending-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .interest-pending-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .interest-pending-dark-mode .text-slate-500,
+        .interest-pending-dark-mode .text-slate-400,
+        .interest-pending-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .interest-pending-dark-mode .border-slate-100,
+        .interest-pending-dark-mode .border-slate-200,
+        .interest-pending-dark-mode .border-red-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
       <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">

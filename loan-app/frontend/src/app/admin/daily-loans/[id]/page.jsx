@@ -15,10 +15,12 @@ import FollowupHistory from "../../../../components/FollowupHistory";
 import { useToast } from "../../../../context/ToastContext";
 import { format } from "date-fns";
 import LoanStatusBadge from "../../../../components/LoanStatusBadge";
+import { useUI } from "../../../../context/UIContext";
 
 const ViewDailyLoanPage = ({ params: paramsPromise }) => {
   const params = use(paramsPromise);
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const { showToast } = useToast();
   const [loanData, setLoanData] = useState(null);
   const [emis, setEmis] = useState([]);
@@ -67,7 +69,28 @@ const ViewDailyLoanPage = ({ params: paramsPromise }) => {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen bg-[#F8FAFC]">
+      <style jsx global>{`
+        /* Scoped daily loan view page dark mode overrides. Prefixed with
+           .daily-loan-view-dark-mode so nothing here can affect any other
+           page. DailyLoanForm, EMITable and FollowupHistory style
+           themselves. */
+        .daily-loan-view-dark-mode {
+          background-color: #0f172a;
+        }
+        .daily-loan-view-dark-mode .bg-\[\#F8FAFC\]\/80 {
+          background-color: rgba(15, 23, 42, 0.8) !important;
+        }
+        .daily-loan-view-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .daily-loan-view-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .daily-loan-view-dark-mode .border-slate-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`flex min-h-screen bg-[#F8FAFC] transition-colors duration-300 ${isDarkMode ? "daily-loan-view-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

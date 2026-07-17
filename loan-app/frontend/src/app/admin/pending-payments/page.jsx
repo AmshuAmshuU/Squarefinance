@@ -19,9 +19,11 @@ import TableActionMenu from "../../../components/TableActionMenu";
 import ConfirmationModal from "../../../components/ConfirmationModal";
 import { hasPermission } from "../../../utils/auth";
 import { subMonths, subDays, differenceInCalendarDays, startOfDay } from "date-fns";
+import { useUI } from "../../../context/UIContext";
 
 const PendingPaymentsPage = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -167,7 +169,68 @@ const PendingPaymentsPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        /* Scoped pending payments (all loan types) dark mode overrides.
+           Single style tag, kept unconditional so it covers the table and
+           the filter drawer. Prefixed with .pending-payments-dark-mode so
+           nothing here can affect any other page. */
+        .pending-payments-dark-mode {
+          background-color: #0f172a;
+        }
+        .pending-payments-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .pending-payments-dark-mode .bg-slate-50\/50,
+        .pending-payments-dark-mode .bg-slate-50\/40 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .pending-payments-dark-mode .bg-slate-50,
+        .pending-payments-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .pending-payments-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .pending-payments-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .pending-payments-dark-mode .bg-blue-50,
+        .pending-payments-dark-mode .bg-blue-50\/80 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .pending-payments-dark-mode .bg-red-50,
+        .pending-payments-dark-mode .bg-red-50\/30,
+        .pending-payments-dark-mode .bg-red-50\/60,
+        .pending-payments-dark-mode .hover\:bg-red-50\/60:hover {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .pending-payments-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .pending-payments-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .pending-payments-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .pending-payments-dark-mode .text-slate-500,
+        .pending-payments-dark-mode .text-slate-400,
+        .pending-payments-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .pending-payments-dark-mode .border-slate-50,
+        .pending-payments-dark-mode .border-slate-100,
+        .pending-payments-dark-mode .border-slate-200,
+        .pending-payments-dark-mode .border-red-100,
+        .pending-payments-dark-mode .border-red-300 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .pending-payments-dark-mode input,
+        .pending-payments-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "pending-payments-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

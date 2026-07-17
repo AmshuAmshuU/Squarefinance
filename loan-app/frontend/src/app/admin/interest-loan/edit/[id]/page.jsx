@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import InterestLoanForm from "@/components/InterestLoanForm";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
+import { useUI } from "@/context/UIContext";
 
 const EditInterestLoanPage = () => {
   const router = useRouter();
@@ -14,6 +15,7 @@ const EditInterestLoanPage = () => {
   const returnTo = searchParams.get("returnTo") || "/admin/interest-loan";
   const { id } = useParams();
   const { showToast } = useToast();
+  const { isDarkMode } = useUI();
   const [loan, setLoan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -72,7 +74,39 @@ const EditInterestLoanPage = () => {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen bg-[#F8FAFC]">
+      <style jsx global>{`
+        /* Scoped interest loan edit page dark mode overrides. Prefixed
+           with .interest-loan-edit-dark-mode so nothing here can affect
+           any other page. InterestLoanForm styles itself. */
+        .interest-loan-edit-dark-mode {
+          background-color: #0f172a;
+        }
+        .interest-loan-edit-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .interest-loan-edit-dark-mode .bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .interest-loan-edit-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .interest-loan-edit-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .interest-loan-edit-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .interest-loan-edit-dark-mode .text-slate-600,
+        .interest-loan-edit-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .interest-loan-edit-dark-mode .border-slate-100,
+        .interest-loan-edit-dark-mode .border-slate-200,
+        .interest-loan-edit-dark-mode .border-emerald-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`flex min-h-screen bg-[#F8FAFC] transition-colors duration-300 ${isDarkMode ? "interest-loan-edit-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

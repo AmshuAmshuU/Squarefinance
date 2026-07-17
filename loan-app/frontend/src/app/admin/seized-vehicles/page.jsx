@@ -12,8 +12,10 @@ import Link from "next/link";
 import SoldVehicleModal from "../../../components/SoldVehicleModal";
 import SuccessModal from "../../../components/SuccessModal";
 import ContactActionMenu from "../../../components/ContactActionMenu";
+import { useUI } from "../../../context/UIContext";
 
 const SeizedVehiclesPage = () => {
+  const { isDarkMode } = useUI();
   const [seizedLoans, setSeizedLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -160,7 +162,75 @@ const SeizedVehiclesPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .seized-vehicles-dark-mode {
+          background-color: #0f172a;
+        }
+        .seized-vehicles-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .seized-vehicles-dark-mode .bg-slate-50,
+        .seized-vehicles-dark-mode .bg-slate-50\/50,
+        .seized-vehicles-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .seized-vehicles-dark-mode .hover\:bg-slate-50:hover,
+        .seized-vehicles-dark-mode .group:hover .group-hover\:bg-slate-50,
+        .seized-vehicles-dark-mode .hover\:bg-slate-100:hover {
+          background-color: #334155 !important;
+        }
+        .seized-vehicles-dark-mode .bg-blue-50\/80 {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        .seized-vehicles-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .seized-vehicles-dark-mode .hover\:bg-red-100:hover {
+          background-color: rgba(239, 68, 68, 0.22) !important;
+        }
+        .seized-vehicles-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .seized-vehicles-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .seized-vehicles-dark-mode .text-slate-900,
+        .seized-vehicles-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .seized-vehicles-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .seized-vehicles-dark-mode .text-slate-600,
+        .seized-vehicles-dark-mode .hover\:text-slate-600:hover {
+          color: #cbd5e1 !important;
+        }
+        .seized-vehicles-dark-mode .text-slate-500,
+        .seized-vehicles-dark-mode .text-slate-400,
+        .seized-vehicles-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .seized-vehicles-dark-mode .placeholder\:text-slate-300::placeholder {
+          color: #64748b !important;
+        }
+        .seized-vehicles-dark-mode .border-slate-200,
+        .seized-vehicles-dark-mode .border-slate-100,
+        .seized-vehicles-dark-mode .border-slate-300,
+        .seized-vehicles-dark-mode .border-red-100,
+        .seized-vehicles-dark-mode .border-red-200,
+        .seized-vehicles-dark-mode .border-amber-200,
+        .seized-vehicles-dark-mode .border-emerald-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .seized-vehicles-dark-mode .divide-slate-50 > * {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .seized-vehicles-dark-mode input,
+        .seized-vehicles-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "seized-vehicles-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
@@ -361,7 +431,7 @@ const SeizedVehiclesPage = () => {
                                           y: rect.bottom,
                                         });
                                       }}
-                                      className="text-[10px] font-bold text-slate-400 hover:text-primary transition-colors text-left"
+                                      className="text-[10px] font-bold text-blue-500 hover:text-primary transition-colors text-left"
                                     >
                                       {num}
                                     </button>

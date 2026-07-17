@@ -10,9 +10,11 @@ import {
   forecloseLoan,
 } from "../../../services/loan.service";
 import { useToast } from "../../../context/ToastContext";
+import { useUI } from "../../../context/UIContext";
 
 const ForeclosurePage = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const { showToast } = useToast();
 
   const [loading, setLoading] = useState(false);
@@ -207,7 +209,67 @@ const ForeclosurePage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        /* Scoped foreclosure payments dark mode overrides. Single style
+           tag, kept unconditional so it covers the page and the
+           multi-step foreclosure modal. Prefixed with
+           .foreclosure-payments-dark-mode so nothing here can affect any
+           other page. */
+        .foreclosure-payments-dark-mode {
+          background-color: #0f172a;
+        }
+        .foreclosure-payments-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .foreclosure-payments-dark-mode .bg-slate-50\/50,
+        .foreclosure-payments-dark-mode .bg-slate-50\/10 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .foreclosure-payments-dark-mode .bg-slate-50,
+        .foreclosure-payments-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .foreclosure-payments-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .foreclosure-payments-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .foreclosure-payments-dark-mode .bg-green-50 {
+          background-color: rgba(34, 197, 94, 0.15) !important;
+        }
+        .foreclosure-payments-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .foreclosure-payments-dark-mode .text-slate-900,
+        .foreclosure-payments-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .foreclosure-payments-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .foreclosure-payments-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .foreclosure-payments-dark-mode .text-slate-500,
+        .foreclosure-payments-dark-mode .text-slate-400,
+        .foreclosure-payments-dark-mode .text-slate-300,
+        .foreclosure-payments-dark-mode .text-slate-200 {
+          color: #94a3b8 !important;
+        }
+        .foreclosure-payments-dark-mode .border-slate-50,
+        .foreclosure-payments-dark-mode .border-slate-100,
+        .foreclosure-payments-dark-mode .border-slate-200,
+        .foreclosure-payments-dark-mode .border-amber-100,
+        .foreclosure-payments-dark-mode .border-green-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .foreclosure-payments-dark-mode input,
+        .foreclosure-payments-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "foreclosure-payments-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <div className="border-b border-slate-100 bg-white">

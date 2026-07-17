@@ -9,9 +9,11 @@ import { useToast } from "../context/ToastContext";
 import TableActionMenu from "./TableActionMenu";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "../utils/auth";
+import { useUI } from "../context/UIContext";
 
 const DailyFollowupList = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -116,7 +118,69 @@ const DailyFollowupList = () => {
     setCurrentPage(1);
   };
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className={`max-w-7xl mx-auto ${isDarkMode ? "daily-followup-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped daily loan followups dark mode overrides. Single style
+           tag, kept unconditional so it covers both the table and any
+           conditionally-rendered popup content. Prefixed with
+           .daily-followup-dark-mode so nothing here can affect any other
+           page. */
+        .daily-followup-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .daily-followup-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .daily-followup-dark-mode .bg-slate-50,
+        .daily-followup-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .daily-followup-dark-mode .hover\:bg-slate-50:hover,
+        .daily-followup-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .daily-followup-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .daily-followup-dark-mode .bg-blue-100 {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        .daily-followup-dark-mode .bg-green-100 {
+          background-color: rgba(34, 197, 94, 0.15) !important;
+        }
+        .daily-followup-dark-mode .bg-orange-50 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .daily-followup-dark-mode .bg-red-100 {
+          background-color: rgba(239, 68, 68, 0.2) !important;
+        }
+        .daily-followup-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .daily-followup-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .daily-followup-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .daily-followup-dark-mode .text-slate-400,
+        .daily-followup-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .daily-followup-dark-mode .border-slate-100,
+        .daily-followup-dark-mode .border-slate-200,
+        .daily-followup-dark-mode .border-blue-100,
+        .daily-followup-dark-mode .border-green-200,
+        .daily-followup-dark-mode .border-orange-100,
+        .daily-followup-dark-mode .border-red-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .daily-followup-dark-mode input,
+        .daily-followup-dark-mode select,
+        .daily-followup-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
       <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">

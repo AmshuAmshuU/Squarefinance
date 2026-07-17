@@ -61,7 +61,7 @@ const navItems = [
 const Sidebar = () => {
   const pathname = usePathname();
   const user = getUserFromToken();
-  const { isSidebarOpen, closeSidebar } = useUI();
+  const { isSidebarOpen, closeSidebar, isDarkMode } = useUI();
   const [expandedMenus, setExpandedMenus] = useState({});
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -164,8 +164,56 @@ const Sidebar = () => {
 
   return (
     <>
+      <style jsx global>{`
+        /* Shared sidebar dark mode overrides - applies on every page since
+           the sidebar is global chrome, not page-specific content. */
+        .sidebar-dark-mode {
+          background-color: #1e293b !important;
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .sidebar-dark-mode .bg-slate-50\/30,
+        .sidebar-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .sidebar-dark-mode .border-slate-200,
+        .sidebar-dark-mode .border-slate-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .sidebar-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .sidebar-dark-mode .hover\:bg-slate-100:hover,
+        .sidebar-dark-mode .hover\:bg-slate-200:hover,
+        .sidebar-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .sidebar-dark-mode .text-slate-400,
+        .sidebar-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .sidebar-dark-mode .hover\:text-slate-600:hover {
+          color: #e2e8f0 !important;
+        }
+        .sidebar-dark-mode {
+          scrollbar-color: #475569 transparent;
+          scrollbar-width: thin;
+        }
+        .sidebar-dark-mode ::-webkit-scrollbar {
+          width: 8px;
+        }
+        .sidebar-dark-mode ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .sidebar-dark-mode ::-webkit-scrollbar-thumb {
+          background-color: #475569;
+          border-radius: 999px;
+        }
+        .sidebar-dark-mode ::-webkit-scrollbar-thumb:hover {
+          background-color: #64748b;
+        }
+      `}</style>
       {/* DESKTOP SIDEBAR DESIGN */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 h-screen sticky top-0">
+      <aside className={`hidden md:flex flex-col w-64 bg-white border-r border-slate-200 h-screen sticky top-0 transition-colors duration-300 ${isDarkMode ? "sidebar-dark-mode" : ""}`}>
         <div className="h-24 flex items-center gap-3 px-6 border-b border-slate-200 flex-shrink-0 bg-slate-50/30">
           <Logo size="sm" />
           <div className="h-8 w-px bg-slate-200"></div>
@@ -283,7 +331,7 @@ const Sidebar = () => {
 
         {/* Sidebar Panel */}
         <aside
-          className={`absolute top-0 left-0 w-72 h-full bg-white shadow-2xl transition-transform duration-300 transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+          className={`absolute top-0 left-0 w-72 h-full bg-white shadow-2xl transition-transform duration-300 transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} ${isDarkMode ? "sidebar-dark-mode" : ""}`}
         >
           <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-3">

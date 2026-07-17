@@ -10,9 +10,11 @@ import { getAllExpenses } from "../../../services/expenseService";
 import { useToast } from "../../../context/ToastContext";
 import { format } from "date-fns";
 import Pagination from "../../../components/Pagination";
+import { useUI } from "../../../context/UIContext";
 
 const CollectionsPage = () => {
   const { showToast } = useToast();
+  const { isDarkMode } = useUI();
   
   // TABS State
   const [activeTab, setActiveTab] = useState("collections"); // "collections" | "loans" | "expenses"
@@ -331,7 +333,68 @@ const CollectionsPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex font-sans">
+      <style jsx global>{`
+        .collections-dark-mode {
+          background-color: #0f172a;
+        }
+        .collections-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .collections-dark-mode .bg-slate-50,
+        .collections-dark-mode .bg-slate-50\/30 {
+          background-color: #334155 !important;
+        }
+        .collections-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .collections-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .collections-dark-mode .bg-purple-50 {
+          background-color: rgba(168, 85, 247, 0.15) !important;
+        }
+        .collections-dark-mode .bg-orange-50 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .collections-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .collections-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .collections-dark-mode .text-slate-900,
+        .collections-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .collections-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .collections-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .collections-dark-mode .text-slate-500,
+        .collections-dark-mode .text-slate-400,
+        .collections-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .collections-dark-mode .border-slate-200,
+        .collections-dark-mode .border-slate-100,
+        .collections-dark-mode .border-blue-100,
+        .collections-dark-mode .border-purple-100,
+        .collections-dark-mode .border-orange-100,
+        .collections-dark-mode .border-red-100,
+        .collections-dark-mode .border-emerald-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .collections-dark-mode .divide-slate-100 > *,
+        .collections-dark-mode .divide-slate-50 > * {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .collections-dark-mode input[type="date"] {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex font-sans transition-colors duration-300 ${isDarkMode ? "collections-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

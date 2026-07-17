@@ -3,10 +3,12 @@ import React, { useState } from "react";
 import { format } from "date-fns";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
+import { useUI } from "@/context/UIContext";
 import { Plus, IndianRupee, History, Info } from "lucide-react";
 
 const InterestLoanDetails = ({ loan, emis, onRefresh }) => {
   const { showToast } = useToast();
+  const { isDarkMode } = useUI();
   const [submitting, setSubmitting] = useState(false);
   const [principalModalOpen, setPrincipalModalOpen] = useState(false);
   const [principalPayment, setPrincipalPayment] = useState({
@@ -67,7 +69,58 @@ const InterestLoanDetails = ({ loan, emis, onRefresh }) => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className={`space-y-8 animate-in fade-in duration-500 ${isDarkMode ? "interest-loan-details-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped InterestLoanDetails dark mode overrides - covers the
+           summary cards and both payment popups (principal + interest),
+           since they're all descendants of this same root. Prefixed with
+           .interest-loan-details-dark-mode so nothing here can affect any
+           other page. */
+        .interest-loan-details-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .interest-loan-details-dark-mode .bg-slate-50,
+        .interest-loan-details-dark-mode .bg-blue-50\/50 {
+          background-color: #334155 !important;
+        }
+        .interest-loan-details-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .interest-loan-details-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .interest-loan-details-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .interest-loan-details-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .interest-loan-details-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .interest-loan-details-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .interest-loan-details-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .interest-loan-details-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .interest-loan-details-dark-mode .border-slate-50,
+        .interest-loan-details-dark-mode .border-slate-100,
+        .interest-loan-details-dark-mode .border-slate-200,
+        .interest-loan-details-dark-mode .border-blue-100,
+        .interest-loan-details-dark-mode .border-emerald-100,
+        .interest-loan-details-dark-mode .border-emerald-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .interest-loan-details-dark-mode input,
+        .interest-loan-details-dark-mode select,
+        .interest-loan-details-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
       {/* Header Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">

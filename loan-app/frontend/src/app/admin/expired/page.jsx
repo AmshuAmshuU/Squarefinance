@@ -8,8 +8,10 @@ import Sidebar from "../../../components/Sidebar";
 import { getUserFromToken } from "../../../utils/auth";
 import { getExpiredDocLoans } from "../../../services/loan.service";
 import Pagination from "../../../components/Pagination";
+import { useUI } from "../../../context/UIContext";
 
 const ExpiredLoansPage = () => {
+  const { isDarkMode } = useUI();
   const router = useRouter();
   const user = getUserFromToken();
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
@@ -83,7 +85,60 @@ const ExpiredLoansPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .expired-dark-mode {
+          background-color: #0f172a;
+        }
+        .expired-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .expired-dark-mode .bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .expired-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .expired-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .expired-dark-mode .hover\:bg-slate-200:hover {
+          background-color: #475569 !important;
+        }
+        .expired-dark-mode .bg-blue-50\/80 {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        .expired-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .expired-dark-mode .text-slate-900,
+        .expired-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .expired-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .expired-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .expired-dark-mode .text-slate-500,
+        .expired-dark-mode .text-slate-400,
+        .expired-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .expired-dark-mode .border-slate-200,
+        .expired-dark-mode .border-slate-100,
+        .expired-dark-mode .border-red-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .expired-dark-mode .divide-slate-100 > * {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .expired-dark-mode input,
+        .expired-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "expired-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

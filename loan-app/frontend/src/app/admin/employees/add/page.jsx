@@ -6,8 +6,10 @@ import Navbar from "../../../../components/Navbar";
 import Sidebar from "../../../../components/Sidebar";
 import { useToast } from "../../../../context/ToastContext";
 import { createEmployee } from "../../../../services/userService";
+import { useUI } from "../../../../context/UIContext";
 
 const AddEmployeePage = () => {
+  const { isDarkMode } = useUI();
   const router = useRouter();
   const { showToast } = useToast();
   const [step, setStep] = useState(1); // 1: Details, 2: Access, 3: Preview
@@ -141,7 +143,59 @@ const AddEmployeePage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .employee-add-dark-mode {
+          background-color: #0f172a;
+        }
+        .employee-add-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .employee-add-dark-mode .bg-slate-50,
+        .employee-add-dark-mode .bg-slate-50\/50,
+        .employee-add-dark-mode .bg-slate-100,
+        .employee-add-dark-mode .bg-slate-200 {
+          background-color: #334155 !important;
+        }
+        .employee-add-dark-mode .hover\:bg-slate-50:hover,
+        .employee-add-dark-mode .hover\:bg-slate-200:hover {
+          background-color: #475569 !important;
+        }
+        .employee-add-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .employee-add-dark-mode .text-slate-900,
+        .employee-add-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .employee-add-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .employee-add-dark-mode .text-slate-600,
+        .employee-add-dark-mode .hover\:text-slate-600:hover {
+          color: #cbd5e1 !important;
+        }
+        .employee-add-dark-mode .text-slate-500,
+        .employee-add-dark-mode .text-slate-400,
+        .employee-add-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .employee-add-dark-mode .placeholder\:text-slate-300::placeholder {
+          color: #64748b !important;
+        }
+        .employee-add-dark-mode .border-slate-200,
+        .employee-add-dark-mode .border-slate-100,
+        .employee-add-dark-mode .border-blue-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .employee-add-dark-mode .divide-slate-50 > * {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .employee-add-dark-mode input,
+        .employee-add-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "employee-add-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

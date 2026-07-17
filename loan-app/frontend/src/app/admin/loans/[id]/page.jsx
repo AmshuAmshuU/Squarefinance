@@ -15,10 +15,12 @@ import { getEMIsByLoanId } from "../../../../services/customer";
 import { flattenLoan } from "../../../../utils/loanUtils";
 import FollowupHistory from "../../../../components/FollowupHistory";
 import LoanStatusBadge from "../../../../components/LoanStatusBadge";
+import { useUI } from "../../../../context/UIContext";
 
 const ViewLoanPage = () => {
   const router = useRouter();
   const { id } = useParams();
+  const { isDarkMode } = useUI();
   const [loan, setLoan] = useState(null);
   const [emis, setEmis] = useState([]);
   const [history, setHistory] = useState([]);
@@ -114,7 +116,7 @@ const ViewLoanPage = () => {
   if (loading) {
     return (
       <AuthGuard>
-        <div className="min-h-screen bg-[#F8FAFC] flex">
+        <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "loan-view-dark-mode" : ""}`}>
           <Sidebar />
           <div className="flex-1 flex flex-col min-w-0">
             <Navbar />
@@ -131,7 +133,32 @@ const ViewLoanPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        /* Scoped loan view page dark mode overrides. Prefixed with
+           .loan-view-dark-mode so nothing here can affect any other page.
+           LoanForm, EMITable and FollowupHistory style themselves. */
+        .loan-view-dark-mode {
+          background-color: #0f172a;
+        }
+        .loan-view-dark-mode .bg-\[\#F8FAFC\]\/80 {
+          background-color: rgba(15, 23, 42, 0.8) !important;
+        }
+        .loan-view-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .loan-view-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .loan-view-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .loan-view-dark-mode .border-slate-100,
+        .loan-view-dark-mode .border-slate-200,
+        .loan-view-dark-mode .border-blue-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "loan-view-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

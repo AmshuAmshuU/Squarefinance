@@ -17,9 +17,11 @@ import Link from "next/link";
 import TableActionMenu from "../../../components/TableActionMenu";
 import ConfirmationModal from "../../../components/ConfirmationModal";
 import { hasPermission } from "../../../utils/auth";
+import { useUI } from "../../../context/UIContext";
 
 const PartialPaymentsPage = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -189,7 +191,62 @@ const PartialPaymentsPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        /* Scoped partial payments (all loan types) dark mode overrides.
+           Single style tag. Prefixed with .partial-payments-dark-mode so
+           nothing here can affect any other page. */
+        .partial-payments-dark-mode {
+          background-color: #0f172a;
+        }
+        .partial-payments-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .partial-payments-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .partial-payments-dark-mode .bg-slate-50,
+        .partial-payments-dark-mode .bg-slate-100,
+        .partial-payments-dark-mode .bg-slate-200 {
+          background-color: #334155 !important;
+        }
+        .partial-payments-dark-mode .hover\:bg-slate-50:hover,
+        .partial-payments-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .partial-payments-dark-mode .bg-blue-50\/80 {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        .partial-payments-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .partial-payments-dark-mode .bg-red-100 {
+          background-color: rgba(239, 68, 68, 0.2) !important;
+        }
+        .partial-payments-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .partial-payments-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .partial-payments-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .partial-payments-dark-mode .text-slate-400,
+        .partial-payments-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .partial-payments-dark-mode .border-slate-50,
+        .partial-payments-dark-mode .border-slate-100,
+        .partial-payments-dark-mode .border-slate-200,
+        .partial-payments-dark-mode .border-red-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .partial-payments-dark-mode input,
+        .partial-payments-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "partial-payments-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

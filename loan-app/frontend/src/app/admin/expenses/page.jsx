@@ -8,9 +8,11 @@ import { getAllExpenses, deleteExpense } from "../../../services/expenseService"
 import { useToast } from "../../../context/ToastContext";
 import { format } from "date-fns";
 import Pagination from "../../../components/Pagination";
+import { useUI } from "../../../context/UIContext";
 
 const ExpensesPage = () => {
   const { showToast } = useToast();
+  const { isDarkMode } = useUI();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editExpense, setEditExpense] = useState(null);
   const [expenses, setExpenses] = useState([]);
@@ -78,7 +80,60 @@ const ExpensesPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .expenses-dark-mode {
+          background-color: #0f172a;
+        }
+        .expenses-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .expenses-dark-mode .bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .expenses-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .expenses-dark-mode .hover\:bg-blue-50\/40:hover {
+          background-color: rgba(59, 130, 246, 0.12) !important;
+        }
+        .expenses-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .expenses-dark-mode .hover\:bg-blue-100:hover {
+          background-color: rgba(59, 130, 246, 0.22) !important;
+        }
+        .expenses-dark-mode .bg-rose-50 {
+          background-color: rgba(244, 63, 94, 0.15) !important;
+        }
+        .expenses-dark-mode .hover\:bg-rose-100:hover {
+          background-color: rgba(244, 63, 94, 0.22) !important;
+        }
+        .expenses-dark-mode .text-slate-900,
+        .expenses-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .expenses-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .expenses-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .expenses-dark-mode .text-slate-500,
+        .expenses-dark-mode .text-slate-400,
+        .expenses-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .expenses-dark-mode .border-slate-200,
+        .expenses-dark-mode .border-slate-100,
+        .expenses-dark-mode .border-blue-100,
+        .expenses-dark-mode .border-rose-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .expenses-dark-mode .divide-slate-50 > * {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "expenses-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
@@ -217,7 +272,7 @@ const ExpensesPage = () => {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center p-4 ${isDarkMode ? "expenses-dark-mode" : ""}`}>
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
           <div className="relative bg-white w-full max-w-sm rounded-[2rem] border border-slate-200 shadow-2xl p-8 text-center">
             <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-4">

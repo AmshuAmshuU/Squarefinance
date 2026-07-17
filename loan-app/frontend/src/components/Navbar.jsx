@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { Bell, Sun, Moon } from "lucide-react";
 import { removeToken, getUserFromToken } from "../utils/auth";
 import Logo from "./Logo";
 import { useUI } from "../context/UIContext";
@@ -12,7 +12,7 @@ import NotificationDropdown from "./NotificationDropdown";
 const Navbar = () => {
   const router = useRouter();
   const user = getUserFromToken();
-  const { toggleSidebar } = useUI();
+  const { toggleSidebar, isDarkMode, toggleDarkMode } = useUI();
   const { unreadCount } = useNotifications();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -25,7 +25,41 @@ const Navbar = () => {
   const userInitial = user?.name ? user.name[0].toUpperCase() : "U";
 
   return (
-    <nav className="sticky top-0 z-40 w-full h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <>
+    <style jsx global>{`
+      /* Shared navbar dark mode overrides - applies on every page since the
+         navbar is global chrome, not page-specific content. */
+      .navbar-dark-mode {
+        background-color: rgba(30, 41, 59, 0.85) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+      }
+      .navbar-dark-mode .bg-blue-50\/50 {
+        background-color: rgba(59, 130, 246, 0.15) !important;
+      }
+      .navbar-dark-mode .hover\:bg-blue-100\/50:hover {
+        background-color: rgba(59, 130, 246, 0.2) !important;
+      }
+      .navbar-dark-mode .border-blue-100 {
+        border-color: rgba(59, 130, 246, 0.25) !important;
+      }
+      .navbar-dark-mode .bg-white {
+        background-color: #1e293b !important;
+      }
+      .navbar-dark-mode .border-slate-100,
+      .navbar-dark-mode .border-slate-200 {
+        border-color: rgba(255, 255, 255, 0.08) !important;
+      }
+      .navbar-dark-mode .text-slate-900 {
+        color: #f1f5f9 !important;
+      }
+      .navbar-dark-mode .text-slate-500 {
+        color: #94a3b8 !important;
+      }
+      .navbar-dark-mode .hover\:bg-slate-50:hover {
+        background-color: #334155 !important;
+      }
+    `}</style>
+    <nav className={`sticky top-0 z-40 w-full h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm transition-colors duration-300 ${isDarkMode ? "navbar-dark-mode" : ""}`}>
       {/* 🛺 Auto-rickshaw static mascot */}
       <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none z-10">
         <img
@@ -67,6 +101,28 @@ const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
+          {/* Dark mode toggle */}
+          <button
+            type="button"
+            onClick={toggleDarkMode}
+            aria-label="Toggle dark mode"
+            className={`relative w-12 h-7 rounded-full transition-colors duration-300 flex items-center px-1 shrink-0 ${
+              isDarkMode ? "bg-slate-700" : "bg-slate-200"
+            }`}
+          >
+            <span
+              className={`w-5 h-5 rounded-full bg-white shadow-md flex items-center justify-center transition-transform duration-300 ${
+                isDarkMode ? "translate-x-5" : "translate-x-0"
+              }`}
+            >
+              {isDarkMode ? (
+                <Moon className="w-3 h-3 text-slate-700" />
+              ) : (
+                <Sun className="w-3 h-3 text-amber-500" />
+              )}
+            </span>
+          </button>
+
           {/* Notification Bell */}
           <div className="relative">
             <button 
@@ -144,6 +200,7 @@ const Navbar = () => {
         </div>
       </div>
     </nav>
+    </>
   );
 };
 

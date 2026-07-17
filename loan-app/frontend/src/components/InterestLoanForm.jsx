@@ -11,6 +11,7 @@ import PrincipalPaymentList from "./PrincipalPaymentList";
 import EMITable from "./EMITable";
 import { checkLoanNumberUniqueness } from "@/services/loan.service";
 import { getLoanExpensesTotal } from "@/services/expenseService";
+import { useUI } from "@/context/UIContext";
 
 const _loanUniquenessCache = new Map();
 
@@ -39,6 +40,7 @@ const InterestLoanForm = ({
   const [totalExpenses, setTotalExpenses] = useState(0);
   const user = getUserFromToken();
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const { isDarkMode } = useUI();
 
   const validationSchema = Yup.object().shape({
     loanNumber: Yup.string()
@@ -233,7 +235,56 @@ const InterestLoanForm = ({
 
 
   return (
-    <div className="bg-white w-full max-w-4xl mx-auto rounded-3xl shadow-sm overflow-hidden border border-slate-200 flex flex-col">
+    <div className={`bg-white w-full max-w-4xl mx-auto rounded-3xl shadow-sm overflow-hidden border border-slate-200 flex flex-col ${isDarkMode ? "interest-loan-form-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped InterestLoanForm dark mode overrides. Shared by the
+           Interest Loans edit and add pages. Prefixed with
+           .interest-loan-form-dark-mode so nothing here can affect any
+           other page. */
+        .interest-loan-form-dark-mode {
+          background-color: #1e293b !important;
+          border-color: rgba(255, 255, 255, 0.08) !important;
+          color: #cbd5e1;
+        }
+        .interest-loan-form-dark-mode .bg-white {
+          background-color: #334155 !important;
+        }
+        .interest-loan-form-dark-mode .bg-slate-50,
+        .interest-loan-form-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .interest-loan-form-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .interest-loan-form-dark-mode .bg-orange-50 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .interest-loan-form-dark-mode .bg-red-50,
+        .interest-loan-form-dark-mode .bg-red-100 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .interest-loan-form-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .interest-loan-form-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .interest-loan-form-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .interest-loan-form-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .interest-loan-form-dark-mode .border-slate-100,
+        .interest-loan-form-dark-mode .border-slate-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .interest-loan-form-dark-mode input,
+        .interest-loan-form-dark-mode select,
+        .interest-loan-form-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
       <div className="p-8">
         <form onSubmit={formik.handleSubmit}
           onKeyDown={(e) => { if (e.key === "Enter" && e.target.tagName !== "TEXTAREA" && e.target.type !== "submit") e.preventDefault(); }} className="space-y-8">

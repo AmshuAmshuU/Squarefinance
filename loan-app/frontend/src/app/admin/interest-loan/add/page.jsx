@@ -7,10 +7,12 @@ import Navbar from "@/components/Navbar";
 import InterestLoanForm from "@/components/InterestLoanForm";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
+import { useUI } from "@/context/UIContext";
 
 const AddInterestLoanPage = () => {
   const router = useRouter();
   const { showToast } = useToast();
+  const { isDarkMode } = useUI();
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (values) => {
@@ -28,7 +30,18 @@ const AddInterestLoanPage = () => {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen bg-[#F8FAFC]">
+      <style jsx global>{`
+        .interest-loan-add-dark-mode {
+          background-color: #0f172a;
+        }
+        .interest-loan-add-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .interest-loan-add-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+      `}</style>
+      <div className={`flex min-h-screen bg-[#F8FAFC] transition-colors duration-300 ${isDarkMode ? "interest-loan-add-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

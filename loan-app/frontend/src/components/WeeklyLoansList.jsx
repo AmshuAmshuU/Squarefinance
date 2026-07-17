@@ -14,9 +14,11 @@ import { Trash2 } from "lucide-react";
 import { exportLoansToExcel } from "../utils/excelExport";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "../utils/auth";
+import { useUI } from "../context/UIContext";
 
 const WeeklyLoansList = ({ type, title }) => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -130,7 +132,60 @@ const WeeklyLoansList = ({ type, title }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className={`max-w-7xl mx-auto ${isDarkMode ? "weekly-loans-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped weekly loans list dark mode overrides, same pattern as
+           the Loans list page. Prefixed with .weekly-loans-dark-mode so
+           nothing here can affect any other page. */
+        .weekly-loans-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .weekly-loans-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .weekly-loans-dark-mode .bg-slate-50,
+        .weekly-loans-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .weekly-loans-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .weekly-loans-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #475569 !important;
+        }
+        .weekly-loans-dark-mode .bg-blue-50\/80 {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        .weekly-loans-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .weekly-loans-dark-mode .bg-green-100 {
+          background-color: rgba(34, 197, 94, 0.15) !important;
+        }
+        .weekly-loans-dark-mode .bg-orange-100 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .weekly-loans-dark-mode .text-slate-900,
+        .weekly-loans-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .weekly-loans-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .weekly-loans-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .weekly-loans-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .weekly-loans-dark-mode .border-slate-100,
+        .weekly-loans-dark-mode .border-slate-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .weekly-loans-dark-mode .divide-slate-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
       {/* Header matching standard Loans page */}
       <div className="flex justify-between items-start mb-6 sm:mb-8">
         <div>
@@ -541,7 +596,7 @@ const WeeklyLoansList = ({ type, title }) => {
                                 y: rect.bottom,
                               });
                             }}
-                            className="text-slate-600 font-bold text-xs tracking-widest hover:text-primary transition-colors text-left"
+                            className="text-blue-500 font-bold text-xs tracking-widest hover:text-primary transition-colors text-left"
                           >
                             {num}
                           </button>

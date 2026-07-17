@@ -15,9 +15,11 @@ import {
 import LoanStatusBadge from "../../../../../components/LoanStatusBadge";
 import { getEMIsByLoanId } from "../../../../../services/customer";
 import { flattenLoan } from "../../../../../utils/loanUtils";
+import { useUI } from "../../../../../context/UIContext";
 
 const EditLoanPage = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/admin/loans";
   const { id } = useParams();
@@ -165,7 +167,7 @@ const EditLoanPage = () => {
   if (loading) {
     return (
       <AuthGuard>
-        <div className="min-h-screen bg-[#F8FAFC] flex">
+        <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "loan-edit-dark-mode" : ""}`}>
           <Sidebar />
           <div className="flex-1 flex flex-col min-w-0">
             <Navbar />
@@ -182,7 +184,41 @@ const EditLoanPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        /* Scoped loan edit page dark mode overrides. Prefixed with
+           .loan-edit-dark-mode so nothing here can affect any other page.
+           LoanForm and EMITable style themselves. */
+        .loan-edit-dark-mode {
+          background-color: #0f172a;
+        }
+        .loan-edit-dark-mode .bg-\[\#F8FAFC\]\/80 {
+          background-color: rgba(15, 23, 42, 0.8) !important;
+        }
+        .loan-edit-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .loan-edit-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .loan-edit-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .loan-edit-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .loan-edit-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .loan-edit-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .loan-edit-dark-mode .border-slate-100,
+        .loan-edit-dark-mode .border-slate-200,
+        .loan-edit-dark-mode .border-blue-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "loan-edit-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

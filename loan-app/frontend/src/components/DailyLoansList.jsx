@@ -11,9 +11,11 @@ import { Trash2 } from "lucide-react";
 import { exportLoansToExcel } from "../utils/excelExport";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "../utils/auth";
+import { useUI } from "../context/UIContext";
 
 const DailyLoansList = ({ type, title }) => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const { showToast } = useToast();
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [activeContactMenu, setActiveContactMenu] = useState(null); // { number, name, type, x, y }
@@ -127,7 +129,60 @@ const DailyLoansList = ({ type, title }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className={`max-w-7xl mx-auto ${isDarkMode ? "daily-loans-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped daily loans list dark mode overrides, same pattern as the
+           Loans list page. Prefixed with .daily-loans-dark-mode so nothing
+           here can affect any other page. */
+        .daily-loans-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .daily-loans-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .daily-loans-dark-mode .bg-slate-50,
+        .daily-loans-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .daily-loans-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .daily-loans-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #475569 !important;
+        }
+        .daily-loans-dark-mode .bg-blue-50\/80 {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        .daily-loans-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .daily-loans-dark-mode .bg-green-100 {
+          background-color: rgba(34, 197, 94, 0.15) !important;
+        }
+        .daily-loans-dark-mode .bg-orange-100 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .daily-loans-dark-mode .text-slate-900,
+        .daily-loans-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .daily-loans-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .daily-loans-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .daily-loans-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .daily-loans-dark-mode .border-slate-100,
+        .daily-loans-dark-mode .border-slate-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .daily-loans-dark-mode .divide-slate-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
       {/* Header matching Weekly style */}
       <div className="flex justify-between items-start mb-6 sm:mb-8">
         <div>
@@ -535,7 +590,7 @@ const DailyLoansList = ({ type, title }) => {
                                 y: rect.bottom,
                               });
                             }}
-                            className="text-slate-600 font-bold text-xs tracking-widest hover:text-primary transition-colors text-left"
+                            className="text-blue-500 font-bold text-xs tracking-widest hover:text-primary transition-colors text-left"
                           >
                             {num}
                           </button>

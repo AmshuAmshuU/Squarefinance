@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useToast } from "../context/ToastContext";
+import { useUI } from "../context/UIContext";
 import { addMonths, format } from "date-fns";
 import { getUserFromToken } from "../utils/auth";
 import ClientResponseSection from "./ClientResponseSection";
@@ -38,6 +39,7 @@ const LoanForm = ({
   emis = [],
 }) => {
   const { showToast } = useToast();
+  const { isDarkMode } = useUI();
   const user = getUserFromToken();
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
@@ -539,7 +541,64 @@ const LoanForm = ({
   };
 
   return (
-    <div className="bg-white w-full max-w-4xl mx-auto rounded-3xl shadow-sm overflow-hidden border border-slate-200 flex flex-col">
+    <div className={`bg-white w-full max-w-4xl mx-auto rounded-3xl shadow-sm overflow-hidden border border-slate-200 flex flex-col ${isDarkMode ? "loan-form-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped LoanForm dark mode overrides. This component is shared by
+           the Loans view, edit, and add pages, so this one conversion
+           covers all three. Prefixed with .loan-form-dark-mode so nothing
+           here can affect any other page. */
+        .loan-form-dark-mode {
+          background-color: #1e293b !important;
+          border-color: rgba(255, 255, 255, 0.08) !important;
+          color: #cbd5e1;
+        }
+        .loan-form-dark-mode .bg-white {
+          background-color: #334155 !important;
+        }
+        .loan-form-dark-mode .bg-slate-50,
+        .loan-form-dark-mode .bg-slate-100,
+        .loan-form-dark-mode .bg-slate-200 {
+          background-color: #334155 !important;
+        }
+        .loan-form-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .loan-form-dark-mode .bg-blue-50,
+        .loan-form-dark-mode .bg-blue-100 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .loan-form-dark-mode .bg-emerald-50,
+        .loan-form-dark-mode .bg-emerald-100 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .loan-form-dark-mode .bg-orange-50,
+        .loan-form-dark-mode .bg-orange-100 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .loan-form-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .loan-form-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .loan-form-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .loan-form-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .loan-form-dark-mode .border-slate-50,
+        .loan-form-dark-mode .border-slate-100,
+        .loan-form-dark-mode .border-slate-200,
+        .loan-form-dark-mode .border-slate-300 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .loan-form-dark-mode input,
+        .loan-form-dark-mode select,
+        .loan-form-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
       <div className="p-8">
         <form
           onSubmit={formik.handleSubmit}

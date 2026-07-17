@@ -11,11 +11,13 @@ import {
   Users,
 } from "lucide-react";
 import TodoDashboardSection from "../../../components/analytics/TodoDashboardSection";
+import { useUI } from "../../../context/UIContext";
 
 const DashboardPage = () => {
   const user = getUserFromToken();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { isDarkMode } = useUI();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -35,7 +37,57 @@ const DashboardPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        /* Scoped dashboard dark mode overrides, following the same pattern
+           as the analytics page. Every rule is prefixed with
+           .dashboard-dark-mode, so nothing here can affect any other page. */
+        .dashboard-dark-mode {
+          background-color: #0f172a;
+          color: #cbd5e1;
+        }
+        .dashboard-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .dashboard-dark-mode .bg-slate-50\/30 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .dashboard-dark-mode .bg-slate-50,
+        .dashboard-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .dashboard-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .dashboard-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .dashboard-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .dashboard-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .dashboard-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .dashboard-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .dashboard-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .dashboard-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .dashboard-dark-mode .border-slate-100,
+        .dashboard-dark-mode .border-slate-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .dashboard-dark-mode .divide-slate-50 > :not([hidden]) ~ :not([hidden]) {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "dashboard-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

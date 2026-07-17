@@ -11,9 +11,11 @@ import ContactActionMenu from "./ContactActionMenu";
 import { updateFollowup } from "../services/loan.service";
 import ClientResponseSection from "./ClientResponseSection";
 import { getUserFromToken } from "../utils/auth";
+import { useUI } from "../context/UIContext";
 
 const DailyPendingList = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -122,7 +124,61 @@ const DailyPendingList = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className={`max-w-7xl mx-auto ${isDarkMode ? "daily-pending-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped daily pending payments dark mode overrides. Single style
+           tag, kept unconditional so it covers both the table and the
+           conditionally-rendered Update Response popup. Prefixed with
+           .daily-pending-dark-mode so nothing here can affect any other
+           page. */
+        .daily-pending-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .daily-pending-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .daily-pending-dark-mode .bg-slate-50,
+        .daily-pending-dark-mode .bg-slate-100,
+        .daily-pending-dark-mode .bg-slate-200 {
+          background-color: #334155 !important;
+        }
+        .daily-pending-dark-mode .hover\:bg-slate-50:hover,
+        .daily-pending-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .daily-pending-dark-mode .bg-red-50,
+        .daily-pending-dark-mode .bg-red-50\/30 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .daily-pending-dark-mode .bg-red-100 {
+          background-color: rgba(239, 68, 68, 0.2) !important;
+        }
+        .daily-pending-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .daily-pending-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .daily-pending-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .daily-pending-dark-mode .text-slate-500,
+        .daily-pending-dark-mode .text-slate-400,
+        .daily-pending-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .daily-pending-dark-mode .border-slate-50,
+        .daily-pending-dark-mode .border-slate-100,
+        .daily-pending-dark-mode .border-slate-200,
+        .daily-pending-dark-mode .border-red-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .daily-pending-dark-mode input,
+        .daily-pending-dark-mode select,
+        .daily-pending-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
       <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">

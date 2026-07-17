@@ -6,9 +6,11 @@ import Sidebar from "../../../components/Sidebar";
 import { useRouter } from "next/navigation";
 import { useToast } from "../../../context/ToastContext";
 import { getPendingApprovals, processApproval } from "../../../services/approvalService";
+import { useUI } from "../../../context/UIContext";
 
 const ApprovalsPage = () => {
     const router = useRouter();
+    const { isDarkMode } = useUI();
     const { showToast } = useToast();
     const [approvals, setApprovals] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -59,7 +61,66 @@ const ApprovalsPage = () => {
 
     return (
         <AuthGuard roles={["SUPER_ADMIN"]}>
-            <div className="min-h-screen bg-[#F8FAFC] flex">
+            <style jsx global>{`
+                /* Scoped approvals page dark mode overrides. Prefixed with
+                   .approvals-dark-mode so nothing here can affect any
+                   other page. Only one <style jsx> tag in this component -
+                   this page renders no shared components that carry their
+                   own style tags. */
+                .approvals-dark-mode {
+                    background-color: #0f172a;
+                }
+                .approvals-dark-mode .bg-white {
+                    background-color: #1e293b !important;
+                }
+                .approvals-dark-mode .bg-slate-50,
+                .approvals-dark-mode .bg-slate-100 {
+                    background-color: #334155 !important;
+                }
+                .approvals-dark-mode .hover\:bg-slate-50:hover,
+                .approvals-dark-mode .hover\:bg-slate-50\/50:hover {
+                    background-color: #334155 !important;
+                }
+                .approvals-dark-mode .bg-blue-50 {
+                    background-color: rgba(59, 130, 246, 0.15) !important;
+                }
+                .approvals-dark-mode .bg-amber-50,
+                .approvals-dark-mode .bg-amber-50\/50 {
+                    background-color: rgba(245, 158, 11, 0.12) !important;
+                }
+                .approvals-dark-mode .bg-amber-100 {
+                    background-color: rgba(245, 158, 11, 0.2) !important;
+                }
+                .approvals-dark-mode .hover\:bg-rose-50:hover {
+                    background-color: rgba(244, 63, 94, 0.15) !important;
+                }
+                .approvals-dark-mode .text-slate-900 {
+                    color: #f1f5f9 !important;
+                }
+                .approvals-dark-mode .text-slate-700 {
+                    color: #e2e8f0 !important;
+                }
+                .approvals-dark-mode .text-slate-600 {
+                    color: #cbd5e1 !important;
+                }
+                .approvals-dark-mode .text-slate-500,
+                .approvals-dark-mode .text-slate-400,
+                .approvals-dark-mode .text-slate-300 {
+                    color: #94a3b8 !important;
+                }
+                .approvals-dark-mode .border-slate-100,
+                .approvals-dark-mode .border-slate-200,
+                .approvals-dark-mode .border-slate-50,
+                .approvals-dark-mode .border-amber-100,
+                .approvals-dark-mode .border-blue-100 {
+                    border-color: rgba(255, 255, 255, 0.08) !important;
+                }
+                .approvals-dark-mode .divide-slate-50,
+                .approvals-dark-mode .divide-amber-50 {
+                    border-color: rgba(255, 255, 255, 0.08) !important;
+                }
+            `}</style>
+            <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "approvals-dark-mode" : ""}`}>
                 <Sidebar />
                 <div className="flex-1 flex flex-col min-w-0">
                     <Navbar />

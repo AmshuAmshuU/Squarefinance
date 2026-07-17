@@ -7,9 +7,11 @@ import Sidebar from "../../../../components/Sidebar";
 import LoanForm from "../../../../components/LoanForm";
 import { createLoan } from "../../../../services/loan.service";
 import { useToast } from "../../../../context/ToastContext";
+import { useUI } from "../../../../context/UIContext";
 
 const AddLoanPage = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [submitting, setSubmitting] = useState(false);
   const { showToast } = useToast();
 
@@ -73,7 +75,18 @@ const AddLoanPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .loan-add-dark-mode {
+          background-color: #0f172a;
+        }
+        .loan-add-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .loan-add-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "loan-add-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

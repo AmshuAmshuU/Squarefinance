@@ -9,9 +9,11 @@ import { useToast } from "@/context/ToastContext";
 import TableActionMenu from "./TableActionMenu";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "../utils/auth";
+import { useUI } from "@/context/UIContext";
 
 const InterestFollowupList = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -110,7 +112,57 @@ const InterestFollowupList = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className={`max-w-7xl mx-auto ${isDarkMode ? "interest-followup-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped interest loan followups dark mode overrides. Single style
+           tag, kept unconditional so it covers both the table and any
+           conditionally-rendered popup content. Prefixed with
+           .interest-followup-dark-mode so nothing here can affect any
+           other page. */
+        .interest-followup-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .interest-followup-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .interest-followup-dark-mode .bg-slate-50,
+        .interest-followup-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .interest-followup-dark-mode .hover\:bg-slate-50:hover,
+        .interest-followup-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .interest-followup-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .interest-followup-dark-mode .bg-blue-100 {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        .interest-followup-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .interest-followup-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .interest-followup-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .interest-followup-dark-mode .text-slate-400,
+        .interest-followup-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .interest-followup-dark-mode .border-slate-100,
+        .interest-followup-dark-mode .border-slate-200,
+        .interest-followup-dark-mode .border-blue-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .interest-followup-dark-mode input,
+        .interest-followup-dark-mode select,
+        .interest-followup-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
       <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">

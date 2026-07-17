@@ -14,13 +14,12 @@ import {
   Wallet,
   AlertCircle,
   Download,
-  Sun,
-  Moon,
 } from "lucide-react";
 import { getAnalyticsStats, getExportData } from "../../../services/analytics.service";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useToast } from "../../../context/ToastContext";
+import { useUI } from "../../../context/UIContext";
 import CollectionTrendChart from "../../../components/analytics/CollectionTrendChart";
 import DistributionPieCharts from "../../../components/analytics/DistributionPieCharts";
 import PaymentModeTable from "../../../components/analytics/PaymentModeTable";
@@ -31,21 +30,8 @@ const AnalyticsPage = () => {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
-  const [isDark, setIsDark] = useState(false);
+  const { isDarkMode: isDark } = useUI();
   const { showToast } = useToast();
-
-  useEffect(() => {
-    const saved = localStorage.getItem("analyticsDarkMode");
-    if (saved === "true") setIsDark(true);
-  }, []);
-
-  const toggleDarkMode = () => {
-    setIsDark((prev) => {
-      const next = !prev;
-      localStorage.setItem("analyticsDarkMode", String(next));
-      return next;
-    });
-  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -265,7 +251,7 @@ const AnalyticsPage = () => {
         /* Scoped analytics dark mode overrides.
            Every rule below is prefixed with .analytics-dark-mode,
            so nothing here can ever affect any other page or component. */
-        main.analytics-dark-mode {
+        .analytics-dark-mode {
           background-color: #0f172a;
           color: #cbd5e1;
         }
@@ -314,6 +300,9 @@ const AnalyticsPage = () => {
         .analytics-dark-mode .text-slate-600 {
           color: #cbd5e1 !important;
         }
+        .analytics-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
         .analytics-dark-mode .border-slate-100,
         .analytics-dark-mode .border-slate-200 {
           border-color: rgba(255, 255, 255, 0.08) !important;
@@ -338,15 +327,11 @@ const AnalyticsPage = () => {
           color-scheme: dark;
         }
       `}</style>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDark ? "analytics-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
-          <main
-            className={`py-8 px-4 sm:px-8 transition-colors duration-300 ${
-              isDark ? "analytics-dark-mode" : ""
-            }`}
-          >
+          <main className="py-8 px-4 sm:px-8">
             <div className="max-w-6xl mx-auto">
               {/* Header */}
               <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -361,26 +346,6 @@ const AnalyticsPage = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={toggleDarkMode}
-                    aria-label="Toggle dark mode"
-                    className={`relative w-14 h-8 rounded-full transition-colors duration-300 flex items-center px-1 shrink-0 ${
-                      isDark ? "bg-slate-700" : "bg-slate-200"
-                    }`}
-                  >
-                    <span
-                      className={`w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center transition-transform duration-300 ${
-                        isDark ? "translate-x-6" : "translate-x-0"
-                      }`}
-                    >
-                      {isDark ? (
-                        <Moon className="w-3.5 h-3.5 text-slate-700" />
-                      ) : (
-                        <Sun className="w-3.5 h-3.5 text-amber-500" />
-                      )}
-                    </span>
-                  </button>
                   <button
                     onClick={handleExport}
                     disabled={exporting}

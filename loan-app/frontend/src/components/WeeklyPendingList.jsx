@@ -11,9 +11,11 @@ import ContactActionMenu from "./ContactActionMenu";
 import { updateFollowup } from "../services/loan.service";
 import ClientResponseSection from "./ClientResponseSection";
 import { getUserFromToken } from "../utils/auth";
+import { useUI } from "../context/UIContext";
 
 const WeeklyPendingList = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -122,7 +124,63 @@ const WeeklyPendingList = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className={`max-w-7xl mx-auto ${isDarkMode ? "weekly-pending-dark-mode" : ""}`}>
+      <style jsx global>{`
+        /* Scoped weekly pending payments dark mode overrides. Covers the
+           table, the overdue badges, and the Update Response popup (a
+           single style tag, kept unconditional so it covers both the
+           always-rendered table and the conditionally-rendered popup -
+           styled-jsx does not allow more than one <style jsx> tag per
+           component). Prefixed with .weekly-pending-dark-mode so nothing
+           here can affect any other page. */
+        .weekly-pending-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .weekly-pending-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .weekly-pending-dark-mode .bg-slate-50,
+        .weekly-pending-dark-mode .bg-slate-100,
+        .weekly-pending-dark-mode .bg-slate-200 {
+          background-color: #334155 !important;
+        }
+        .weekly-pending-dark-mode .hover\:bg-slate-50:hover,
+        .weekly-pending-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .weekly-pending-dark-mode .bg-red-50,
+        .weekly-pending-dark-mode .bg-red-50\/30 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .weekly-pending-dark-mode .bg-red-100 {
+          background-color: rgba(239, 68, 68, 0.2) !important;
+        }
+        .weekly-pending-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .weekly-pending-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .weekly-pending-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .weekly-pending-dark-mode .text-slate-500,
+        .weekly-pending-dark-mode .text-slate-400,
+        .weekly-pending-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .weekly-pending-dark-mode .border-slate-50,
+        .weekly-pending-dark-mode .border-slate-100,
+        .weekly-pending-dark-mode .border-slate-200,
+        .weekly-pending-dark-mode .border-red-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .weekly-pending-dark-mode input,
+        .weekly-pending-dark-mode select,
+        .weekly-pending-dark-mode textarea {
+          color-scheme: dark;
+        }
+      `}</style>
       <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">

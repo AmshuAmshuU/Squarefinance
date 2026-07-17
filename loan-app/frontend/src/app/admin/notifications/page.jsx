@@ -15,8 +15,10 @@ import {
 } from "lucide-react";
 import { getToken } from "../../../utils/auth";
 import { format, isToday, isYesterday } from "date-fns";
+import { useUI } from "../../../context/UIContext";
 
 const NotificationsPage = () => {
+  const { isDarkMode } = useUI();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all"); // all, unread, clear
@@ -123,7 +125,54 @@ const NotificationsPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .notifications-dark-mode {
+          background-color: #0f172a;
+        }
+        .notifications-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .notifications-dark-mode .bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .notifications-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .notifications-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .notifications-dark-mode .bg-blue-100 {
+          background-color: rgba(59, 130, 246, 0.22) !important;
+        }
+        .notifications-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .notifications-dark-mode .text-slate-900,
+        .notifications-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .notifications-dark-mode .text-slate-700,
+        .notifications-dark-mode .hover\:text-slate-700:hover {
+          color: #e2e8f0 !important;
+        }
+        .notifications-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .notifications-dark-mode .text-slate-500,
+        .notifications-dark-mode .text-slate-400,
+        .notifications-dark-mode .text-slate-200 {
+          color: #94a3b8 !important;
+        }
+        .notifications-dark-mode .border-slate-200,
+        .notifications-dark-mode .border-slate-100,
+        .notifications-dark-mode .border-blue-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .notifications-dark-mode .h-px.bg-slate-200 {
+          background-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "notifications-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

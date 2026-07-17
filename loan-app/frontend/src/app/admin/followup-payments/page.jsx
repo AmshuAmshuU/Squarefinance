@@ -16,9 +16,11 @@ import { useToast } from "../../../context/ToastContext";
 import Link from "next/link";
 import TableActionMenu from "../../../components/TableActionMenu";
 import ConfirmationModal from "../../../components/ConfirmationModal";
+import { useUI } from "../../../context/UIContext";
 
 const FollowupPaymentsPage = () => {
   const router = useRouter();
+  const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -244,7 +246,73 @@ const FollowupPaymentsPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        /* Scoped followup payments (all loan types) dark mode overrides.
+           Single style tag. Prefixed with .followup-payments-dark-mode so
+           nothing here can affect any other page. */
+        .followup-payments-dark-mode {
+          background-color: #0f172a;
+        }
+        .followup-payments-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .followup-payments-dark-mode .bg-slate-50\/50 {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .followup-payments-dark-mode .bg-slate-50,
+        .followup-payments-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .followup-payments-dark-mode .hover\:bg-slate-50:hover,
+        .followup-payments-dark-mode .group:hover .group-hover\:bg-slate-50 {
+          background-color: #334155 !important;
+        }
+        .followup-payments-dark-mode .bg-blue-50,
+        .followup-payments-dark-mode .bg-blue-50\/80 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .followup-payments-dark-mode .bg-blue-100 {
+          background-color: rgba(59, 130, 246, 0.2) !important;
+        }
+        .followup-payments-dark-mode .bg-green-50 {
+          background-color: rgba(34, 197, 94, 0.15) !important;
+        }
+        .followup-payments-dark-mode .bg-orange-50 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .followup-payments-dark-mode .bg-purple-50 {
+          background-color: rgba(168, 85, 247, 0.15) !important;
+        }
+        .followup-payments-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .followup-payments-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .followup-payments-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .followup-payments-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .followup-payments-dark-mode .text-slate-400,
+        .followup-payments-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .followup-payments-dark-mode .border-slate-100,
+        .followup-payments-dark-mode .border-slate-200,
+        .followup-payments-dark-mode .border-blue-100,
+        .followup-payments-dark-mode .border-green-100,
+        .followup-payments-dark-mode .border-orange-100,
+        .followup-payments-dark-mode .border-purple-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .followup-payments-dark-mode input,
+        .followup-payments-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "followup-payments-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

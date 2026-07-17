@@ -11,8 +11,10 @@ import {
   deleteEmployee,
 } from "../../../../../services/userService";
 import TodoDashboardSection from "../../../../../components/analytics/TodoDashboardSection";
+import { useUI } from "../../../../../context/UIContext";
 
 const ViewEmployeePage = () => {
+  const { isDarkMode } = useUI();
   const router = useRouter();
   const { id } = useParams();
   const { showToast } = useToast();
@@ -81,28 +83,72 @@ const ViewEmployeePage = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <AuthGuard>
-        <div className="min-h-screen bg-[#F8FAFC] flex">
-          <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <Navbar />
-            <main className="py-8 px-4 sm:px-8 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-            </main>
-          </div>
-        </div>
-      </AuthGuard>
-    );
-  }
-
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .employee-view-dark-mode {
+          background-color: #0f172a;
+        }
+        .employee-view-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .employee-view-dark-mode .bg-slate-50,
+        .employee-view-dark-mode .bg-slate-50\/50 {
+          background-color: #334155 !important;
+        }
+        .employee-view-dark-mode .hover\:bg-slate-50:hover,
+        .employee-view-dark-mode .hover\:bg-slate-50\/50:hover {
+          background-color: #334155 !important;
+        }
+        .employee-view-dark-mode .hover\:bg-red-50:hover {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .employee-view-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .employee-view-dark-mode .bg-emerald-50,
+        .employee-view-dark-mode .bg-emerald-50\/50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .employee-view-dark-mode .bg-amber-50,
+        .employee-view-dark-mode .bg-amber-50\/50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .employee-view-dark-mode .text-slate-900,
+        .employee-view-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .employee-view-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .employee-view-dark-mode .text-slate-600,
+        .employee-view-dark-mode .hover\:text-slate-600:hover {
+          color: #cbd5e1 !important;
+        }
+        .employee-view-dark-mode .text-slate-500,
+        .employee-view-dark-mode .text-slate-400,
+        .employee-view-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .employee-view-dark-mode .border-slate-200,
+        .employee-view-dark-mode .border-slate-100,
+        .employee-view-dark-mode .border-dashed.border-slate-200,
+        .employee-view-dark-mode .border-blue-100,
+        .employee-view-dark-mode .border-emerald-100,
+        .employee-view-dark-mode .border-amber-100,
+        .employee-view-dark-mode .border-red-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "employee-view-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
+          {loading ? (
+            <main className="py-8 px-4 sm:px-8 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+            </main>
+          ) : (
           <main className="py-8 px-4 sm:px-8">
             <div className="max-w-3xl mx-auto">
               <div className="mb-8 flex justify-between items-end">
@@ -341,6 +387,7 @@ const ViewEmployeePage = () => {
               </div>
             </div>
           </main>
+          )}
         </div>
       </div>
     </AuthGuard>

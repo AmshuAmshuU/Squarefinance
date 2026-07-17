@@ -9,8 +9,10 @@ import {
   getEmployeeById,
   updateEmployee,
 } from "../../../../../services/userService";
+import { useUI } from "../../../../../context/UIContext";
 
 const EditEmployeePage = () => {
+  const { isDarkMode } = useUI();
   const router = useRouter();
   const { id } = useParams();
   const { showToast } = useToast();
@@ -171,28 +173,65 @@ const EditEmployeePage = () => {
     </div>
   );
 
-  if (loading) {
-    return (
-      <AuthGuard>
-        <div className="min-h-screen bg-[#F8FAFC] flex">
-          <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <Navbar />
-            <main className="py-8 px-4 sm:px-8 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
-            </main>
-          </div>
-        </div>
-      </AuthGuard>
-    );
-  }
-
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .employee-edit-dark-mode {
+          background-color: #0f172a;
+        }
+        .employee-edit-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .employee-edit-dark-mode .bg-slate-50,
+        .employee-edit-dark-mode .bg-slate-50\/50,
+        .employee-edit-dark-mode .bg-slate-100,
+        .employee-edit-dark-mode .bg-slate-200 {
+          background-color: #334155 !important;
+        }
+        .employee-edit-dark-mode .hover\:bg-slate-50:hover,
+        .employee-edit-dark-mode .hover\:bg-slate-200:hover {
+          background-color: #475569 !important;
+        }
+        .employee-edit-dark-mode .text-slate-900,
+        .employee-edit-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .employee-edit-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .employee-edit-dark-mode .text-slate-600,
+        .employee-edit-dark-mode .hover\:text-slate-600:hover {
+          color: #cbd5e1 !important;
+        }
+        .employee-edit-dark-mode .text-slate-500,
+        .employee-edit-dark-mode .text-slate-400,
+        .employee-edit-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .employee-edit-dark-mode .placeholder\:text-slate-300::placeholder {
+          color: #64748b !important;
+        }
+        .employee-edit-dark-mode .border-slate-200,
+        .employee-edit-dark-mode .border-slate-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .employee-edit-dark-mode .divide-slate-50 > * {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .employee-edit-dark-mode input,
+        .employee-edit-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "employee-edit-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
+          {loading ? (
+            <main className="py-8 px-4 sm:px-8 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+            </main>
+          ) : (
           <main className="py-8 px-4 sm:px-8">
             <div className="max-w-3xl mx-auto">
               <div className="mb-8">
@@ -389,6 +428,7 @@ const EditEmployeePage = () => {
               </form>
             </div>
           </main>
+          )}
         </div>
       </div>
     </AuthGuard>

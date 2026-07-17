@@ -154,3 +154,25 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
 }
+
+/* Every scrollbar in the app in dark mode (toggled on <html> by UIContext).
+   Page content actually scrolls inside each page's own "flex-1 overflow-y-auto"
+   container, not the window itself, so this has to reach every scrollable
+   descendant, not just html/body. Only thumb/track color is forced; width is
+   left alone so existing thin/custom scrollbars aren't affected. */
+html.app-dark-scrollbar * {
+  scrollbar-color: #475569 transparent;
+}
+
+html.app-dark-scrollbar *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.app-dark-scrollbar *::-webkit-scrollbar-thumb {
+  background-color: #475569;
+  border-radius: 999px;
+}
+
+html.app-dark-scrollbar *::-webkit-scrollbar-thumb:hover {
+  background-color: #64748b;
+}

@@ -6,8 +6,10 @@ import Sidebar from "../../../components/Sidebar";
 import { getAllEMIs } from "../../../services/customer";
 import Pagination from "../../../components/Pagination";
 import ContactActionMenu from "../../../components/ContactActionMenu";
+import { useUI } from "../../../context/UIContext";
 
 const EMIDetailsPage = () => {
+  const { isDarkMode } = useUI();
   const [emis, setEmis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -245,7 +247,74 @@ const EMIDetailsPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex">
+      <style jsx global>{`
+        .emi-details-dark-mode {
+          background-color: #0f172a;
+        }
+        .emi-details-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .emi-details-dark-mode .bg-slate-50,
+        .emi-details-dark-mode .bg-slate-50\/50,
+        .emi-details-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .emi-details-dark-mode .hover\:bg-slate-50:hover,
+        .emi-details-dark-mode .hover\:bg-slate-50\/50:hover,
+        .emi-details-dark-mode .active\:bg-slate-50:hover,
+        .emi-details-dark-mode .group:active .group-active\:bg-slate-50,
+        .emi-details-dark-mode .hover\:bg-slate-100:hover {
+          background-color: #334155 !important;
+        }
+        .emi-details-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .emi-details-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .emi-details-dark-mode .bg-emerald-50 {
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+        .emi-details-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .emi-details-dark-mode .text-slate-900,
+        .emi-details-dark-mode .text-slate-800 {
+          color: #f1f5f9 !important;
+        }
+        .emi-details-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .emi-details-dark-mode .text-slate-600,
+        .emi-details-dark-mode .hover\:text-slate-600:hover {
+          color: #cbd5e1 !important;
+        }
+        .emi-details-dark-mode .text-slate-500,
+        .emi-details-dark-mode .text-slate-400,
+        .emi-details-dark-mode .text-slate-300 {
+          color: #94a3b8 !important;
+        }
+        .emi-details-dark-mode .placeholder\:text-slate-300::placeholder {
+          color: #64748b !important;
+        }
+        .emi-details-dark-mode .border-slate-200,
+        .emi-details-dark-mode .border-slate-100,
+        .emi-details-dark-mode .border-dashed.border-slate-200,
+        .emi-details-dark-mode .border-blue-100,
+        .emi-details-dark-mode .border-red-100,
+        .emi-details-dark-mode .border-emerald-100,
+        .emi-details-dark-mode .border-amber-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .emi-details-dark-mode .divide-slate-100 > * {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        .emi-details-dark-mode input,
+        .emi-details-dark-mode select {
+          color-scheme: dark;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex transition-colors duration-300 ${isDarkMode ? "emi-details-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />

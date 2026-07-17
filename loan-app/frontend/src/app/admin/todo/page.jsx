@@ -8,8 +8,10 @@ import { getTodos, createTodo, updateTodo, deleteTodo } from "../../../services/
 import { useSearchParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useToast } from "../../../context/ToastContext";
+import { useUI } from "../../../context/UIContext";
 
 const TodoListPage = () => {
+  const { isDarkMode } = useUI();
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -181,7 +183,69 @@ const TodoListPage = () => {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-[#F8FAFC] flex font-sans">
+      <style jsx global>{`
+        /* Scoped to-do page dark mode overrides, following the same pattern
+           as the analytics and dashboard pages. Every rule is prefixed with
+           .todo-dark-mode, so nothing here can affect any other page. The
+           Add/Edit To-Do modal is a shared component used elsewhere in the
+           app and is intentionally left out of this pass. */
+        .todo-dark-mode {
+          background-color: #0f172a;
+          color: #cbd5e1;
+        }
+        .todo-dark-mode .bg-white {
+          background-color: #1e293b !important;
+        }
+        .todo-dark-mode .bg-slate-50\/50,
+        .todo-dark-mode .hover\:bg-slate-50\/30:hover {
+          background-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        .todo-dark-mode .bg-slate-50,
+        .todo-dark-mode .bg-slate-100 {
+          background-color: #334155 !important;
+        }
+        .todo-dark-mode .hover\:bg-slate-50:hover {
+          background-color: #334155 !important;
+        }
+        .todo-dark-mode .bg-slate-900 {
+          background-color: #475569 !important;
+        }
+        .todo-dark-mode .hover\:bg-slate-200:hover {
+          background-color: #475569 !important;
+        }
+        .todo-dark-mode .bg-blue-100 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .todo-dark-mode .bg-green-100 {
+          background-color: rgba(34, 197, 94, 0.15) !important;
+        }
+        .todo-dark-mode .bg-orange-50 {
+          background-color: rgba(249, 115, 22, 0.15) !important;
+        }
+        .todo-dark-mode .bg-red-50 {
+          background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+        .todo-dark-mode .text-slate-900 {
+          color: #f1f5f9 !important;
+        }
+        .todo-dark-mode .text-slate-700 {
+          color: #e2e8f0 !important;
+        }
+        .todo-dark-mode .text-slate-600 {
+          color: #cbd5e1 !important;
+        }
+        .todo-dark-mode .text-slate-500 {
+          color: #94a3b8 !important;
+        }
+        .todo-dark-mode .text-red-700 {
+          color: #fca5a5 !important;
+        }
+        .todo-dark-mode .border-slate-100,
+        .todo-dark-mode .border-slate-200 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+      `}</style>
+      <div className={`min-h-screen bg-[#F8FAFC] flex font-sans transition-colors duration-300 ${isDarkMode ? "todo-dark-mode" : ""}`}>
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Navbar />
