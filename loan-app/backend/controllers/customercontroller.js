@@ -390,19 +390,23 @@ const updateEMI = asyncHandler(async (req, res, next) => {
     if (!buckets[key]) {
       buckets[key] = {
         date: normalizeToMidnight(new Date(date)),
-        modes: new Set(),
-        chequeNumbers: new Set(),
+        emiModes: new Set(),
+        emiChequeNumbers: new Set(),
+        overdueModes: new Set(),
+        overdueChequeNumbers: new Set(),
         emiDelta: 0,
         overdueDelta: 0,
       };
     }
     const val = parseFloat(amount) || 0;
+    const modesSet = type === "EMI" ? buckets[key].emiModes : buckets[key].overdueModes;
+    const chequeSet = type === "EMI" ? buckets[key].emiChequeNumbers : buckets[key].overdueChequeNumbers;
     if (type === "EMI") buckets[key].emiDelta += isNew ? val : -val;
     else buckets[key].overdueDelta += isNew ? val : -val;
 
     if (isNew && val > 0) {
-      if (mode) buckets[key].modes.add(mode.toUpperCase());
-      if (chequeNumber) buckets[key].chequeNumbers.add(chequeNumber);
+      if (mode) modesSet.add(mode.toUpperCase());
+      if (chequeNumber) chequeSet.add(chequeNumber);
     }
   };
 
@@ -430,33 +434,56 @@ const updateEMI = asyncHandler(async (req, res, next) => {
     emi.overdue.forEach(p => addToBucket(p.date, p.mode, p.chequeNumber, 'Overdue', p.amount, true));
   }
 
-  // Create Payment records for each bucket with a non-zero delta
+  // Create Payment records for each bucket with a non-zero delta.
+  // EMI and Overdue deltas are recorded as SEPARATE Payment records (rather
+  // than one combined record) because the Collections tab matches a payment's
+  // paymentType against either the EMI's paymentHistory or its overdue array
+  // — never both. A single combined record with a mixed amount and a generic
+  // "Monthly/Daily/Weekly" paymentType could never match a same-date entry in
+  // either array when both an EMI and an Overdue amount changed together,
+  // causing the payment to silently disappear from Collections.
+  const emiPaymentTypeFor = (loanModel) =>
+    loanModel === "DailyLoan" ? "Daily" : loanModel === "WeeklyLoan" ? "Weekly" : "Monthly";
+
   for (const key in buckets) {
-    const { date, modes, emiDelta, overdueDelta } = buckets[key];
-    const totalDelta = emiDelta + overdueDelta;
+    const { date, emiModes, emiChequeNumbers, overdueModes, overdueChequeNumbers, emiDelta, overdueDelta } = buckets[key];
 
-    if (totalDelta !== 0 || emiDelta !== 0 || overdueDelta !== 0) {
-      const { date, modes, chequeNumbers } = buckets[key];
-      const combinedMode = modes.size > 0 ? Array.from(modes).join(", ") : "CASH";
-      const combinedChequeNo = chequeNumbers.size > 0 ? Array.from(chequeNumbers).join(", ") : "";
-
+    if (emiDelta !== 0) {
+      const emiMode = emiModes.size > 0 ? Array.from(emiModes).join(", ") : "CASH";
+      const emiChequeNo = emiChequeNumbers.size > 0 ? Array.from(emiChequeNumbers).join(", ") : "";
       await Payment.create({
         emiId: emi._id,
         loanId: emi.loanId,
         loanModel: emi.loanModel,
         emiAmount: emiDelta,
-        overdueAmount: overdueDelta,
-        totalAmount: totalDelta,
-        amount: totalDelta, // Legacy fallback
-        mode: combinedMode,
-        chequeNumber: combinedChequeNo,
+        overdueAmount: 0,
+        totalAmount: emiDelta,
+        amount: emiDelta, // Legacy fallback
+        mode: emiMode,
+        chequeNumber: emiChequeNo,
         paymentDate: date,
-        paymentType:
-          emi.loanModel === "DailyLoan"
-            ? "Daily"
-            : emi.loanModel === "WeeklyLoan"
-              ? "Weekly"
-              : "Monthly",
+        paymentType: emiPaymentTypeFor(emi.loanModel),
+        status: "Success",
+        collectedBy: req.user._id,
+        remarks: remarks || "",
+      });
+    }
+
+    if (overdueDelta !== 0) {
+      const overdueMode = overdueModes.size > 0 ? Array.from(overdueModes).join(", ") : "CASH";
+      const overdueChequeNo = overdueChequeNumbers.size > 0 ? Array.from(overdueChequeNumbers).join(", ") : "";
+      await Payment.create({
+        emiId: emi._id,
+        loanId: emi.loanId,
+        loanModel: emi.loanModel,
+        emiAmount: 0,
+        overdueAmount: overdueDelta,
+        totalAmount: overdueDelta,
+        amount: overdueDelta, // Legacy fallback
+        mode: overdueMode,
+        chequeNumber: overdueChequeNo,
+        paymentDate: date,
+        paymentType: "Overdue",
         status: "Success",
         collectedBy: req.user._id,
         remarks: remarks || "",

@@ -39,7 +39,11 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
           sold: [{ $group: { _id: null, total: { $sum: { $ifNull: ["$soldDetails.totalAmount", "$soldDetails.sellAmount", 0] } } } }],
           active: [{ $match: { status: { $ne: "Closed" }, seizedStatus: { $ne: "Sold" } } }, { $count: "count" }],
           closed: [{ $match: { status: "Closed" } }, { $count: "count" }],
-          vehicleStatus: [{ $match: { isSeized: true } }, { $group: { _id: { $switch: { branches: [{ case: { $eq: ["$seizedStatus", "Seized"] }, then: "Seized" }, { case: { $eq: ["$seizedStatus", "Sold"] }, then: "Sold" }], default: "For Seizing" } }, count: { $sum: 1 } } }],
+          // Match on isSeized OR an explicit Seized/Sold status — isSeized can drift
+          // independently (e.g. via an unrelated loan edit) after a vehicle is sold,
+          // but seizedStatus "Sold" can never revert once set, so it's the
+          // authoritative signal and must count on its own.
+          vehicleStatus: [{ $match: { $or: [{ isSeized: true }, { seizedStatus: { $in: ["Seized", "Sold"] } }] } }, { $group: { _id: { $switch: { branches: [{ case: { $eq: ["$seizedStatus", "Seized"] }, then: "Seized" }, { case: { $eq: ["$seizedStatus", "Sold"] }, then: "Sold" }], default: "For Seizing" } }, count: { $sum: 1 } } }],
         }
       }
     ]),
@@ -246,19 +250,40 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
 
   // 2. Collection Breakdown
   const [emiMonthlyArr, emiInterestArr, expenseResultsArr] = expenseStats || [[], [], []];
-  
-  // monthlyCollected will be calculated after Payment aggregates are ready below
-  // For daily and weekly: sum EMI payments from Payment records + processing fees from loan documents
-  // (processing fees are not stored as Payment records for daily/weekly loans)
-  const [emiDailyPayArr, emiWeeklyPayArr, emiMonthlyPayArr, emiInterestPayArr,
-         dailyProcFeeArr] = await Promise.all([
-    Payment.aggregate([
-      { $match: { loanModel: "DailyLoan", status: "Success" } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$amount", 0] } } } }
+
+  // All loan types now sum directly from EMI paymentHistory/overdue (ground truth),
+  // the same way each individual loan's own totalCollected is recalculated after
+  // every approval — NOT from the Payment collection, which can drift out of sync
+  // whenever a payment is edited (mode-only corrections in particular don't always
+  // produce a matching Payment record, so summing Payment records can over/under-count).
+  const [emiDailyPayArr, emiDailyOdArr, dailyProcFeeArr,
+         emiWeeklyPayArr, emiWeeklyOdArr, weeklyProcFeeArr,
+         emiMonthlyPayArr, emiInterestPayArr] = await Promise.all([
+    EMI.aggregate([
+      { $match: { loanModel: "DailyLoan" } },
+      { $unwind: { path: "$paymentHistory", preserveNullAndEmptyArrays: false } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$paymentHistory.amount", 0] } } } }
     ]),
-    Payment.aggregate([
-      { $match: { loanModel: "WeeklyLoan", status: "Success" } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$amount", 0] } } } }
+    EMI.aggregate([
+      { $match: { loanModel: "DailyLoan" } },
+      { $unwind: { path: "$overdue", preserveNullAndEmptyArrays: false } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$overdue.amount", 0] } } } }
+    ]),
+    DailyLoan.aggregate([
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } }
+    ]),
+    EMI.aggregate([
+      { $match: { loanModel: "WeeklyLoan" } },
+      { $unwind: { path: "$paymentHistory", preserveNullAndEmptyArrays: false } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$paymentHistory.amount", 0] } } } }
+    ]),
+    EMI.aggregate([
+      { $match: { loanModel: "WeeklyLoan" } },
+      { $unwind: { path: "$overdue", preserveNullAndEmptyArrays: false } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$overdue.amount", 0] } } } }
+    ]),
+    WeeklyLoan.aggregate([
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } }
     ]),
     // Vehicle loans: sum EMI paymentHistory + OD + processing fees directly
     Promise.all([
@@ -280,10 +305,11 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
         { $match: { status: "Closed", foreclosureAmount: { $gt: 0 } } },
         { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureAmount", 0] } } } }
       ]),
-      // Sold vehicle amounts
+      // Sold vehicle amounts — matched on seizedStatus alone (not isSeized, which can
+      // drift independently and isn't the authoritative "was this vehicle sold" signal)
       Loan.aggregate([
-        { $match: { "soldDetails.totalAmount": { $exists: true, $gt: 0 } } },
-        { $group: { _id: null, total: { $sum: { $ifNull: ["$soldDetails.totalAmount", 0] } } } }
+        { $match: { seizedStatus: "Sold" } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$soldDetails.totalAmount", "$soldDetails.sellAmount", 0] } } } }
       ]),
     ]),
     // Interest loan: sum from InterestEMI paymentHistory (Payment records may have duplicates)
@@ -291,17 +317,15 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
       { $unwind: { path: "$paymentHistory", preserveNullAndEmptyArrays: false } },
       { $group: { _id: null, total: { $sum: { $ifNull: ["$paymentHistory.amount", 0] } } } }
     ]),
-    // Daily loan processing fees are NOT in Payment records — read from loan documents
-    DailyLoan.aggregate([
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } }
-    ]),
   ]);
 
-  // Weekly: Payment records include processing fees — use them directly
-  const weeklyCollected = Math.round(getAggSum(emiWeeklyPayArr));
+  const weeklyCollected = Math.round(
+    getAggSum(emiWeeklyPayArr) + getAggSum(emiWeeklyOdArr) + getAggSum(weeklyProcFeeArr)
+  );
 
-  // Daily: Processing fees NOT stored as Payment records — add from loan documents
-  const dailyCollected = Math.round(getAggSum(emiDailyPayArr)) + Math.round(getAggSum(dailyProcFeeArr));
+  const dailyCollected = Math.round(
+    getAggSum(emiDailyPayArr) + getAggSum(emiDailyOdArr) + getAggSum(dailyProcFeeArr)
+  );
 
   // Monthly collected: EMI payments + OD + processing fees + foreclosure + sold amounts
   const [loanEmiPayArr, loanOdArr, loanProcFeeArr, loanForeclosureArr, loanSoldArr] = emiMonthlyPayArr || [[], [], [], [], []];

@@ -169,7 +169,11 @@ const processApproval = asyncHandler(async (req, res, next) => {
         emi.remarks = remarks;
         emi.approvedBy = req.user._id;
         emi.approvedAt = Date.now();
-        await emi.save();
+        // timestamps:false — updatedBy/updatedAt already correctly reflect the
+        // staff member's original submission (set when they submitted for
+        // approval); approvedBy/approvedAt are the separate, correct place to
+        // record this approval action, so updatedAt must not be bumped here.
+        await emi.save({ timestamps: false });
 
         // Sync WeeklyLoan/DailyLoan counters after approval, derived from
         // actual EMI records (ground truth) - not just totalCollected.
@@ -309,7 +313,10 @@ const processApproval = asyncHandler(async (req, res, next) => {
         emi.remarks = remarks;
         emi.approvedBy = req.user._id;
         emi.approvedAt = Date.now();
-        await emi.save();
+        // timestamps:false — same reasoning as the EMI_PAYMENT branch above:
+        // don't let this approval save overwrite the staff member's original
+        // updatedAt with the approval time.
+        await emi.save({ timestamps: false });
       }
     } else if (requestType === "FORECLOSURE") {
       const loan = await Loan.findById(targetId);

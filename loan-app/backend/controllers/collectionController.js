@@ -77,8 +77,11 @@ const getCollectionReport = asyncHandler(async (req, res, next) => {
                               in: { 
                                 $and: [
                                   { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ov.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
-                                  { $eq: [{ $toDouble: "$$ov.amount" }, "$$paymentAmount"] },
-                                  { $eq: [{ $toUpper: { $ifNull: ["$$ov.mode", "CASH"] } }, { $toUpper: "$mode" }] }
+                                  { $eq: [{ $toDouble: "$$ov.amount" }, "$$paymentAmount"] }
+                                  // Mode is intentionally NOT part of this match: a mode-only
+                                  // correction (e.g. Online -> Cash) leaves the Payment record's
+                                  // mode stale, but the date+amount still correctly identify the
+                                  // same transaction, so it must still show in Collections.
                                 ]
                               }
                             }
@@ -97,8 +100,9 @@ const getCollectionReport = asyncHandler(async (req, res, next) => {
                               in: { 
                                 $and: [
                                   { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ph.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
-                                  { $eq: [{ $toDouble: "$$ph.amount" }, "$$paymentAmount"] },
-                                  { $eq: [{ $toUpper: "$$ph.mode" }, { $toUpper: "$mode" }] }
+                                  { $eq: [{ $toDouble: "$$ph.amount" }, "$$paymentAmount"] }
+                                  // Mode intentionally not matched here either — see the
+                                  // overdue branch above for why.
                                 ]
                               }
                             }
@@ -247,8 +251,11 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
                               in: { 
                                 $and: [
                                   { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ov.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
-                                  { $eq: [{ $toDouble: "$$ov.amount" }, "$$paymentAmount"] },
-                                  { $eq: [{ $toUpper: { $ifNull: ["$$ov.mode", "CASH"] } }, { $toUpper: "$mode" }] }
+                                  { $eq: [{ $toDouble: "$$ov.amount" }, "$$paymentAmount"] }
+                                  // Mode is intentionally NOT part of this match: a mode-only
+                                  // correction (e.g. Online -> Cash) leaves the Payment record's
+                                  // mode stale, but the date+amount still correctly identify the
+                                  // same transaction, so it must still show in Collections.
                                 ]
                               }
                             }
@@ -267,8 +274,9 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
                               in: { 
                                 $and: [
                                   { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ph.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
-                                  { $eq: [{ $toDouble: "$$ph.amount" }, "$$paymentAmount"] },
-                                  { $eq: [{ $toUpper: "$$ph.mode" }, { $toUpper: "$mode" }] }
+                                  { $eq: [{ $toDouble: "$$ph.amount" }, "$$paymentAmount"] }
+                                  // Mode intentionally not matched here either — see the
+                                  // overdue branch above for why.
                                 ]
                               }
                             }
