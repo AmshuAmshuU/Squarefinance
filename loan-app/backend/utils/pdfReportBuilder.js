@@ -30,10 +30,12 @@ const getBrowser = async () => {
   });
 };
 
-// FRONTEND_URL is a comma-separated CORS allowlist (e.g.
-// "http://localhost:3000,https://www.squarefinance.org"), not a single
-// navigable address — pick the one matching where this code is actually
-// running, so local testing hits localhost and production hits the live site.
+// FRONTEND_URL is a comma-separated CORS allowlist accumulated over time
+// (localhost, old dev/preview domains, Vercel auto-generated URLs, an
+// alternate .info domain, etc.) — NOT a single navigable address, and NOT
+// safe to resolve by just picking "any non-localhost entry", since several
+// of those entries are stale/unrelated domains, not the real live site.
+// In production, specifically look for squarefinance.org.
 const resolveFrontendUrl = () => {
   const candidates = (process.env.FRONTEND_URL || "")
     .split(",")
@@ -41,11 +43,18 @@ const resolveFrontendUrl = () => {
     .filter(Boolean);
 
   const isProd = process.env.NODE_ENV === "production";
-  const match = candidates.find((u) =>
-    isProd ? !u.includes("localhost") : u.includes("localhost")
-  );
+  const match = isProd
+    ? candidates.find((u) => u.includes("squarefinance.org"))
+    : candidates.find((u) => u.includes("localhost"));
 
-  return (match || candidates[0] || "").replace(/\/$/, "");
+  if (!match) {
+    throw new Error(
+      `Could not find a ${isProd ? "squarefinance.org" : "localhost"} entry in FRONTEND_URL. ` +
+      `Current value: ${process.env.FRONTEND_URL || "(not set)"}`
+    );
+  }
+
+  return match.replace(/\/$/, "");
 };
 
 const buildAnalyticsPagePdf = async ({ loginEmail, loginPassword, loginAccessKey }) => {
