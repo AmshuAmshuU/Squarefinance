@@ -202,4 +202,49 @@ const sendInquiryEmail = async (inquiryData) => {
   }
 };
 
-module.exports = { sendOTP, sendInquiryEmail };
+const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, attachmentFilename) => {
+  if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !GMAIL_USER) {
+    throw new Error("Email configuration missing");
+  }
+
+  const from = GMAIL_USER;
+  const to = recipients.join(", ");
+  const boundary = "square_finance_report_boundary";
+
+  const attachmentBase64 = attachmentBuffer.toString("base64");
+  // MIME requires base64 attachment content wrapped at 76 chars per line
+  const wrappedAttachment = attachmentBase64.match(/.{1,76}/g).join("\r\n");
+
+  const str = [
+    `Content-Type: multipart/mixed; boundary="${boundary}"\n`,
+    "MIME-Version: 1.0\n",
+    `to: ${to}\n`,
+    `from: ${from}\n`,
+    `subject: ${subject}\n\n`,
+    `--${boundary}\n`,
+    'Content-Type: text/html; charset="UTF-8"\n\n',
+    `${htmlBody}\n\n`,
+    `--${boundary}\n`,
+    `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; name="${attachmentFilename}"\n`,
+    `Content-Disposition: attachment; filename="${attachmentFilename}"\n`,
+    "Content-Transfer-Encoding: base64\n\n",
+    `${wrappedAttachment}\n\n`,
+    `--${boundary}--`,
+  ].join("");
+
+  const encodedMessage = Buffer.from(str)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  const result = await gmail.users.messages.send({
+    userId: "me",
+    requestBody: { raw: encodedMessage },
+  });
+
+  console.log(`Report email sent to ${to}:`, result.data.id);
+  return result.data;
+};
+
+module.exports = { sendOTP, sendInquiryEmail, sendReportEmail };

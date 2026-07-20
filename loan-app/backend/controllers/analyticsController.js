@@ -553,7 +553,10 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
   sendResponse(res, 200, "success", "Analytics stats fetched successfully", null, statsResponse);
 });
 
-const exportAllData = asyncHandler(async (req, res, next) => {
+// Shared data-gathering logic for the "Consolidated Report" — used by both
+// the manual Export button (exportAllData) and the automated daily email
+// (reportController.js), so both always produce identical data.
+const getConsolidatedReportData = async () => {
   const InterestEMI = require("../models/InterestEMI");
 
   const [
@@ -626,13 +629,18 @@ const exportAllData = asyncHandler(async (req, res, next) => {
     return { ...loan, totalCollected, clientResponse };
   }));
 
-  sendResponse(res, 200, "success", "Export data fetched successfully", null, {
+  return {
     monthlyLoans: enhancedMonthly,
     dailyLoans: enhancedDaily,
     weeklyLoans: enhancedWeekly,
     interestLoans: enhancedInterest,
     expenses
-  });
+  };
+};
+
+const exportAllData = asyncHandler(async (req, res, next) => {
+  const data = await getConsolidatedReportData();
+  sendResponse(res, 200, "success", "Export data fetched successfully", null, data);
 });
 
 const getTrendStats = asyncHandler(async (req, res, next) => {
@@ -988,4 +996,5 @@ module.exports = {
   exportAllData,
   getTrendStats,
   getProfitStats,
+  getConsolidatedReportData,
 };
