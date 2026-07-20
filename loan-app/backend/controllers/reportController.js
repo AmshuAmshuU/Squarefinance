@@ -98,31 +98,50 @@ const sendDailyAnalyticsPdf = asyncHandler(async (req, res, next) => {
   // same long-running Render process, after the response has been sent.
   sendResponse(res, 202, "success", `Analytics PDF generation started — will be emailed to ${recipient} shortly`, null, { recipient });
 
+  // Hard overall safety-net timeout. Every individual Puppeteer wait
+  // already has its own timeout, but this guarantees SOMETHING gets
+  // logged within a bounded window no matter what — e.g. if a network
+  // call (like the Gmail API upload) hangs without its own timeout —
+  // instead of the job going silent with nothing in the logs at all.
+  const withHardTimeout = (promise, ms, label) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} exceeded hard timeout of ${ms}ms`)), ms)
+      ),
+    ]);
+
   try {
-    const pdfBuffer = await buildAnalyticsPagePdf({ loginEmail, loginPassword, loginAccessKey });
+    await withHardTimeout(
+      (async () => {
+        const pdfBuffer = await buildAnalyticsPagePdf({ loginEmail, loginPassword, loginAccessKey });
 
-    const today = new Date().toLocaleDateString("en-IN", {
-      day: "2-digit", month: "long", year: "numeric", timeZone: "Asia/Kolkata",
-    });
-    const fileName = `Analytics_Snapshot_${new Date().toISOString().split("T")[0]}.pdf`;
+        const today = new Date().toLocaleDateString("en-IN", {
+          day: "2-digit", month: "long", year: "numeric", timeZone: "Asia/Kolkata",
+        });
+        const fileName = `Analytics_Snapshot_${new Date().toISOString().split("T")[0]}.pdf`;
 
-    const htmlBody = `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333;">
-        <h2 style="color: #2563eb;">Square Finance — Daily Analytics Snapshot</h2>
-        <p>Attached is a full snapshot of the Analytics page (All Time view) for <strong>${today}</strong>.</p>
-        <p style="font-size: 12px; color: #9ca3af;">This report was generated and sent automatically.</p>
-      </div>
-    `;
+        const htmlBody = `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333;">
+            <h2 style="color: #2563eb;">Square Finance — Daily Analytics Snapshot</h2>
+            <p>Attached is a full snapshot of the Analytics page (All Time view) for <strong>${today}</strong>.</p>
+            <p style="font-size: 12px; color: #9ca3af;">This report was generated and sent automatically.</p>
+          </div>
+        `;
 
-    await sendReportEmail(
-      [recipient],
-      `Square Finance — Analytics Snapshot (${today})`,
-      htmlBody,
-      pdfBuffer,
-      fileName,
-      "application/pdf"
+        await sendReportEmail(
+          [recipient],
+          `Square Finance — Analytics Snapshot (${today})`,
+          htmlBody,
+          pdfBuffer,
+          fileName,
+          "application/pdf"
+        );
+        console.log(`Analytics PDF sent to ${recipient}`);
+      })(),
+      90000,
+      "Analytics PDF job"
     );
-    console.log(`Analytics PDF sent to ${recipient}`);
   } catch (err) {
     // Response already sent — can't forward to the error middleware.
     // Log it so it's visible in Render's Logs tab.
