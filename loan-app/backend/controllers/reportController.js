@@ -91,31 +91,43 @@ const sendDailyAnalyticsPdf = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("No PDF recipient configured", 500));
   }
 
-  const pdfBuffer = await buildAnalyticsPagePdf({ loginEmail, loginPassword, loginAccessKey });
+  // Respond immediately. The scheduler only needs to successfully trigger
+  // this — cron-job.org's free tier caps request timeouts at 30 seconds,
+  // well under how long a real headless-browser login + page capture
+  // takes on a free-tier host. The actual work continues below, in this
+  // same long-running Render process, after the response has been sent.
+  sendResponse(res, 202, "success", `Analytics PDF generation started — will be emailed to ${recipient} shortly`, null, { recipient });
 
-  const today = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit", month: "long", year: "numeric", timeZone: "Asia/Kolkata",
-  });
-  const fileName = `Analytics_Snapshot_${new Date().toISOString().split("T")[0]}.pdf`;
+  try {
+    const pdfBuffer = await buildAnalyticsPagePdf({ loginEmail, loginPassword, loginAccessKey });
 
-  const htmlBody = `
-    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333;">
-      <h2 style="color: #2563eb;">Square Finance — Daily Analytics Snapshot</h2>
-      <p>Attached is a full snapshot of the Analytics page (All Time view) for <strong>${today}</strong>.</p>
-      <p style="font-size: 12px; color: #9ca3af;">This report was generated and sent automatically.</p>
-    </div>
-  `;
+    const today = new Date().toLocaleDateString("en-IN", {
+      day: "2-digit", month: "long", year: "numeric", timeZone: "Asia/Kolkata",
+    });
+    const fileName = `Analytics_Snapshot_${new Date().toISOString().split("T")[0]}.pdf`;
 
-  await sendReportEmail(
-    [recipient],
-    `Square Finance — Analytics Snapshot (${today})`,
-    htmlBody,
-    pdfBuffer,
-    fileName,
-    "application/pdf"
-  );
+    const htmlBody = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333;">
+        <h2 style="color: #2563eb;">Square Finance — Daily Analytics Snapshot</h2>
+        <p>Attached is a full snapshot of the Analytics page (All Time view) for <strong>${today}</strong>.</p>
+        <p style="font-size: 12px; color: #9ca3af;">This report was generated and sent automatically.</p>
+      </div>
+    `;
 
-  sendResponse(res, 200, "success", `Analytics PDF sent to ${recipient}`, null, { recipient });
+    await sendReportEmail(
+      [recipient],
+      `Square Finance — Analytics Snapshot (${today})`,
+      htmlBody,
+      pdfBuffer,
+      fileName,
+      "application/pdf"
+    );
+    console.log(`Analytics PDF sent to ${recipient}`);
+  } catch (err) {
+    // Response already sent — can't forward to the error middleware.
+    // Log it so it's visible in Render's Logs tab.
+    console.error("Analytics PDF background job failed:", err);
+  }
 });
 
 module.exports = { sendDailyConsolidatedReport, sendDailyAnalyticsPdf };
