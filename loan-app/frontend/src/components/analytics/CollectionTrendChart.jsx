@@ -15,7 +15,7 @@ import {
 import { getTrendStats } from "../../services/analytics.service";
 import { Calendar, Filter, Loader2 } from "lucide-react";
 
-const CollectionTrendChart = ({ initialInterval = "all", isCumulative = false, chartId }) => {
+const CollectionTrendChart = ({ initialInterval = "all", isCumulative = false }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -129,7 +129,6 @@ const CollectionTrendChart = ({ initialInterval = "all", isCumulative = false, c
             <select
               value={interval}
               onChange={(e) => setInterval(e.target.value)}
-              data-report-select={chartId}
               className="w-full appearance-none pl-10 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[9px] font-black uppercase tracking-widest text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer hover:bg-slate-100/50"
             >
               {intervalOptions.map((opt) => (
