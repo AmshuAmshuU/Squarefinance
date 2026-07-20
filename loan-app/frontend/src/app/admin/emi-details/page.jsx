@@ -184,67 +184,6 @@ const EMIDetailsPage = () => {
       .sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate));
   }, [emis, searchQuery]);
 
-  const exportToExcel = () => {
-    // Filter and sort individual EMIs for the detailed export
-    const filteredEmis = emis
-      .filter(
-        (emi) =>
-          (emi.customerName?.toLowerCase() || "").includes(
-            searchQuery.toLowerCase(),
-          ) ||
-          (emi.loanNumber?.toLowerCase() || "").includes(
-            searchQuery.toLowerCase(),
-          ),
-      )
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-
-    const headers = [
-      "Loan Number",
-      "Customer Name",
-      "EMI No.",
-      "Due Date",
-      "EMI Amount",
-      "Amount Paid",
-      "Payment Date",
-      "Payment Mode",
-      "Overdue",
-      "Status",
-      "Remarks",
-    ];
-
-    const rows = filteredEmis.map((emi) => [
-      emi.loanNumber || "-",
-      emi.customerName || "-",
-      emi.emiNumber || "-",
-      formatDate(emi.dueDate),
-      emi.emiAmount || 0,
-      emi.amountPaid || 0,
-      formatDate(emi.paymentDate),
-      emi.paymentMode || "-",
-      emi.overdue || 0,
-      emi.status || "Pending",
-      emi.remarks || "-",
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `Detailed_EMI_History_${new Date().toISOString().split("T")[0]}.csv`,
-    );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <AuthGuard>
       <style jsx global>{`
@@ -369,26 +308,6 @@ const EMIDetailsPage = () => {
                     className="flex-none px-6 h-[46px] bg-red-50 border border-red-100 text-red-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
                     Clear
-                  </button>
-                  <button
-                    onClick={exportToExcel}
-                    disabled={customerWiseEMIs.length === 0}
-                    className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white px-6 h-[46px] rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    Export
                   </button>
                 </div>
               </div>

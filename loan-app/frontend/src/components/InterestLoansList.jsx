@@ -7,10 +7,9 @@ import { useToast } from "@/context/ToastContext";
 import { format } from "date-fns";
 import TableActionMenu from "./TableActionMenu";
 import Pagination from "./Pagination";
-import { Trash2, Eye, Edit, Download } from "lucide-react";
+import { Trash2, Eye, Edit } from "lucide-react";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "@/utils/auth";
-import { exportLoansToExcel } from "@/utils/exportExcel";
 import { useUI } from "@/context/UIContext";
 
 const InterestLoansList = ({ type, title }) => {
@@ -88,23 +87,6 @@ const InterestLoansList = ({ type, title }) => {
       } catch (err) {
         showToast(err.message || "Failed to delete", "error");
       }
-    }
-  };
-
-  const handleExportAll = async () => {
-    try {
-      showToast("Preparing export...", "info");
-      const response = await interestLoanService.getAllLoans({ limit: 5000 });
-      const { loans: allLoans } = response.data;
-
-      if (allLoans && allLoans.length > 0) {
-        await exportLoansToExcel(allLoans, "INTEREST");
-        showToast("Export successful", "success");
-      } else {
-        showToast("No data to export", "warning");
-      }
-    } catch (err) {
-      showToast(err.message || "Export failed", "error");
     }
   };
 
@@ -195,12 +177,6 @@ const InterestLoansList = ({ type, title }) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportAll}
-            className="flex bg-slate-50 text-slate-500 border border-slate-100 px-3 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-slate-100 transition-all items-center justify-center gap-1.5 shadow-sm"
-          >
-            <Download size={14} /> Export
-          </button>
           {canCreate && (
             <Link
               href="/admin/interest-loan/add"

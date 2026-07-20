@@ -8,7 +8,6 @@ import { format } from "date-fns";
 import TableActionMenu from "./TableActionMenu";
 import Pagination from "./Pagination";
 import { Trash2 } from "lucide-react";
-import { exportLoansToExcel } from "../utils/excelExport";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "../utils/auth";
 import { useUI } from "../context/UIContext";
@@ -94,40 +93,6 @@ const DailyLoansList = ({ type, title }) => {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      showToast("Preparing export data...", "info");
-      // Fetch all loans for export (ignoring pagination limits by setting a high limit)
-      const params = {
-        limit: 1000,
-      };
-
-      if (type === "pending") {
-        params.status = "Pending";
-      } else if (type === "followup") {
-        params.followup = "true";
-      }
-
-      if (searchQuery.trim()) {
-        params.searchQuery = searchQuery;
-      }
-
-      const response = await getDailyLoans(params);
-      const allLoans = response.data.dailyLoans;
-
-      if (!allLoans || allLoans.length === 0) {
-        showToast("No data to export", "error");
-        return;
-      }
-
-      await exportLoansToExcel(allLoans, "DAILY");
-      showToast("Daily loans exported successfully", "success");
-    } catch (err) {
-      console.error("Export error:", err);
-      showToast("Failed to export daily loans", "error");
-    }
-  };
-
   return (
     <div className={`max-w-7xl mx-auto ${isDarkMode ? "daily-loans-dark-mode" : ""}`}>
       <style jsx global>{`
@@ -194,25 +159,6 @@ const DailyLoansList = ({ type, title }) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleExport}
-            className="flex bg-slate-50 text-slate-500 border border-slate-100 px-3 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-slate-100 transition-all items-center justify-center gap-1.5 shadow-sm"
-          >
-            <svg
-              className="w-3.5 h-3.5 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2.5"
-                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M16 8l-4 4m0 0l-4-4m4 4V4"
-              />
-            </svg>
-            Export
-          </button>
           {canCreate && (
             <Link
               href="/admin/daily-loans/add"
