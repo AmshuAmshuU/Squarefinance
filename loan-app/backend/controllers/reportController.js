@@ -139,7 +139,12 @@ const sendDailyAnalyticsPdf = asyncHandler(async (req, res, next) => {
         );
         console.log(`Analytics PDF sent to ${recipient}`);
       })(),
-      90000,
+      // Generous ceiling — nothing is waiting on this in real time (it's a
+      // once-daily background email), so there's no cost to giving it
+      // plenty of room on a free-tier host where auth/DB round-trips have
+      // been observed taking 500ms-1s+ each, well above what a single
+      // lightweight lookup normally costs.
+      240000,
       "Analytics PDF job"
     );
   } catch (err) {
