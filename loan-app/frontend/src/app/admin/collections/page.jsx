@@ -434,25 +434,27 @@ const CollectionsPage = () => {
               </div>
 
               {/* TABS */}
-              <div className="flex mb-8 bg-white border border-slate-200 rounded-2xl p-1 shadow-sm overflow-x-auto min-w-max md:min-w-0 w-max">
-                 <button 
-                  onClick={() => setActiveTab("collections")}
-                  className={`px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === "collections" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
-                 >
-                   Collections
-                 </button>
-                 <button 
-                  onClick={() => setActiveTab("loans")}
-                  className={`px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === "loans" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
-                 >
-                   Loans Given
-                 </button>
-                 <button 
-                  onClick={() => setActiveTab("expenses")}
-                  className={`px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === "expenses" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
-                 >
-                   Expenses
-                 </button>
+              <div className="mb-8 overflow-x-auto">
+                <div className="flex bg-white border border-slate-200 rounded-2xl p-1 shadow-sm w-max">
+                   <button
+                    onClick={() => setActiveTab("collections")}
+                    className={`px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === "collections" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
+                   >
+                     Collections
+                   </button>
+                   <button
+                    onClick={() => setActiveTab("loans")}
+                    className={`px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === "loans" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
+                   >
+                     Loans Given
+                   </button>
+                   <button
+                    onClick={() => setActiveTab("expenses")}
+                    className={`px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === "expenses" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
+                   >
+                     Expenses
+                   </button>
+                </div>
               </div>
 
               {/* Filters */}
