@@ -8,12 +8,18 @@
 
 const getBrowser = async () => {
   if (process.env.NODE_ENV === "production") {
-    const chromium = require("@sparticuz/chromium");
+    // @sparticuz/chromium ships as an ESM module — required via plain
+    // CommonJS require(), its real API (executablePath, args, etc.) sits
+    // under a .default property instead of directly on the module. Fall
+    // back to the module itself in case a future version stops needing
+    // the wrapping.
+    const chromiumModule = require("@sparticuz/chromium");
+    const chromium = chromiumModule.default || chromiumModule;
     const puppeteer = require("puppeteer-core");
     return puppeteer.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      headless: true,
       defaultViewport: { width: 1600, height: 1200 },
     });
   }
