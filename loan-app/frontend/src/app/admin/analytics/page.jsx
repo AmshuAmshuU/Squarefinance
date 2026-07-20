@@ -57,7 +57,7 @@ const AnalyticsPage = () => {
       const res = await getExportData();
       if (!res.data) throw new Error("No data received for export");
 
-      const { monthlyLoans, dailyLoans, weeklyLoans, interestLoans, expenses } = res.data;
+      const { monthlyLoans, dailyLoans, weeklyLoans, interestLoans, expenses, analyticsSummary } = res.data;
       const workbook = new ExcelJS.Workbook();
 
       const formatHeader = (worksheet, headers, title) => {
@@ -229,6 +229,130 @@ const AnalyticsPage = () => {
         ]);
       });
       autoFit(expenseSheet);
+
+      // 6. Analytics Summary - mirrors the Analytics page's stat cards
+      // (everything except graphs). Kept identical to the backend's copy in
+      // backend/utils/excelReportBuilder.js (addAnalyticsSummarySheet) so the
+      // automated daily email and this manual export always match.
+      const TYPE_ROWS = [
+        { label: "Vehicle", key: "monthly" },
+        { label: "Weekly", key: "weekly" },
+        { label: "Daily", key: "daily" },
+        { label: "Interest", key: "interest" },
+      ];
+      const PROFIT_INTERVAL_COLS = [
+        { key: "all", label: "All Time" },
+        { key: "weekly", label: "Last 7 Days" },
+        { key: "monthly", label: "Last 30 Days" },
+        { key: "3months", label: "Last 3 Months" },
+        { key: "6months", label: "Last 6 Months" },
+        { key: "yearly", label: "Last 1 Year" },
+      ];
+      const money = (v) => Math.round(v || 0);
+      const summarySheet = workbook.addWorksheet("Analytics Summary");
+      const c = analyticsSummary?.cards || {};
+      const WIDE = 1 + PROFIT_INTERVAL_COLS.length;
+
+      const sectionTitle = (text) => {
+        const row = summarySheet.addRow([text]);
+        summarySheet.mergeCells(row.number, 1, row.number, WIDE);
+        row.font = { bold: true, size: 13, color: { argb: "FF1E293B" } };
+        row.height = 22;
+        row.alignment = { vertical: "middle" };
+      };
+      const tableHeader = (cols) => {
+        const row = summarySheet.addRow(cols);
+        row.eachCell((cell) => {
+          cell.font = { bold: true, size: 10, color: { argb: "FFFFFFFF" } };
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF334155" } };
+          cell.alignment = { horizontal: "center" };
+        });
+      };
+      const dataRow = (cols, { bold = false } = {}) => {
+        const row = summarySheet.addRow(cols);
+        if (bold) row.font = { bold: true };
+      };
+      const blank = () => summarySheet.addRow([]);
+
+      sectionTitle("TOTAL DISBURSED");
+      tableHeader(["Type", "All Time", "Active"]);
+      TYPE_ROWS.forEach((t) =>
+        dataRow([t.label, money(c.disbursementBreakdown?.[t.key]), money(c.activeDisbursed?.[t.key])]),
+      );
+      dataRow(["Total", money(c.totalLoanAmount), money(c.activeDisbursed?.total)], { bold: true });
+      blank();
+
+      sectionTitle("TOTAL COLLECTED & FUTURE EXPECTED");
+      tableHeader(["Type", "Collected", "Expected"]);
+      TYPE_ROWS.forEach((t) =>
+        dataRow([t.label, money(c.collectedBreakdown?.[t.key]), money(c.futureIncome?.[t.key])]),
+      );
+      dataRow(["Total", money(c.totalCollectedAmount), money(c.futureIncome?.total)], { bold: true });
+      if (c.futureIncome?.interestPrincipal > 0) {
+        dataRow([`* Interest expected includes Rs.${money(c.futureIncome.interestPrincipal)} remaining principal`]);
+      }
+      blank();
+
+      sectionTitle("TOTAL EXPENSES");
+      dataRow(["Total Expenses", money(c.totalExpenses)], { bold: true });
+      blank();
+
+      sectionTitle("PENDING PAYMENTS");
+      tableHeader(["Type", "Loans", "EMIs"]);
+      TYPE_ROWS.forEach((t) =>
+        dataRow([t.label, c.pendingBreakdown?.[t.key]?.loans || 0, c.pendingBreakdown?.[t.key]?.emis || 0]),
+      );
+      dataRow(["Total", c.pendingLoansCount || 0, c.pendingEmisCount || 0], { bold: true });
+      blank();
+
+      sectionTitle("PARTIAL PAYMENTS");
+      dataRow(["Partial Payments (Loans)", c.partialLoansCount || 0], { bold: true });
+      blank();
+
+      sectionTitle("LOAN PORTFOLIO");
+      tableHeader(["Type", "Total", "Active", "Closed"]);
+      TYPE_ROWS.forEach((t) =>
+        dataRow([t.label, c.totalLoansBreakdown?.[t.key] || 0, c.activeByType?.[t.key] || 0, c.closedByType?.[t.key] || 0]),
+      );
+      dataRow(["Total", c.totalLoansGiven || 0, c.activeLoansCount || 0, c.closedLoansCount || 0], { bold: true });
+      blank();
+
+      sectionTitle("MONTHLY EMI EXPECTED");
+      tableHeader(["Type", "Amount"]);
+      dataRow(["Vehicle", money(c.monthlyEmiBreakdown?.monthly)]);
+      dataRow(["Weekly", money(c.monthlyEmiBreakdown?.weekly)]);
+      dataRow(["Daily (x30)", money(c.monthlyEmiBreakdown?.daily)]);
+      dataRow(["Interest", money(c.monthlyEmiBreakdown?.interest)]);
+      dataRow(["Total", money(c.totalMonthlyEmiExpected)], { bold: true });
+      blank();
+
+      sectionTitle("PAYMENT MODE ANALYSIS");
+      tableHeader(["Type", "Disbursed", "Collected"]);
+      dataRow(["Cash Balance", money(c.paymentModeStats?.disbursement?.cash), money(c.paymentModeStats?.collection?.cash)]);
+      dataRow(["Account Balance", money(c.paymentModeStats?.disbursement?.account), money(c.paymentModeStats?.collection?.account)]);
+      dataRow(["Total Summary", money(c.paymentModeStats?.disbursement?.total), money(c.paymentModeStats?.collection?.total)], { bold: true });
+      dataRow(["Net Cash Flow", money((c.paymentModeStats?.collection?.cash || 0) - (c.paymentModeStats?.disbursement?.cash || 0))]);
+      dataRow(["Net Bank Flow", money((c.paymentModeStats?.collection?.account || 0) - (c.paymentModeStats?.disbursement?.account || 0))]);
+      blank();
+
+      sectionTitle("PROFIT OVERVIEW - TOTAL PROFIT BY PERIOD");
+      tableHeader(["Type", ...PROFIT_INTERVAL_COLS.map((i) => i.label)]);
+      TYPE_ROWS.forEach((t) => {
+        dataRow([t.label, ...PROFIT_INTERVAL_COLS.map((i) => money(analyticsSummary?.profitByInterval?.[i.key]?.breakdown?.[t.key]))]);
+      });
+      dataRow(["Total", ...PROFIT_INTERVAL_COLS.map((i) => money(analyticsSummary?.profitByInterval?.[i.key]?.totalProfit))], { bold: true });
+      blank();
+
+      sectionTitle("EXPECTED PROFIT (NEXT MONTH)");
+      tableHeader(["Type", "Expected"]);
+      dataRow(["Vehicle", money(analyticsSummary?.expectedNextMonth?.breakdown?.monthly)]);
+      dataRow(["Interest", money(analyticsSummary?.expectedNextMonth?.breakdown?.interest)]);
+      dataRow(["Total", money(analyticsSummary?.expectedNextMonth?.total)], { bold: true });
+      dataRow(["* Weekly and Daily loans excluded - profit is realized only at disbursement"]);
+
+      summarySheet.columns.forEach((column, idx) => {
+        column.width = idx === 0 ? 32 : 18;
+      });
 
       const buffer = await workbook.xlsx.writeBuffer();
       saveAs(new Blob([buffer]), `Consolidated_Report_${new Date().toISOString().split('T')[0]}.xlsx`);

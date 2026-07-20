@@ -12,6 +12,16 @@ const InterestLoan = require("../models/InterestLoan");
 const InterestEMI = require("../models/InterestEMI");
 const Payment = require("../models/Payment");
 
+// Invokes an existing asyncHandler-wrapped route handler internally (no real
+// HTTP request/response) so its exact calculation logic can be reused without
+// duplicating the aggregation pipelines. Captures the `data` field that
+// handler would normally send via sendResponse().
+const invokeInternal = (handler, req) =>
+  new Promise((resolve, reject) => {
+    const res = { status: () => res, json: (payload) => resolve(payload.data) };
+    handler(req, res, (err) => reject(err));
+  });
+
 const getAnalyticsStats = asyncHandler(async (req, res, next) => {
   const startTotal = performance.now();
 
@@ -629,12 +639,32 @@ const getConsolidatedReportData = async () => {
     return { ...loan, totalCollected, clientResponse };
   }));
 
+  // Analytics Summary — mirrors the Analytics page's cards (minus graphs) for
+  // the exported report, reusing getAnalyticsStats/getProfitStats directly so
+  // this can never drift from what the Analytics page itself shows.
+  const profitIntervals = ["all", "weekly", "monthly", "3months", "6months", "yearly"];
+  const [cardsData, ...profitResults] = await Promise.all([
+    invokeInternal(getAnalyticsStats, { query: {} }),
+    ...profitIntervals.map((interval) => invokeInternal(getProfitStats, { query: { interval } })),
+  ]);
+  const profitByInterval = {};
+  profitIntervals.forEach((interval, i) => {
+    profitByInterval[interval] = profitResults[i];
+  });
+
+  const analyticsSummary = {
+    cards: cardsData.cards,
+    profitByInterval,
+    expectedNextMonth: profitByInterval.all.expectedNextMonth,
+  };
+
   return {
     monthlyLoans: enhancedMonthly,
     dailyLoans: enhancedDaily,
     weeklyLoans: enhancedWeekly,
     interestLoans: enhancedInterest,
-    expenses
+    expenses,
+    analyticsSummary,
   };
 };
 
