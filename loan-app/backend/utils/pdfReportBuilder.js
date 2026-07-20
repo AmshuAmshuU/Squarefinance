@@ -63,7 +63,20 @@ const buildAnalyticsPagePdf = async ({ loginEmail, loginPassword, loginAccessKey
     // conditions would hang until Puppeteer's own timeout. Waiting for
     // specific elements/URL changes instead.
     await page.goto(`${baseUrl}/admin/login`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector('input[name="email"]', { timeout: 20000 });
+    try {
+      await page.waitForSelector('input[name="email"]', { timeout: 20000 });
+    } catch (err) {
+      // Diagnostic: log what the hidden browser actually saw, so a failure
+      // here (bot-protection block page, slow hydration, wrong URL, etc.)
+      // is visible in Render's logs instead of just a bare timeout.
+      const currentUrl = page.url();
+      const bodyText = await page
+        .evaluate(() => document.body.innerText.slice(0, 500))
+        .catch(() => "(could not read page content)");
+      console.error(`Login page selector wait failed. Current URL: ${currentUrl}`);
+      console.error(`Page text snippet: ${bodyText}`);
+      throw err;
+    }
     await page.type('input[name="email"]', loginEmail, { delay: 20 });
     await page.type('input[name="password"]', loginPassword, { delay: 20 });
     if (loginAccessKey) {
