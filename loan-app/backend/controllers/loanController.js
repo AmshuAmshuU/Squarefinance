@@ -528,9 +528,15 @@ const getLoanByLoanNumber = asyncHandler(async (req, res, next) => {
 
   const principalPerMonth =
     (loan.principalAmount || 0) / (loan.tenureMonths || 1);
-  const remainingPrincipalAmount = Math.ceil(
-    remainingTenureCount * principalPerMonth,
-  );
+  // A loan properly closed via the Foreclose flow (has foreclosureAmount
+  // recorded) is fully settled - show 0 rather than the EMI-derived figure,
+  // which reflects EMIs that were never individually collected because the
+  // loan was paid off in one lump sum. Loans closed WITHOUT foreclosureAmount
+  // (legacy/manual closures) still fall through to the recovery logic below.
+  const remainingPrincipalAmount =
+    loan.status?.toLowerCase() === "closed" && loan.foreclosureAmount
+      ? 0
+      : Math.ceil(remainingTenureCount * principalPerMonth);
 
   const formattedLoan = formatLoanResponse(loan);
   formattedLoan.loanTerms.remainingPrincipalAmount = remainingPrincipalAmount;
@@ -676,9 +682,15 @@ const getLoanById = asyncHandler(async (req, res, next) => {
 
   const principalPerMonth =
     (loan.principalAmount || 0) / (loan.tenureMonths || 1);
-  const remainingPrincipalAmount = Math.ceil(
-    remainingTenureCount * principalPerMonth,
-  );
+  // A loan properly closed via the Foreclose flow (has foreclosureAmount
+  // recorded) is fully settled - show 0 rather than the EMI-derived figure,
+  // which reflects EMIs that were never individually collected because the
+  // loan was paid off in one lump sum. Loans closed WITHOUT foreclosureAmount
+  // (legacy/manual closures) still fall through to the recovery logic below.
+  const remainingPrincipalAmount =
+    loan.status?.toLowerCase() === "closed" && loan.foreclosureAmount
+      ? 0
+      : Math.ceil(remainingTenureCount * principalPerMonth);
 
   const formattedLoan = formatLoanResponse(loan);
   formattedLoan.loanTerms.remainingPrincipalAmount = remainingPrincipalAmount;
@@ -2030,6 +2042,10 @@ const forecloseLoan = asyncHandler(async (req, res, next) => {
     remarks,
     paymentMode,
     chequeNumber,
+    foreclosureChargePercent,
+    foreclosureChargeAmount,
+    od,
+    miscellaneousFee,
   } = req.body;
 
   const loan = await Loan.findById(id);
@@ -2111,8 +2127,6 @@ const forecloseLoan = asyncHandler(async (req, res, next) => {
   }
 
   const pDate = paymentDate ? new Date(paymentDate) : new Date();
-  const pMode =
-    (paymentBreakdown || []).map((p) => p.mode).join(", ") || "CASH";
 
   // 1. Update Loan status to Closed
   const updatedLoan = await Loan.findByIdAndUpdate(
@@ -2124,7 +2138,11 @@ const forecloseLoan = asyncHandler(async (req, res, next) => {
       foreclosedBy: req.user?._id,
       foreclosureDate: pDate,
       foreclosureAmount: totalAmount,
-      remainingPrincipal,
+      foreclosureChargePercent: foreclosureChargePercent || 0,
+      foreclosureChargeAmount: foreclosureChargeAmount || 0,
+      odAmount: od || 0,
+      miscellaneousFee: miscellaneousFee || 0,
+      remainingPrincipal: 0,
       paymentMode: paymentMode || "Cash",
       chequeNumber: paymentMode === "Cheque" ? chequeNumber : undefined,
     },
@@ -2134,23 +2152,7 @@ const forecloseLoan = asyncHandler(async (req, res, next) => {
     .populate("foreclosedBy", "name")
     .populate("updatedBy", "name");
 
-  // 2. Update all pending/partial EMIs for this loan to "Paid"
-  await EMI.updateMany(
-    {
-      loanId: id,
-      status: { $ne: "Paid" },
-    },
-    {
-      $set: {
-        status: "Paid",
-        paymentDate: pDate,
-        paymentMode: pMode,
-        remarks: `Loan foreclosed. Total Payment: ₹${totalAmount} via ${pMode}`,
-      },
-    },
-  );
-
-  // 3. Create Payment Records for each mode in breakdown
+  // 2. Create Payment Records for each mode in breakdown
   let targetEmiId = null;
   const firstJustPaidEmi = await EMI.findOne({
     loanId: id,

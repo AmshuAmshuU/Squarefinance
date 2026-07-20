@@ -445,6 +445,17 @@ const LoanForm = ({
     const principal = parseFloat(formik.values.loanTerms.principalAmount) || 0;
     const tenure = parseInt(formik.values.loanTerms.tenureMonths) || 0;
 
+    // A loan closed via foreclosure is fully settled - the EMI-derived
+    // figure below reflects EMIs that were never individually collected
+    // because the loan was paid off in one lump sum, so show 0 instead.
+    if (
+      formik.values.status.status === "Closed" &&
+      formik.values.status.foreclosureDetails?.foreclosureAmount
+    ) {
+      setRemainingPrincipalAmount(0);
+      return;
+    }
+
     if (principal > 0 && tenure > 0) {
       const principalPerMonth = principal / tenure;
       let remainingTenureCount = 0;
@@ -477,6 +488,8 @@ const LoanForm = ({
   }, [
     formik.values.loanTerms.principalAmount,
     formik.values.loanTerms.tenureMonths,
+    formik.values.status.status,
+    formik.values.status.foreclosureDetails?.foreclosureAmount,
     emis,
   ]);
 

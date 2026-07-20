@@ -297,6 +297,22 @@ const EditLoanPage = () => {
                         </div>
                         <div>
                           <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-1">
+                            OD/Overdue
+                          </span>
+                          <p className="text-sm font-black text-slate-900">
+                            ₹{(loan.status.foreclosureDetails.odAmount || 0).toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-1">
+                            Misc. Fee
+                          </span>
+                          <p className="text-sm font-black text-slate-900">
+                            ₹{(loan.status.foreclosureDetails.miscellaneousFee || 0).toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest block mb-1">
                             Processed By
                           </span>
                           <p className="text-sm font-black text-slate-900 uppercase">

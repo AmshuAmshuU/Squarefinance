@@ -321,9 +321,8 @@ const processApproval = asyncHandler(async (req, res, next) => {
     } else if (requestType === "FORECLOSURE") {
       const loan = await Loan.findById(targetId);
       if (loan) {
-        const { remainingPrincipal, totalAmount, paymentBreakdown, paymentDate, remarks, paymentMode, chequeNumber } = requestedData;
+        const { remainingPrincipal, totalAmount, paymentBreakdown, paymentDate, remarks, paymentMode, chequeNumber, foreclosureChargePercent, foreclosureChargeAmount, od, miscellaneousFee } = requestedData;
         const pDate = paymentDate ? new Date(paymentDate) : new Date();
-        const pMode = (paymentBreakdown || []).map(p => p.mode).join(", ") || "CASH";
 
         loan.status = "Closed";
         loan.paymentStatus = "Closed";
@@ -331,27 +330,17 @@ const processApproval = asyncHandler(async (req, res, next) => {
         loan.foreclosedBy = approval.requestedBy;
         loan.foreclosureDate = pDate;
         loan.foreclosureAmount = totalAmount;
-        loan.remainingPrincipal = remainingPrincipal;
+        loan.foreclosureChargePercent = foreclosureChargePercent || 0;
+        loan.foreclosureChargeAmount = foreclosureChargeAmount || 0;
+        loan.odAmount = od || 0;
+        loan.miscellaneousFee = miscellaneousFee || 0;
+        loan.remainingPrincipal = 0;
         loan.paymentMode = paymentMode || "Cash";
         loan.chequeNumber = paymentMode === "Cheque" ? chequeNumber : undefined;
         
         loan.approvedBy = req.user._id;
         loan.approvedAt = Date.now();
         await loan.save();
-
-        await EMI.updateMany(
-          { loanId: loan._id, status: { $ne: "Paid" } },
-          { 
-              $set: { 
-                  status: "Paid", 
-                  paymentDate: pDate, 
-                  paymentMode: pMode, 
-                  remarks: `Loan foreclosed. Total: ₹${totalAmount}`,
-                  approvedBy: req.user._id,
-                  approvedAt: Date.now()
-              } 
-          }
-        );
 
         if (paymentBreakdown && Array.isArray(paymentBreakdown)) {
           for (const p of paymentBreakdown) {
