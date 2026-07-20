@@ -3,6 +3,7 @@ const ErrorHandler = require("../utils/ErrorHandler");
 const sendResponse = require("../utils/response");
 const { getConsolidatedReportData } = require("./analyticsController");
 const { buildConsolidatedReportWorkbook } = require("../utils/excelReportBuilder");
+const { buildAnalyticsPagePdf } = require("../utils/pdfReportBuilder");
 const { sendReportEmail } = require("../utils/emailService");
 
 // Triggered by an external scheduler (not a logged-in user), so it's
@@ -67,4 +68,54 @@ const sendDailyConsolidatedReport = asyncHandler(async (req, res, next) => {
   });
 });
 
-module.exports = { sendDailyConsolidatedReport };
+// Separate from the Excel report by design: logs into the app with a real
+// account (via a hidden automated browser), captures the live Analytics
+// page as a PDF, and emails it to a single recipient only. Independent
+// trigger, independent failure mode — if this fails, the Excel report
+// (sent by sendDailyConsolidatedReport) is completely unaffected.
+const sendDailyAnalyticsPdf = asyncHandler(async (req, res, next) => {
+  const providedSecret = req.headers["x-cron-secret"];
+  if (!process.env.CRON_SECRET || providedSecret !== process.env.CRON_SECRET) {
+    return next(new ErrorHandler("Unauthorized", 401));
+  }
+
+  const loginEmail = process.env.ANALYTICS_PDF_LOGIN_EMAIL;
+  const loginPassword = process.env.ANALYTICS_PDF_LOGIN_PASSWORD;
+  const loginAccessKey = process.env.ANALYTICS_PDF_LOGIN_ACCESS_KEY;
+  const recipient = process.env.ANALYTICS_PDF_RECIPIENT || loginEmail;
+
+  if (!loginEmail || !loginPassword) {
+    return next(new ErrorHandler("ANALYTICS_PDF_LOGIN_EMAIL/PASSWORD not configured", 500));
+  }
+  if (!recipient) {
+    return next(new ErrorHandler("No PDF recipient configured", 500));
+  }
+
+  const pdfBuffer = await buildAnalyticsPagePdf({ loginEmail, loginPassword, loginAccessKey });
+
+  const today = new Date().toLocaleDateString("en-IN", {
+    day: "2-digit", month: "long", year: "numeric", timeZone: "Asia/Kolkata",
+  });
+  const fileName = `Analytics_Snapshot_${new Date().toISOString().split("T")[0]}.pdf`;
+
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333;">
+      <h2 style="color: #2563eb;">Square Finance — Daily Analytics Snapshot</h2>
+      <p>Attached is a full snapshot of the Analytics page (All Time view) for <strong>${today}</strong>.</p>
+      <p style="font-size: 12px; color: #9ca3af;">This report was generated and sent automatically.</p>
+    </div>
+  `;
+
+  await sendReportEmail(
+    [recipient],
+    `Square Finance — Analytics Snapshot (${today})`,
+    htmlBody,
+    pdfBuffer,
+    fileName,
+    "application/pdf"
+  );
+
+  sendResponse(res, 200, "success", `Analytics PDF sent to ${recipient}`, null, { recipient });
+});
+
+module.exports = { sendDailyConsolidatedReport, sendDailyAnalyticsPdf };

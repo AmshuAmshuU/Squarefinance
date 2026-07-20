@@ -202,7 +202,14 @@ const sendInquiryEmail = async (inquiryData) => {
   }
 };
 
-const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, attachmentFilename) => {
+const sendReportEmail = async (
+  recipients,
+  subject,
+  htmlBody,
+  attachmentBuffer,
+  attachmentFilename,
+  attachmentMimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+) => {
   if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !GMAIL_USER) {
     throw new Error("Email configuration missing");
   }
@@ -211,7 +218,11 @@ const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, 
   const to = recipients.join(", ");
   const boundary = "square_finance_report_boundary";
 
-  const attachmentBase64 = attachmentBuffer.toString("base64");
+  // Defensive: some sources (e.g. Puppeteer's page.pdf()) return a plain
+  // Uint8Array rather than a true Node Buffer. Buffer.from() on an
+  // already-real Buffer is a safe no-op-equivalent, so this is always
+  // correct regardless of what the caller passed in.
+  const attachmentBase64 = Buffer.from(attachmentBuffer).toString("base64");
   // MIME requires base64 attachment content wrapped at 76 chars per line
   const wrappedAttachment = attachmentBase64.match(/.{1,76}/g).join("\r\n");
 
@@ -225,7 +236,7 @@ const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, 
     'Content-Type: text/html; charset="UTF-8"\n\n',
     `${htmlBody}\n\n`,
     `--${boundary}\n`,
-    `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; name="${attachmentFilename}"\n`,
+    `Content-Type: ${attachmentMimeType}; name="${attachmentFilename}"\n`,
     `Content-Disposition: attachment; filename="${attachmentFilename}"\n`,
     "Content-Transfer-Encoding: base64\n\n",
     `${wrappedAttachment}\n\n`,

@@ -605,7 +605,7 @@ const AnalyticsPage = () => {
                   <VehicleStatsChart data={stats?.vehicleStats || []} />
                 </div>
                 <div className="lg:col-span-3">
-                  <CollectionTrendChart isCumulative={false} initialInterval="monthly" />
+                  <CollectionTrendChart isCumulative={false} initialInterval="monthly" chartId="monthly-trend" />
                 </div>
               </div>
 
@@ -624,7 +624,7 @@ const AnalyticsPage = () => {
 
               {/* Cumulative Growth Chart */}
               <div className="mt-10 min-h-[500px]">
-                <CollectionTrendChart isCumulative={true} initialInterval="yearly" />
+                <CollectionTrendChart isCumulative={true} initialInterval="yearly" chartId="yearly-trend" />
               </div>
 
               {/* Profit Overview */}
