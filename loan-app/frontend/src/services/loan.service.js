@@ -89,6 +89,12 @@ export const getFollowupLoans = async (params = {}) => {
   );
 };
 
+export const getFollowupDashboardSummary = async () => {
+  return await apiHandler("/api/loans/followup-summary", {
+    method: "GET",
+  });
+};
+
 export const getPendingEmiDetails = async (id) => {
   return await apiHandler(`/api/loans/pending-details/${id}`, {
     method: "GET",

@@ -10,6 +10,7 @@ const {
   calculateEMIApi,
   getPendingPayments,
   getFollowupLoans,
+  getFollowupDashboardSummary,
   getPendingEmiDetails,
   updatePaymentStatus,
   getForeclosureLoans,
@@ -58,6 +59,7 @@ router.get(
   getPendingPayments,
 );
 router.get("/followups", getFollowupLoans);
+router.get("/followup-summary", getFollowupDashboardSummary);
 router.get("/foreclosure", getForeclosureLoans);
 router.get("/seized-vehicles", getSeizedVehicles);
 router.patch(

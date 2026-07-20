@@ -1847,6 +1847,132 @@ const getFollowupLoans = asyncHandler(async (req, res, next) => {
   );
 });
 
+// Dashboard "Followup Accountability" card. Two buckets, across all 4 loan
+// types (status === "Active" only - excludes Closed, Seized, Pending, and
+// Waiting for Approval):
+//   today - nextFollowUpDate falls on today's calendar date
+//   stale - loan currently has a genuinely due/unpaid EMI (same definition
+//           getPendingPayments uses) AND nextFollowUpDate is missing or in
+//           the past. This is the "staff hasn't followed up" list - once
+//           someone sets the date to today or later, the loan drops out
+//           automatically since it's computed live, not stored.
+const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
+  const InterestEMI = require("../models/InterestEMI");
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+  const now = new Date();
+
+  const modelConfigs = [
+    { Model: Loan, loanType: "Vehicle", emiCollection: "emis", emiForeignField: "loanId" },
+    { Model: WeeklyLoan, loanType: "Weekly", emiCollection: "emis", emiForeignField: "loanId" },
+    { Model: DailyLoan, loanType: "Daily", emiCollection: "emis", emiForeignField: "loanId" },
+    { Model: InterestLoan, loanType: "Interest", emiCollection: "interestemis", emiForeignField: "interestLoanId" },
+  ];
+
+  const results = await Promise.all(
+    modelConfigs.map(async ({ Model, loanType, emiCollection, emiForeignField }) => {
+      const pipeline = [
+        { $match: { status: "Active" } },
+        {
+          $lookup: {
+            from: emiCollection,
+            localField: "_id",
+            foreignField: emiForeignField,
+            as: "emis",
+          },
+        },
+        {
+          $addFields: {
+            hasPendingEmi: {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: "$emis",
+                      as: "emi",
+                      cond: {
+                        $and: [
+                          { $ne: ["$$emi.status", "Paid"] },
+                          {
+                            $or: [
+                              { $eq: ["$$emi.status", "Partially Paid"] },
+                              { $lte: ["$$emi.dueDate", now] },
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+                0,
+              ],
+            },
+            isFollowupToday: {
+              $and: [
+                { $ne: ["$nextFollowUpDate", null] },
+                { $gte: ["$nextFollowUpDate", todayStart] },
+                { $lte: ["$nextFollowUpDate", todayEnd] },
+              ],
+            },
+            isStaleFollowup: {
+              $or: [
+                { $eq: ["$nextFollowUpDate", null] },
+                { $lt: ["$nextFollowUpDate", todayStart] },
+              ],
+            },
+          },
+        },
+        {
+          $facet: {
+            today: [
+              { $match: { isFollowupToday: true } },
+              {
+                $project: {
+                  _id: 1,
+                  loanNumber: 1,
+                  customerName: 1,
+                  mobileNumbers: 1,
+                  nextFollowUpDate: 1,
+                },
+              },
+            ],
+            stale: [
+              { $match: { hasPendingEmi: true, isStaleFollowup: true } },
+              {
+                $project: {
+                  _id: 1,
+                  loanNumber: 1,
+                  customerName: 1,
+                  mobileNumbers: 1,
+                  nextFollowUpDate: 1,
+                },
+              },
+            ],
+          },
+        },
+      ];
+
+      const [result] = await Model.aggregate(pipeline);
+      const attachType = (list) => (list || []).map((l) => ({ ...l, loanType }));
+      return {
+        today: attachType(result?.today),
+        stale: attachType(result?.stale),
+      };
+    }),
+  );
+
+  const today = results.flatMap((r) => r.today);
+  const stale = results.flatMap((r) => r.stale);
+
+  sendResponse(res, 200, "success", "Followup dashboard summary fetched successfully", null, {
+    today: { count: today.length, items: today },
+    stale: { count: stale.length, items: stale },
+  });
+});
+
 const updateFollowup = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { loanModel, clientResponse, nextFollowUpDate } = req.body;
@@ -2476,6 +2602,7 @@ module.exports = {
   calculateEMIApi,
   getPendingPayments,
   getFollowupLoans,
+  getFollowupDashboardSummary,
   getPendingEmiDetails,
   updatePaymentStatus,
   getForeclosureLoans,

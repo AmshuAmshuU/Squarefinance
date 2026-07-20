@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import TodoDashboardSection from "../../../components/analytics/TodoDashboardSection";
+import FollowupAccountabilityCard from "../../../components/analytics/FollowupAccountabilityCard";
 import { useUI } from "../../../context/UIContext";
 
 const DashboardPage = () => {
@@ -109,6 +110,11 @@ const DashboardPage = () => {
                   Monitoring internal operations. Your session is secured with
                   enterprise-grade encryption.
                 </p>
+              </div>
+
+              {/* Followup Accountability */}
+              <div className="mb-10">
+                <FollowupAccountabilityCard />
               </div>
 
               {/* Employee Management Counts - NEW SECTION */}
