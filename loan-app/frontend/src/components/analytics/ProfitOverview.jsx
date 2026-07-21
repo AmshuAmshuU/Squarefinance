@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -52,6 +52,27 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
+const CumulativeTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-4 border border-slate-100 shadow-xl rounded-2xl">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+          <Calendar size={12} /> {label}
+        </p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">
+            Cumulative Profit:
+          </span>
+          <span className="text-xs font-black text-slate-900">
+            {formatCurrency(payload[0].value)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 const ProfitOverview = () => {
   const [interval, setIntervalValue] = useState("all");
   const [customDates, setCustomDates] = useState({
@@ -87,6 +108,15 @@ const ProfitOverview = () => {
   useEffect(() => {
     fetchProfit();
   }, [fetchProfit]);
+
+  const cumulativeTrend = useMemo(() => {
+    if (!data?.trend) return [];
+    let running = 0;
+    return data.trend.map((point) => {
+      running += point.profit;
+      return { date: point.date, profit: Math.round(running) };
+    });
+  }, [data]);
 
   return (
     <div className="mt-10">
@@ -337,6 +367,96 @@ const ProfitOverview = () => {
                       stroke="#10b981"
                       strokeWidth={4}
                       fill="#10b981"
+                      fillOpacity={0.1}
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Cumulative Profit Chart */}
+      <div className="mt-8 bg-white p-4 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-100/50 flex flex-col min-h-[400px] transition-all">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+          <div className="text-left">
+            <h3 className="text-base md:text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+              <span className="w-2 h-6 md:h-8 bg-indigo-500 rounded-full"></span>
+              CUMULATIVE PROFIT
+            </h3>
+            <p className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 px-3">
+              {intervalOptions.find((o) => o.value === interval)?.label || "All Time"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex-1 min-h-[280px] relative flex items-center justify-center">
+          {loading && (
+            <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-3xl">
+              <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] animate-pulse">
+                Calculating Profit...
+              </span>
+            </div>
+          )}
+
+          {error && !loading ? (
+            <div className="flex flex-col items-center text-center p-10 max-w-sm">
+              <div className="w-16 h-16 bg-red-50 rounded-[2rem] flex items-center justify-center mb-6 text-red-500">
+                <Filter size={32} />
+              </div>
+              <h4 className="text-base font-black text-slate-900 uppercase tracking-tight mb-2">
+                Network Error
+              </h4>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                {error}
+              </p>
+            </div>
+          ) : !loading && cumulativeTrend.length === 0 ? (
+            <div className="flex flex-col items-center text-center p-10 max-w-sm">
+              <div className="w-16 h-16 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-6 text-slate-300">
+                <Calendar size={32} />
+              </div>
+              <h4 className="text-base font-black text-slate-900 uppercase tracking-tight mb-2">
+                Zero Activity
+              </h4>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                No profit was recorded for the selected timeframe.
+              </p>
+            </div>
+          ) : (
+            !loading && (
+              <div className="w-full" style={{ height: "320px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={cumulativeTrend}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <XAxis
+                      dataKey="date"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 7, fontWeight: 900, fill: "#94a3b8" }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 7, fontWeight: 900, fill: "#94a3b8" }}
+                      tickFormatter={(value) =>
+                        `${value >= 100000 ? (value / 100000).toFixed(1) + "L" : (value / 1000).toFixed(0) + "K"}`
+                      }
+                    />
+                    <Tooltip content={<CumulativeTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="profit"
+                      name="Cumulative Profit"
+                      stroke="#6366f1"
+                      strokeWidth={4}
+                      fill="#6366f1"
                       fillOpacity={0.1}
                       isAnimationActive={false}
                     />
