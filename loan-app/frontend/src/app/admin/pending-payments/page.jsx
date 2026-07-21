@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
@@ -716,4 +716,10 @@ const PendingPaymentsPage = () => {
   );
 };
 
-export default PendingPaymentsPage;
+const PendingPaymentsPageWithSuspense = () => (
+  <Suspense fallback={<div>Loading...</div>}>
+    <PendingPaymentsPage />
+  </Suspense>
+);
+
+export default PendingPaymentsPageWithSuspense;
