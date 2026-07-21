@@ -57,7 +57,7 @@ const AnalyticsPage = () => {
       const res = await getExportData();
       if (!res.data) throw new Error("No data received for export");
 
-      const { monthlyLoans, dailyLoans, weeklyLoans, interestLoans, expenses, analyticsSummary } = res.data;
+      const { monthlyLoans, dailyLoans, weeklyLoans, interestLoans, expenses, analyticsSummary, vehicleEmis, weeklyEmis, dailyEmis, interestEmis, userNameById } = res.data;
       const workbook = new ExcelJS.Workbook();
 
       const formatHeader = (worksheet, headers, title) => {
@@ -353,6 +353,80 @@ const AnalyticsPage = () => {
       summarySheet.columns.forEach((column, idx) => {
         column.width = idx === 0 ? 32 : 18;
       });
+
+      // 7. EMI Schedules - one sheet per loan type, filterable by Loan No
+      // (AutoFilter dropdown with type-to-search, works in Excel 2010+).
+      // Kept identical to the backend's copy in
+      // backend/utils/excelReportBuilder.js (addEmiScheduleSheet /
+      // addInterestEmiScheduleSheet) so the automated daily email and this
+      // manual export always match.
+      const nameOf = (id) => (id ? (userNameById?.[id] || "Unknown") : "-");
+      const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-IN") : "-");
+
+      const addEmiScheduleSheet = (title, emis) => {
+        const headers = [
+          "Loan No", "Customer Name", "EMI No", "Due Date", "EMI Amount", "Amount Paid",
+          "Status", "Payment Mode", "Payment Date", "Overdue Amount", "Overdue Date", "Overdue Mode",
+          "Updated By", "Approved By", "Approved At",
+        ];
+        const sheet = workbook.addWorksheet(title);
+        const headerRow = sheet.addRow(headers);
+        headerRow.eachCell((cell) => {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
+          cell.font = { color: { argb: "FFFFFFFF" }, bold: true, size: 10 };
+          cell.alignment = { vertical: "middle", horizontal: "center" };
+        });
+        headerRow.height = 22;
+        sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+        (emis || []).forEach((emi) => {
+          const od = (emi.overdue || [])[0];
+          sheet.addRow([
+            emi.loanNumber, emi.customerName, emi.emiNumber, fmtDate(emi.dueDate),
+            emi.emiAmount || 0, emi.amountPaid || 0, emi.status,
+            emi.paymentMode || "-", fmtDate(emi.paymentDate),
+            od ? od.amount : "-", od ? fmtDate(od.date) : "-", od ? od.mode : "-",
+            nameOf(emi.updatedBy), nameOf(emi.approvedBy), fmtDate(emi.approvedAt),
+          ]);
+        });
+
+        sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+        autoFit(sheet);
+      };
+      addEmiScheduleSheet("Vehicle EMI Schedule", vehicleEmis);
+      addEmiScheduleSheet("Weekly EMI Schedule", weeklyEmis);
+      addEmiScheduleSheet("Daily EMI Schedule", dailyEmis);
+
+      // Interest EMIs have a different shape (interestAmount instead of
+      // emiAmount, no overdue array, a chequeNumber field).
+      {
+        const headers = [
+          "Loan No", "Customer Name", "EMI No", "Due Date", "Interest Amount", "Amount Paid",
+          "Status", "Payment Mode", "Payment Date", "Cheque Number",
+          "Updated By", "Approved By", "Approved At",
+        ];
+        const sheet = workbook.addWorksheet("Interest EMI Schedule");
+        const headerRow = sheet.addRow(headers);
+        headerRow.eachCell((cell) => {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
+          cell.font = { color: { argb: "FFFFFFFF" }, bold: true, size: 10 };
+          cell.alignment = { vertical: "middle", horizontal: "center" };
+        });
+        headerRow.height = 22;
+        sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+        (interestEmis || []).forEach((emi) => {
+          sheet.addRow([
+            emi.loanNumber, emi.customerName, emi.emiNumber, fmtDate(emi.dueDate),
+            emi.interestAmount || 0, emi.amountPaid || 0, emi.status,
+            emi.paymentMode || "-", fmtDate(emi.paymentDate), emi.chequeNumber || "-",
+            nameOf(emi.updatedBy), nameOf(emi.approvedBy), fmtDate(emi.approvedAt),
+          ]);
+        });
+
+        sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+        autoFit(sheet);
+      }
 
       const buffer = await workbook.xlsx.writeBuffer();
       saveAs(new Blob([buffer]), `Consolidated_Report_${new Date().toISOString().split('T')[0]}.xlsx`);

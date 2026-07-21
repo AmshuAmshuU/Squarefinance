@@ -180,7 +180,92 @@ const addAnalyticsSummarySheet = (workbook, summary = {}) => {
   });
 };
 
-const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weeklyLoans, interestLoans, expenses, analyticsSummary }) => {
+// One row per EMI, for the Vehicle/Weekly/Daily "EMI" schema shape.
+// AutoFilter lets Karthik pick a single Loan No from the column dropdown
+// (with a type-to-search box) and hide every other loan's rows instead of
+// scrolling through hundreds of EMIs at once - works in Excel 2010+.
+const addEmiScheduleSheet = (workbook, title, emis, userNameById) => {
+  const headers = [
+    "Loan No", "Customer Name", "EMI No", "Due Date", "EMI Amount", "Amount Paid",
+    "Status", "Payment Mode", "Payment Date", "Overdue Amount", "Overdue Date", "Overdue Mode",
+    "Updated By", "Approved By", "Approved At",
+  ];
+  const sheet = workbook.addWorksheet(title);
+  const headerRow = sheet.addRow(headers);
+  headerRow.eachCell((cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
+    cell.font = { color: { argb: "FFFFFFFF" }, bold: true, size: 10 };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+  });
+  headerRow.height = 22;
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+  const nameOf = (id) => (id ? userNameById[id.toString()] || "Unknown" : "-");
+
+  emis.forEach((emi) => {
+    const od = (emi.overdue || [])[0];
+    sheet.addRow([
+      emi.loanNumber, emi.customerName, emi.emiNumber, fmtDate(emi.dueDate),
+      money(emi.emiAmount), money(emi.amountPaid), emi.status,
+      emi.paymentMode || "-", fmtDate(emi.paymentDate),
+      od ? money(od.amount) : "-", od ? fmtDate(od.date) : "-", od ? od.mode : "-",
+      nameOf(emi.updatedBy), nameOf(emi.approvedBy), fmtDate(emi.approvedAt),
+    ]);
+  });
+
+  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+  sheet.columns.forEach((column, idx) => {
+    let maxLen = headers[idx].length;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const len = cell.value ? cell.value.toString().length : 0;
+      if (len > maxLen) maxLen = len;
+    });
+    column.width = maxLen < 12 ? 12 : maxLen + 2;
+  });
+};
+
+// Interest loan EMIs have a different shape (interestAmount instead of
+// emiAmount, no overdue array, a chequeNumber field) so this stays separate
+// rather than forcing addEmiScheduleSheet to branch on loan type.
+const addInterestEmiScheduleSheet = (workbook, emis, userNameById) => {
+  const headers = [
+    "Loan No", "Customer Name", "EMI No", "Due Date", "Interest Amount", "Amount Paid",
+    "Status", "Payment Mode", "Payment Date", "Cheque Number",
+    "Updated By", "Approved By", "Approved At",
+  ];
+  const sheet = workbook.addWorksheet("Interest EMI Schedule");
+  const headerRow = sheet.addRow(headers);
+  headerRow.eachCell((cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
+    cell.font = { color: { argb: "FFFFFFFF" }, bold: true, size: 10 };
+    cell.alignment = { vertical: "middle", horizontal: "center" };
+  });
+  headerRow.height = 22;
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+  const nameOf = (id) => (id ? userNameById[id.toString()] || "Unknown" : "-");
+
+  emis.forEach((emi) => {
+    sheet.addRow([
+      emi.loanNumber, emi.customerName, emi.emiNumber, fmtDate(emi.dueDate),
+      money(emi.interestAmount), money(emi.amountPaid), emi.status,
+      emi.paymentMode || "-", fmtDate(emi.paymentDate), emi.chequeNumber || "-",
+      nameOf(emi.updatedBy), nameOf(emi.approvedBy), fmtDate(emi.approvedAt),
+    ]);
+  });
+
+  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+  sheet.columns.forEach((column, idx) => {
+    let maxLen = headers[idx].length;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      const len = cell.value ? cell.value.toString().length : 0;
+      if (len > maxLen) maxLen = len;
+    });
+    column.width = maxLen < 12 ? 12 : maxLen + 2;
+  });
+};
+
+const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weeklyLoans, interestLoans, expenses, analyticsSummary, vehicleEmis, weeklyEmis, dailyEmis, interestEmis, userNameById }) => {
   const workbook = new ExcelJS.Workbook();
 
   // 1. Monthly Loans
@@ -266,6 +351,12 @@ const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weekl
 
   // 6. Analytics Summary
   addAnalyticsSummarySheet(workbook, analyticsSummary);
+
+  // 7. EMI Schedules - one sheet per loan type, filterable by Loan No
+  addEmiScheduleSheet(workbook, "Vehicle EMI Schedule", vehicleEmis || [], userNameById || {});
+  addEmiScheduleSheet(workbook, "Weekly EMI Schedule", weeklyEmis || [], userNameById || {});
+  addEmiScheduleSheet(workbook, "Daily EMI Schedule", dailyEmis || [], userNameById || {});
+  addInterestEmiScheduleSheet(workbook, interestEmis || [], userNameById || {});
 
   return workbook.xlsx.writeBuffer();
 };

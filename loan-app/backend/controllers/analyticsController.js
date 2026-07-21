@@ -568,20 +568,34 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
 // (reportController.js), so both always produce identical data.
 const getConsolidatedReportData = async () => {
   const InterestEMI = require("../models/InterestEMI");
+  const User = require("../models/User");
 
   const [
     monthlyLoans,
     dailyLoans,
     weeklyLoans,
     interestLoans,
-    expenses
+    expenses,
+    allEmis,
+    allInterestEmis,
+    allUsers,
   ] = await Promise.all([
     Loan.find().sort({ createdAt: -1 }).lean(),
     DailyLoan.find().sort({ createdAt: -1 }).lean(),
     WeeklyLoan.find().sort({ createdAt: -1 }).lean(),
     InterestLoan.find().sort({ createdAt: -1 }).lean(),
     Expense.find().sort({ date: -1 }).lean(),
+    EMI.find().sort({ loanNumber: 1, emiNumber: 1 }).lean(),
+    InterestEMI.find().sort({ loanNumber: 1, emiNumber: 1 }).lean(),
+    User.find().lean(),
   ]);
+
+  const userNameById = {};
+  allUsers.forEach((u) => (userNameById[u._id.toString()] = u.name));
+
+  const vehicleEmis = allEmis.filter((e) => e.loanModel === "Loan");
+  const weeklyEmis = allEmis.filter((e) => e.loanModel === "WeeklyLoan");
+  const dailyEmis = allEmis.filter((e) => e.loanModel === "DailyLoan");
 
   // Enhance monthly loans with computed fields from EMI records
   const enhancedMonthly = await Promise.all(monthlyLoans.map(async (loan) => {
@@ -665,6 +679,11 @@ const getConsolidatedReportData = async () => {
     interestLoans: enhancedInterest,
     expenses,
     analyticsSummary,
+    vehicleEmis,
+    weeklyEmis,
+    dailyEmis,
+    interestEmis: allInterestEmis,
+    userNameById,
   };
 };
 
