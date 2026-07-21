@@ -164,9 +164,9 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
 
     // 10. Monthly EMI expected from active loans (all 4 types)
     Promise.all([
-      // Vehicle loans: sum of monthlyEMI for active loans
+      // Vehicle loans: sum of monthlyEMI for Active loans only (excludes Seized, Closed, Pending, Waiting for Approval)
       Loan.aggregate([
-        { $match: { status: { $ne: "Closed" } } },
+        { $match: { status: "Active" } },
         { $group: { _id: null, total: { $sum: { $ifNull: ["$monthlyEMI", 0] } } } }
       ]),
       // Weekly loans: sum of emiAmount for active loans
