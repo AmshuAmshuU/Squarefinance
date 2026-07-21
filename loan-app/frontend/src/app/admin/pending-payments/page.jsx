@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
@@ -23,6 +23,7 @@ import { useUI } from "../../../context/UIContext";
 
 const PendingPaymentsPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +37,9 @@ const PendingPaymentsPage = () => {
     mobileNumber: "",
     nextFollowUpDate: "",
   });
-  const [loanTypeFilter, setLoanTypeFilter] = useState("All");
+  const [loanTypeFilter, setLoanTypeFilter] = useState(
+    searchParams.get("type") || "All",
+  );
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null); // Contact Details Modal
   const [activeContactMenu, setActiveContactMenu] = useState(null); // { number, name, type, x, y }
@@ -284,7 +287,16 @@ const PendingPaymentsPage = () => {
                       ].map(opt => (
                         <button
                           key={opt.value}
-                          onClick={() => { setLoanTypeFilter(opt.value); setIsTypeDropdownOpen(false); }}
+                          onClick={() => {
+                            setLoanTypeFilter(opt.value);
+                            setIsTypeDropdownOpen(false);
+                            router.replace(
+                              opt.value === "All"
+                                ? "/admin/pending-payments"
+                                : `/admin/pending-payments?type=${opt.value}`,
+                              { scroll: false },
+                            );
+                          }}
                           className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-slate-50 ${loanTypeFilter === opt.value ? "bg-blue-50 text-primary" : "text-slate-600"}`}
                         >
                           <span className={`w-2.5 h-2.5 rounded-full ${opt.color}`}></span>
