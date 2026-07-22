@@ -207,6 +207,42 @@ const processApproval = asyncHandler(async (req, res, next) => {
             }
             await parentLoan.save();
           }
+        } else if (emi.loanModel === "Loan" || !emi.loanModel) {
+          // Sync the parent Vehicle Loan the same way customercontroller.js's
+          // direct-save updateEMI path already does - this branch was missing
+          // entirely, so a Vehicle EMI payment applied via the approval
+          // workflow (as opposed to a direct Super Admin edit) marked the EMI
+          // "Paid" but never closed the loan even when every EMI was Paid.
+          const allEmis = await EMI.find({ loanId: emi.loanId, loanModel: "Loan" });
+          const isAllPaid = allEmis.length > 0 && allEmis.every((e) => e.status === "Paid");
+          const isAnyPaid = allEmis.some((e) => e.status === "Paid" || e.status === "Partially Paid");
+
+          const parentLoan = await Loan.findById(emi.loanId);
+          if (parentLoan) {
+            if (isAllPaid) {
+              parentLoan.paymentStatus = "Paid";
+              parentLoan.status = "Closed";
+            } else if (isAnyPaid) {
+              parentLoan.paymentStatus = "Partially Paid";
+              if (parentLoan.status === "Closed") {
+                parentLoan.status = "Active";
+              }
+            } else {
+              parentLoan.paymentStatus = "Pending";
+              if (parentLoan.status === "Closed") {
+                parentLoan.status = "Active";
+              }
+            }
+            const totalOdAmount = allEmis.reduce((acc, currentEmi) => {
+              if (Array.isArray(currentEmi.overdue)) {
+                return acc + currentEmi.overdue.reduce((oAcc, ov) => oAcc + (parseFloat(ov.amount) || 0), 0);
+              }
+              return acc + (parseFloat(currentEmi.overdue) || 0);
+            }, 0);
+            parentLoan.odAmount = totalOdAmount;
+
+            await parentLoan.save();
+          }
         }
       }
     } else if (requestType === "INTEREST_PAYMENT") {
