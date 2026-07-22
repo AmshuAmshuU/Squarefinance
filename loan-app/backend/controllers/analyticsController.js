@@ -116,7 +116,8 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
         { $match: { "loan.status": { $ne: "Closed" } } },
         { $facet: {
           loanCount: [{ $group: { _id: "$loanId" } }, { $count: "count" }],
-          emiCount: [{ $count: "count" }]
+          emiCount: [{ $count: "count" }],
+          amountSum: [{ $group: { _id: null, total: { $sum: "$emiAmount" } } }]
         }}
       ]),
       // Weekly loans pending — only from active loans, only past due date
@@ -126,7 +127,8 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
         { $match: { "loan.status": { $ne: "Closed" } } },
         { $facet: {
           loanCount: [{ $group: { _id: "$loanId" } }, { $count: "count" }],
-          emiCount: [{ $count: "count" }]
+          emiCount: [{ $count: "count" }],
+          amountSum: [{ $group: { _id: null, total: { $sum: "$emiAmount" } } }]
         }}
       ]),
       // Daily loans pending — only from active loans, only past due date
@@ -136,7 +138,8 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
         { $match: { "loan.status": { $ne: "Closed" } } },
         { $facet: {
           loanCount: [{ $group: { _id: "$loanId" } }, { $count: "count" }],
-          emiCount: [{ $count: "count" }]
+          emiCount: [{ $count: "count" }],
+          amountSum: [{ $group: { _id: null, total: { $sum: "$emiAmount" } } }]
         }}
       ]),
       // Interest loans pending — only from active loans, only past due date
@@ -146,7 +149,8 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
         { $match: { "loan.status": { $ne: "Closed" } } },
         { $facet: {
           loanCount: [{ $group: { _id: "$interestLoanId" } }, { $count: "count" }],
-          emiCount: [{ $count: "count" }]
+          emiCount: [{ $count: "count" }],
+          amountSum: [{ $group: { _id: null, total: { $sum: "$interestAmount" } } }]
         }}
       ]),
     ]),
@@ -428,22 +432,27 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
     monthly: {
       loans: vPend[0]?.loanCount?.[0]?.count || 0,
       emis: vPend[0]?.emiCount?.[0]?.count || 0,
+      amount: Math.round(vPend[0]?.amountSum?.[0]?.total || 0),
     },
     weekly: {
       loans: wPend[0]?.loanCount?.[0]?.count || 0,
       emis: wPend[0]?.emiCount?.[0]?.count || 0,
+      amount: Math.round(wPend[0]?.amountSum?.[0]?.total || 0),
     },
     daily: {
       loans: dPend[0]?.loanCount?.[0]?.count || 0,
       emis: dPend[0]?.emiCount?.[0]?.count || 0,
+      amount: Math.round(dPend[0]?.amountSum?.[0]?.total || 0),
     },
     interest: {
       loans: iPend[0]?.loanCount?.[0]?.count || 0,
       emis: iPend[0]?.emiCount?.[0]?.count || 0,
+      amount: Math.round(iPend[0]?.amountSum?.[0]?.total || 0),
     },
   };
   const totalPendingLoans = pendingBreakdown.monthly.loans + pendingBreakdown.weekly.loans + pendingBreakdown.daily.loans + pendingBreakdown.interest.loans;
   const totalPendingEmis = pendingBreakdown.monthly.emis + pendingBreakdown.weekly.emis + pendingBreakdown.daily.emis + pendingBreakdown.interest.emis;
+  const totalPendingAmount = pendingBreakdown.monthly.amount + pendingBreakdown.weekly.amount + pendingBreakdown.daily.amount + pendingBreakdown.interest.amount;
 
   // Future expected income breakdown
   const [futVehicleArr, futWeeklyArr, futDailyArr, futInterestEmiArr, futInterestPrinArr] = futureIncomeData || [[], [], [], [], []];
@@ -507,6 +516,7 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
       },
       pendingLoansCount: totalPendingLoans,
       pendingEmisCount: totalPendingEmis,
+      totalPendingAmount,
       pendingBreakdown,
       partialLoansCount: partialMetrics[0]?.count || 0,
       activeLoansCount,

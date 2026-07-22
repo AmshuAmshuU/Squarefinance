@@ -298,11 +298,11 @@ const AnalyticsPage = () => {
       blank();
 
       sectionTitle("PENDING PAYMENTS");
-      tableHeader(["Type", "Loans", "EMIs"]);
+      tableHeader(["Type", "Loans", "EMIs", "Amount"]);
       TYPE_ROWS.forEach((t) =>
-        dataRow([t.label, c.pendingBreakdown?.[t.key]?.loans || 0, c.pendingBreakdown?.[t.key]?.emis || 0]),
+        dataRow([t.label, c.pendingBreakdown?.[t.key]?.loans || 0, c.pendingBreakdown?.[t.key]?.emis || 0, money(c.pendingBreakdown?.[t.key]?.amount)]),
       );
-      dataRow(["Total", c.pendingLoansCount || 0, c.pendingEmisCount || 0], { bold: true });
+      dataRow(["Total", c.pendingLoansCount || 0, c.pendingEmisCount || 0, money(c.totalPendingAmount)], { bold: true });
       blank();
 
       sectionTitle("PARTIAL PAYMENTS");
@@ -691,6 +691,7 @@ const AnalyticsPage = () => {
                         <th className="text-left font-black text-slate-400 uppercase tracking-widest pb-1.5">Type</th>
                         <th className="text-center font-black text-slate-400 uppercase tracking-widest pb-1.5">Loans</th>
                         <th className="text-center font-black text-rose-400 uppercase tracking-widest pb-1.5">EMIs</th>
+                        <th className="text-right font-black text-rose-400 uppercase tracking-widest pb-1.5">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -702,6 +703,7 @@ const AnalyticsPage = () => {
                       ].map(row => {
                         const loans = stats?.cards?.pendingBreakdown?.[row.key]?.loans || 0;
                         const emis = stats?.cards?.pendingBreakdown?.[row.key]?.emis || 0;
+                        const amount = stats?.cards?.pendingBreakdown?.[row.key]?.amount || 0;
                         return (
                           <tr key={row.key} className={emis > 0 ? "" : "opacity-40"}>
                             <td className="py-1.5 flex items-center gap-1.5">
@@ -710,6 +712,7 @@ const AnalyticsPage = () => {
                             </td>
                             <td className="py-1.5 text-center font-black text-slate-700">{loans}</td>
                             <td className="py-1.5 text-center font-black text-rose-500">{emis}</td>
+                            <td className="py-1.5 text-right font-black text-slate-900">₹{amount.toLocaleString("en-IN")}</td>
                           </tr>
                         );
                       })}
@@ -719,6 +722,7 @@ const AnalyticsPage = () => {
                         <td className="pt-2 font-black text-slate-700 uppercase">Total</td>
                         <td className="pt-2 text-center font-black text-slate-900">{stats?.cards?.pendingLoansCount || 0}</td>
                         <td className="pt-2 text-center font-black text-rose-500">{stats?.cards?.pendingEmisCount || 0}</td>
+                        <td className="pt-2 text-right font-black text-slate-900">₹{(stats?.cards?.totalPendingAmount || 0).toLocaleString("en-IN")}</td>
                       </tr>
                     </tfoot>
                   </table>

@@ -117,11 +117,11 @@ const addAnalyticsSummarySheet = (workbook, summary = {}) => {
 
   // 4. Pending Payments
   sectionTitle("PENDING PAYMENTS");
-  tableHeader(["Type", "Loans", "EMIs"]);
+  tableHeader(["Type", "Loans", "EMIs", "Amount"]);
   TYPE_ROWS.forEach((t) =>
-    dataRow([t.label, c.pendingBreakdown?.[t.key]?.loans || 0, c.pendingBreakdown?.[t.key]?.emis || 0]),
+    dataRow([t.label, c.pendingBreakdown?.[t.key]?.loans || 0, c.pendingBreakdown?.[t.key]?.emis || 0, money(c.pendingBreakdown?.[t.key]?.amount)]),
   );
-  dataRow(["Total", c.pendingLoansCount || 0, c.pendingEmisCount || 0], { bold: true });
+  dataRow(["Total", c.pendingLoansCount || 0, c.pendingEmisCount || 0, money(c.totalPendingAmount)], { bold: true });
   blank();
 
   // 5. Partial Payments
