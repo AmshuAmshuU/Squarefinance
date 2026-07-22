@@ -94,4 +94,13 @@ const sendDailyConsolidatedReport = asyncHandler(async (req, res, next) => {
   });
 });
 
-module.exports = { sendDailyConsolidatedReport };
+// On-demand version of the same health check the daily email runs, so
+// Super Admin can check right now instead of waiting for 11:59pm. Purely
+// additive - the email path above is untouched and keeps running on its
+// own schedule regardless of whether anyone opens this page.
+const getDataHealthReport = asyncHandler(async (req, res, next) => {
+  const health = await runDataHealthCheck();
+  sendResponse(res, 200, "success", "Data health check complete", null, health);
+});
+
+module.exports = { sendDailyConsolidatedReport, getDataHealthReport };

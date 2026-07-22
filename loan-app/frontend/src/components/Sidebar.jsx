@@ -42,6 +42,12 @@ const navItems = [
     ],
   },
   { name: "Analytics", href: "/admin/analytics", icon: "📈" },
+  {
+    name: "Data Health",
+    href: "/admin/data-health",
+    icon: "🩺",
+    roles: ["SUPER_ADMIN"],
+  },
   { name: "Expenses", href: "/admin/expenses", icon: "🧾" },
 
   {

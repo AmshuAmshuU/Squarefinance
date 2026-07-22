@@ -21,3 +21,7 @@ export const getProfitStats = async (interval, startDate, endDate) => {
   if (endDate) url += `&endDate=${endDate}`;
   return await apiHandler(url);
 };
+
+export const getDataHealthCheck = async () => {
+  return await apiHandler("/api/reports/health-check");
+};

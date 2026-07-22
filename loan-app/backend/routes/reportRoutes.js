@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { sendDailyConsolidatedReport } = require("../controllers/reportController");
+const { sendDailyConsolidatedReport, getDataHealthReport } = require("../controllers/reportController");
+const { isAuthenticated, authorizeRoles } = require("../middlewares/auth");
 
 /**
  * @route POST /api/reports/send-daily-summary
@@ -11,5 +12,13 @@ const { sendDailyConsolidatedReport } = require("../controllers/reportController
  * @access Cron secret only
  */
 router.post("/send-daily-summary", sendDailyConsolidatedReport);
+
+/**
+ * @route GET /api/reports/health-check
+ * @desc On-demand version of the same data-health check the daily email
+ *       runs, so Super Admin can check right now instead of waiting.
+ * @access Super Admin only
+ */
+router.get("/health-check", isAuthenticated, authorizeRoles("SUPER_ADMIN"), getDataHealthReport);
 
 module.exports = router;
