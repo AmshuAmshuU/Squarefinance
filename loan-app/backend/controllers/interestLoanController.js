@@ -44,6 +44,43 @@ const recalculatePendingEMIs = async (interestLoanId) => {
   }
 };
 
+// Keeps an Interest loan's EMI schedule current: as long as the loan is
+// Active, a new row is generated once the last existing row's due date has
+// passed - regardless of whether that row was ever paid. An unpaid EMI
+// stays visible as Pending for staff to follow up on, while the schedule
+// still advances underneath it. Reused by every place that touches an
+// interest loan's EMIs (direct payment save, the approval workflow, and the
+// loan-detail/pending-view fetches) so the behavior is identical no matter
+// which code path recorded (or is just viewing) the payment.
+const ensureInterestScheduleCurrent = async (loanId) => {
+  const loan = await InterestLoan.findById(loanId);
+  if (!loan || !loan.status || loan.status.toLowerCase() !== "active") return;
+
+  const emis = await InterestEMI.find({ interestLoanId: loan._id }).sort({ emiNumber: 1 });
+  if (emis.length === 0) return; // initial creation handles the first row itself
+
+  let lastEmi = emis[emis.length - 1];
+  const today = normalizeToMidnight(new Date());
+
+  while (normalizeToMidnight(new Date(lastEmi.dueDate)) <= today) {
+    const nextDueDate = addMonths(new Date(lastEmi.dueDate), 1);
+    const nextInterestAmount = Math.ceil(loan.remainingPrincipalAmount * (loan.interestRate / 100));
+
+    lastEmi = await InterestEMI.create({
+      interestLoanId: loan._id,
+      loanNumber: loan.loanNumber,
+      customerName: loan.customerName,
+      emiNumber: lastEmi.emiNumber + 1,
+      dueDate: nextDueDate,
+      interestAmount: nextInterestAmount,
+      status: "Pending",
+    });
+
+    if (lastEmi.emiNumber > 500) break; // Safety break
+  }
+};
+exports.ensureInterestScheduleCurrent = ensureInterestScheduleCurrent;
+
 // Create Interest Loan
 exports.createInterestLoan = asyncHandler(async (req, res, next) => {
   const {
@@ -314,33 +351,11 @@ exports.getInterestLoanById = asyncHandler(async (req, res, next) => {
       }
       emis = [newEmi];
     } else {
-      let lastEmi = emis[emis.length - 1];
-      const today = normalizeToMidnight(new Date());
-
-      // Catch up with missing EMIs if the last one is paid and we're not yet in the future
-      while (
-        lastEmi.status === "Paid" &&
-        normalizeToMidnight(new Date(lastEmi.dueDate)) <= today
-      ) {
-        const nextDueDate = addMonths(new Date(lastEmi.dueDate), 1);
-        const nextInterestAmount = Math.ceil(
-          loan.remainingPrincipalAmount * (loan.interestRate / 100)
-        );
-
-        const newEmi = await InterestEMI.create({
-          interestLoanId: loan._id,
-          loanNumber: loan.loanNumber,
-          customerName: loan.customerName,
-          emiNumber: lastEmi.emiNumber + 1,
-          dueDate: nextDueDate,
-          interestAmount: nextInterestAmount,
-          status: "Pending",
-        });
-        emis.push(newEmi);
-        lastEmi = newEmi;
-
-        if (lastEmi.emiNumber > 500) break; // Safety break
-      }
+      await ensureInterestScheduleCurrent(loan._id);
+      emis = await InterestEMI.find({ interestLoanId: loan._id })
+        .populate("updatedBy", "name")
+        .populate("approvedBy", "name")
+        .sort({ emiNumber: 1 });
     }
   }
 
@@ -636,7 +651,6 @@ exports.payInterestEMI = asyncHandler(async (req, res, next) => {
   const newAmountPaid = emi.paymentHistory.reduce((acc, curr) => acc + curr.amount, 0);
   emi.amountPaid = newAmountPaid;
 
-  const oldStatus = originalEmi.status;
   if (emi.amountPaid >= emi.interestAmount) {
     emi.status = "Paid";
     emi.paymentDate = emi.paymentHistory.length > 0 ? emi.paymentHistory[emi.paymentHistory.length - 1].date : new Date();
@@ -655,29 +669,10 @@ exports.payInterestEMI = asyncHandler(async (req, res, next) => {
 
   await emi.save();
 
-  if (emi.status === "Paid" && oldStatus !== "Paid") {
-    const nextEmi = await InterestEMI.findOne({
-      interestLoanId: loan._id,
-      emiNumber: emi.emiNumber + 1,
-    });
-
-    if (!nextEmi && loan.status && loan.status.toLowerCase() === "active") {
-      const nextDueDate = addMonths(new Date(emi.dueDate), 1);
-      const nextInterestAmount = Math.ceil(
-        loan.remainingPrincipalAmount * (loan.interestRate / 100)
-      );
-
-      await InterestEMI.create({
-        interestLoanId: loan._id,
-        loanNumber: loan.loanNumber,
-        customerName: loan.customerName,
-        emiNumber: emi.emiNumber + 1,
-        dueDate: nextDueDate,
-        interestAmount: nextInterestAmount,
-        status: "Pending",
-      });
-    }
-  }
+  // Advances the schedule whenever the last row's due date has passed,
+  // regardless of whether this (or any) EMI was actually paid - not just
+  // when this particular payment happened to complete the EMI.
+  await ensureInterestScheduleCurrent(loan._id);
 
   sendResponse(res, 200, "success", "Interest EMI updated successfully", null, emi);
 });
@@ -973,6 +968,11 @@ exports.getInterestPendingEmiDetails = asyncHandler(async (req, res, next) => {
   if (!targetEmi) {
     return next(new ErrorHandler("Installment not found", 404));
   }
+
+  // This view previously had no schedule-advancement logic at all - staff
+  // using this "Pending" quick-view flow day to day would never see a new
+  // row appear, even though the loan detail page would.
+  await ensureInterestScheduleCurrent(targetEmi.interestLoanId);
 
   const emiDetails = await InterestEMI.aggregate([
     {

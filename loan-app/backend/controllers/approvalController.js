@@ -353,6 +353,13 @@ const processApproval = asyncHandler(async (req, res, next) => {
         // don't let this approval save overwrite the staff member's original
         // updatedAt with the approval time.
         await emi.save({ timestamps: false });
+
+        // This branch was missing the schedule-advancement logic that the
+        // direct-save payInterestEMI path already has, so an interest
+        // payment approved here (as opposed to recorded directly by a
+        // Super Admin) would never generate the loan's next EMI row.
+        const { ensureInterestScheduleCurrent } = require("./interestLoanController");
+        await ensureInterestScheduleCurrent(emi.interestLoanId);
       }
     } else if (requestType === "FORECLOSURE") {
       const loan = await Loan.findById(targetId);
