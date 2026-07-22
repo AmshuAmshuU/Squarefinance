@@ -267,15 +267,19 @@ const updateEMI = asyncHandler(async (req, res, next) => {
       status: "Pending",
     });
 
-    // Calculate total amount from all payment sources (EMI dateGroups + overdue payments)
-    let displayAmount = 0;
+    // Calculate EMI portion and OD portion SEPARATELY (not just a combined
+    // total) so Super Admin can see the split in the notification before
+    // ever opening the approval queue - a mixed EMI+OD payment used to
+    // collapse into one undifferentiated number here.
+    let emiPortion = 0;
+    let odPortion = 0;
     let displayMode = "";
 
     // Sum from EMI dateGroups
     if (req.body.dateGroups && Array.isArray(req.body.dateGroups)) {
       req.body.dateGroups.forEach(group => {
         (group.payments || []).forEach(p => {
-          displayAmount += parseFloat(p.amount) || 0;
+          emiPortion += parseFloat(p.amount) || 0;
           if (p.mode && !displayMode.includes(p.mode)) {
             displayMode = displayMode ? `${displayMode}, ${p.mode}` : p.mode;
           }
@@ -286,17 +290,24 @@ const updateEMI = asyncHandler(async (req, res, next) => {
     // Sum from overdue payments
     if (req.body.overdue && Array.isArray(req.body.overdue)) {
       req.body.overdue.forEach(ov => {
-        displayAmount += parseFloat(ov.amount) || 0;
+        odPortion += parseFloat(ov.amount) || 0;
         if (ov.mode && !displayMode.includes(ov.mode)) {
           displayMode = displayMode ? `${displayMode}, ${ov.mode}` : ov.mode;
         }
       });
     }
 
+    let displayAmount = emiPortion + odPortion;
     // Fallback
     if (displayAmount === 0) {
       displayAmount = req.body.addedAmount || req.body.amountPaid || 0;
     }
+
+    const amountSummary = emiPortion > 0 && odPortion > 0
+      ? `EMI ₹${emiPortion} + OD ₹${odPortion} (Total ₹${displayAmount})`
+      : odPortion > 0
+        ? `OD payment of ₹${odPortion}`
+        : `EMI payment of ₹${displayAmount}`;
 
     // Notify Admins
     const { notifyApprovalCountChange } = require("./notificationController");
@@ -304,7 +315,7 @@ const updateEMI = asyncHandler(async (req, res, next) => {
       senderId: req.user._id,
       type: "PAYMENT_REQUEST",
       title: "New EMI Payment Approval Request",
-      message: `Employee ${req.user.name} requested approval for EMI payment of ₹${displayAmount} for loan ${emi.loanNumber} (${emi.customerName}).`,
+      message: `Employee ${req.user.name} requested approval for ${amountSummary} for loan ${emi.loanNumber} (${emi.customerName}).`,
       data: {
         loanNumber: emi.loanNumber,
         customerName: emi.customerName,

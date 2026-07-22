@@ -217,50 +217,53 @@ const ApprovalsPage = () => {
                                                       );
                                                     }
 
-                                                    const getModeSplits = () => {
+                                                    // Returns { emi: {mode: amount}, od: {mode: amount} } so EMI and OD
+                                                    // portions are always shown separately, never collapsed into one
+                                                    // combined number when a submission mixes both.
+                                                    const getSplits = () => {
                                                         const data = app.requestedData;
-                                                        const splits = {};
+                                                        const emiSplits = {};
+                                                        const odSplits = {};
 
-                                                        // If backend identified NEW payments, show ONLY those
+                                                        // EMI portion: prefer backend-identified NEW payments (avoids
+                                                        // re-counting payments already recorded on a prior partial
+                                                        // submission), otherwise fall back to raw dateGroups.
                                                         if (data.newPayments && Array.isArray(data.newPayments)) {
                                                             data.newPayments.forEach(p => {
                                                                 const mode = p.mode || "N/A";
-                                                                splits[mode] = (splits[mode] || 0) + (parseFloat(p.amount) || 0);
+                                                                emiSplits[mode] = (emiSplits[mode] || 0) + (parseFloat(p.amount) || 0);
                                                             });
-                                                            return splits;
-                                                        }
-
-                                                        // Sum from EMI dateGroups
-                                                        if (data.dateGroups) {
+                                                        } else if (data.dateGroups) {
                                                             data.dateGroups.forEach(g => {
                                                                 (g.payments || []).forEach(p => {
                                                                     const mode = p.mode || "N/A";
-                                                                    splits[mode] = (splits[mode] || 0) + (parseFloat(p.amount) || 0);
+                                                                    emiSplits[mode] = (emiSplits[mode] || 0) + (parseFloat(p.amount) || 0);
                                                                 });
                                                             });
                                                         }
 
-                                                        // Sum from overdue payments
+                                                        // OD portion - always checked, independent of whether an EMI
+                                                        // portion was found above.
                                                         if (data.overdue && Array.isArray(data.overdue)) {
                                                             data.overdue.forEach(ov => {
                                                                 const mode = ov.mode || "N/A";
-                                                                splits[mode] = (splits[mode] || 0) + (parseFloat(ov.amount) || 0);
+                                                                odSplits[mode] = (odSplits[mode] || 0) + (parseFloat(ov.amount) || 0);
                                                             });
                                                         }
 
-                                                        // Fallback if nothing found
-                                                        if (Object.keys(splits).length === 0) {
+                                                        // Fallback if nothing found in either portion
+                                                        if (Object.keys(emiSplits).length === 0 && Object.keys(odSplits).length === 0) {
                                                             const amount = data.addedAmount || data.amountPaid || data.totalAmount || data.amount || 0;
                                                             const mode = data.paymentMode || "N/A";
                                                             if (amount > 0) {
-                                                                splits[mode] = (splits[mode] || 0) + parseFloat(amount);
+                                                                emiSplits[mode] = (emiSplits[mode] || 0) + parseFloat(amount);
                                                             }
                                                         }
-                                                        return splits;
+                                                        return { emiSplits, odSplits };
                                                     };
 
-                                                    const splits = getModeSplits();
-                                                    const totalAmount = Object.values(splits).reduce((a, b) => a + b, 0);
+                                                    const { emiSplits, odSplits } = getSplits();
+                                                    const totalAmount = [...Object.values(emiSplits), ...Object.values(odSplits)].reduce((a, b) => a + b, 0);
 
                                                     return (
                                                         <tr key={app._id} className="hover:bg-slate-50/50 transition-colors">
@@ -292,8 +295,16 @@ const ApprovalsPage = () => {
                                                             </td>
                                                             <td className="px-3 py-3">
                                                                 <div className="flex flex-col gap-1">
-                                                                    {Object.entries(splits).map(([mode, amt]) => (
-                                                                        <div key={mode} className="flex items-center gap-2">
+                                                                    {Object.entries(emiSplits).map(([mode, amt]) => (
+                                                                        <div key={`emi-${mode}`} className="flex items-center gap-2">
+                                                                            <span className="text-[9px] font-black text-primary uppercase w-10">EMI</span>
+                                                                            <span className="text-[9px] font-black text-slate-400 uppercase w-12">{mode}</span>
+                                                                            <span className="text-[10px] font-black text-slate-600">- ₹{amt.toLocaleString()}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                    {Object.entries(odSplits).map(([mode, amt]) => (
+                                                                        <div key={`od-${mode}`} className="flex items-center gap-2">
+                                                                            <span className="text-[9px] font-black text-rose-500 uppercase w-10">OD</span>
                                                                             <span className="text-[9px] font-black text-slate-400 uppercase w-12">{mode}</span>
                                                                             <span className="text-[10px] font-black text-slate-600">- ₹{amt.toLocaleString()}</span>
                                                                         </div>
