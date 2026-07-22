@@ -78,11 +78,7 @@ const LoanPendingViewPage = () => {
         nextFollowUpDate: newFollowUpDate,
       });
       showToast("Client response updated globally", "success");
-      const redirectPath =
-        fromPage === "partial"
-          ? "/admin/partial-payments"
-          : "/admin/pending-payments";
-      router.push(redirectPath);
+      router.back();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -216,11 +212,11 @@ const LoanPendingViewPage = () => {
       await updateEMI(selectedEmi._id, payload);
       showToast("EMI updated successfully", "success");
       setShowModal(false);
-      const redirectPath =
-        fromPage === "partial"
-          ? "/admin/partial-payments"
-          : "/admin/pending-payments";
-      router.push(redirectPath);
+      // Stay on this loan and refresh its pending EMI list, rather than
+      // navigating away - a loan can have several pending EMIs, and the
+      // just-paid one should simply drop off the list so the next one
+      // can be actioned without leaving the page.
+      await fetchLoanDetails();
     } catch (error) {
       showToast(error.message || "Failed to update EMI", "error");
     } finally {
