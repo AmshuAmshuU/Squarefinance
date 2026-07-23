@@ -24,14 +24,6 @@ const navItems = [
   { name: "Daily Loans", href: "/admin/daily-loans", icon: "☀️" },
   { name: "Interest Loans", href: "/admin/interest-loan", icon: "📈" },
   {
-    name: "Employees",
-    href: "/admin/employees",
-    icon: "👥",
-    roles: ["SUPER_ADMIN"],
-  },
-  //{ name: "EMI Details", href: "/admin/emi-details", icon: "🗓️" },
-  { name: "Seized Vehicles", href: "/admin/seized-vehicles", icon: "🚗" },
-  {
     name: "Payments",
     icon: "💸",
     subItems: [
@@ -40,6 +32,14 @@ const navItems = [
       { name: "Followup", href: "/admin/followup-payments" },
       { name: "Foreclosure", href: "/admin/foreclosure-payments" },
     ],
+  },
+  //{ name: "EMI Details", href: "/admin/emi-details", icon: "🗓️" },
+  { name: "Seized Vehicles", href: "/admin/seized-vehicles", icon: "🚗" },
+  {
+    name: "Employees",
+    href: "/admin/employees",
+    icon: "👥",
+    roles: ["SUPER_ADMIN"],
   },
   { name: "Analytics", href: "/admin/analytics", icon: "📈" },
   { name: "EMI Calculator", href: "/admin/emi-calculator", icon: "🧮" },
