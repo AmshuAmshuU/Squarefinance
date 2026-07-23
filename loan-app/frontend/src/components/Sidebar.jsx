@@ -42,6 +42,7 @@ const navItems = [
     ],
   },
   { name: "Analytics", href: "/admin/analytics", icon: "📈" },
+  { name: "EMI Calculator", href: "/admin/emi-calculator", icon: "🧮" },
   {
     name: "Data Health",
     href: "/admin/data-health",
