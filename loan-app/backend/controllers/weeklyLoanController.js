@@ -682,7 +682,12 @@ exports.updateWeeklyLoan = asyncHandler(async (req, res, next) => {
           updates.emiAmount = Math.ceil(weeklyLoan.emiAmount);
         }
 
-        return EMI.findByIdAndUpdate(emi._id, updates);
+        // timestamps:false - this is a schedule sync after a loan edit, not
+        // an actual payment, so it shouldn't bump "Last Updated" (updatedAt)
+        // on every EMI of the loan, paid or not. This is exactly what caused
+        // loan W17's EMIs 2-7 to all show the same July "Last Updated" date
+        // even though they were genuinely approved in June.
+        return EMI.findByIdAndUpdate(emi._id, updates, { timestamps: false });
       });
       await Promise.all(updatePromises);
 

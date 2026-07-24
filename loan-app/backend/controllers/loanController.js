@@ -1086,12 +1086,13 @@ const updateLoan = asyncHandler(async (req, res, next) => {
       }
 
       if (hasChanges) {
-        // Note: updatedBy is intentionally NOT set here. This is a schedule
-        // sync (dates/amounts recalculated after a loan edit), not an actual
-        // payment - the "Last Updated" column should only reflect real
-        // payment activity, which is stamped separately in the payment
+        // Note: updatedBy is intentionally NOT set here, and timestamps:false
+        // stops Mongoose auto-bumping updatedAt too. This is a schedule sync
+        // (dates/amounts recalculated after a loan edit), not an actual
+        // payment - the "Last Updated" column (name AND date) should only
+        // reflect real payment activity, stamped separately in the payment
         // recording flow (customercontroller.js / approvalController.js).
-        return EMI.findByIdAndUpdate(emi._id, updates);
+        return EMI.findByIdAndUpdate(emi._id, updates, { timestamps: false });
       }
 
       return null;

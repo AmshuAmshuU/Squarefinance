@@ -608,7 +608,10 @@ exports.updateDailyLoan = asyncHandler(async (req, res, next) => {
           updates.emiAmount = Math.ceil(dailyLoan.emiAmount);
         }
 
-        return EMI.findByIdAndUpdate(emi._id, updates);
+        // timestamps:false - this is a schedule sync after a loan edit, not
+        // an actual payment, so it shouldn't bump "Last Updated" (updatedAt)
+        // on every EMI of the loan, paid or not.
+        return EMI.findByIdAndUpdate(emi._id, updates, { timestamps: false });
       });
       await Promise.all(updatePromises);
 

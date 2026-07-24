@@ -535,7 +535,10 @@ const processApproval = asyncHandler(async (req, res, next) => {
                   hasChanges = true;
                 }
 
-                return hasChanges ? EMI.findByIdAndUpdate(emi._id, updates) : null;
+                // timestamps:false - schedule sync after an approved loan
+                // edit, not an actual payment, so it shouldn't bump "Last
+                // Updated" (updatedAt) on the EMI.
+                return hasChanges ? EMI.findByIdAndUpdate(emi._id, updates, { timestamps: false }) : null;
               });
               await Promise.all(updatePromises.filter((p) => p !== null));
 
