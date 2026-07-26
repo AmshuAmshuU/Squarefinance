@@ -221,6 +221,17 @@ const LoanForm = ({
           ? initialData.vehicleInformation.rtoWorkPending
           : [],
         hpEntry: initialData?.vehicleInformation?.hpEntry || "Not done",
+        rtoWorkStatus:
+          initialData?.vehicleInformation?.rtoWorkStatus || "No work",
+        rtoDocsSubmittedDate:
+          initialData?.vehicleInformation?.rtoDocsSubmittedDate || "",
+        rtoCompletedDate:
+          initialData?.vehicleInformation?.rtoCompletedDate || "",
+        rtoNotes: initialData?.vehicleInformation?.rtoNotes || "",
+        rtoWorkUpdatedBy:
+          initialData?.vehicleInformation?.rtoWorkUpdatedBy || null,
+        rtoWorkUpdatedAt:
+          initialData?.vehicleInformation?.rtoWorkUpdatedAt || null,
       },
       status: {
         status: initialData?.status?.status || "Active",
@@ -1611,6 +1622,61 @@ const LoanForm = ({
                   className={getFieldClass("vehicleInformation.insuranceDate")}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* RTO Work */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em] flex items-center gap-2">
+                <span>🚦</span> RTO Work
+              </h3>
+              <select
+                name="vehicleInformation.rtoWorkStatus"
+                value={formik.values.vehicleInformation.rtoWorkStatus || "No work"}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                disabled={isViewOnly}
+                className="appearance-none px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100 bg-blue-50 text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-70"
+              >
+                <option value="No work">No work</option>
+                <option value="Yet to apply">Yet to apply</option>
+                <option value="Applied">Applied</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+
+            {formik.values.vehicleInformation.rtoWorkUpdatedBy && (
+              <div className="flex justify-end -mt-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-xl">
+                  <span className="text-[9px] font-black text-blue-300 uppercase tracking-widest">
+                    Last Updated By
+                  </span>
+                  <span className="text-[10px] font-black text-primary uppercase">
+                    {typeof formik.values.vehicleInformation.rtoWorkUpdatedBy === "string"
+                      ? formik.values.vehicleInformation.rtoWorkUpdatedBy
+                      : formik.values.vehicleInformation.rtoWorkUpdatedBy.name}
+                  </span>
+                  {formik.values.vehicleInformation.rtoWorkUpdatedAt && (
+                    <span className="text-[9px] font-bold text-slate-500">
+                      {new Date(formik.values.vehicleInformation.rtoWorkUpdatedAt).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}{" "}
+                      at{" "}
+                      {new Date(formik.values.vehicleInformation.rtoWorkUpdatedAt).toLocaleTimeString("en-IN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   HP Entry
@@ -1630,277 +1696,322 @@ const LoanForm = ({
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  RTO Work Pending
+                  Docs Submitted Date
                 </label>
-                {!isViewOnly ? (
-                  <div className="relative">
-                    {/* Multi-select Dropdown Trigger */}
-                    <div
-                      onClick={() => setIsRtoDropdownOpen(!isRtoDropdownOpen)}
-                      className={
-                        "w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus-within:ring-2 focus-within:ring-primary/20 transition-all cursor-pointer flex justify-between items-center gap-2 min-h-[44px]"
-                      }
-                    >
-                      <div className="flex flex-wrap gap-1 flex-1 items-center py-1">
-                        {Array.isArray(
-                          formik.values.vehicleInformation.rtoWorkPending,
-                        ) &&
-                          formik.values.vehicleInformation.rtoWorkPending.length >
-                          0 ? (
-                          formik.values.vehicleInformation.rtoWorkPending.map(
-                            (item) => (
-                              <span
-                                key={item}
-                                className="bg-primary/10 text-primary text-[9px] font-black px-2 py-0.5 rounded-md border border-primary/10 animate-in fade-in zoom-in duration-200 flex items-center gap-1"
+                <input
+                  type="date"
+                  name="vehicleInformation.rtoDocsSubmittedDate"
+                  value={formik.values.vehicleInformation.rtoDocsSubmittedDate || ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  readOnly={isViewOnly}
+                  className={getFieldClass("vehicleInformation.rtoDocsSubmittedDate")}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Completed On
+                </label>
+                <input
+                  type="date"
+                  name="vehicleInformation.rtoCompletedDate"
+                  value={formik.values.vehicleInformation.rtoCompletedDate || ""}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  readOnly={isViewOnly}
+                  className={getFieldClass("vehicleInformation.rtoCompletedDate")}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                RTO Work Checklist
+              </label>
+              {!isViewOnly ? (
+                <div className="relative">
+                  {/* Multi-select Dropdown Trigger */}
+                  <div
+                    onClick={() => setIsRtoDropdownOpen(!isRtoDropdownOpen)}
+                    className={
+                      "w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold focus-within:ring-2 focus-within:ring-primary/20 transition-all cursor-pointer flex justify-between items-center gap-2 min-h-[44px]"
+                    }
+                  >
+                    <div className="flex flex-wrap gap-1 flex-1 items-center py-1">
+                      {Array.isArray(
+                        formik.values.vehicleInformation.rtoWorkPending,
+                      ) &&
+                        formik.values.vehicleInformation.rtoWorkPending.length >
+                        0 ? (
+                        formik.values.vehicleInformation.rtoWorkPending.map(
+                          (item) => (
+                            <span
+                              key={item}
+                              className="bg-primary/10 text-primary text-[9px] font-black px-2 py-0.5 rounded-md border border-primary/10 animate-in fade-in zoom-in duration-200 flex items-center gap-1"
+                            >
+                              {item}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRtoCheckboxChange(item);
+                                }}
+                                className="hover:text-red-500 transition-colors p-0.5"
                               >
-                                {item}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRtoCheckboxChange(item);
-                                  }}
-                                  className="hover:text-red-500 transition-colors p-0.5"
+                                <svg
+                                  className="w-2.5 h-2.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
                                 >
-                                  <svg
-                                    className="w-2.5 h-2.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="3"
-                                      d="M6 18L18 6M6 6l12 12"
-                                    />
-                                  </svg>
-                                </button>
-                              </span>
-                            ),
-                          )
-                        ) : (
-                          <span className="text-slate-400 font-medium text-[11px]">
-                            Select RTO Tasks...
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-shrink-0 ml-auto">
-                        <svg
-                          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-300 ${isRtoDropdownOpen ? "rotate-180" : ""}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="3"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-
-                    {/* Dropdown Menu - Positioned UPWARDS to avoid clipping at the bottom of the card */}
-                    {isRtoDropdownOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setIsRtoDropdownOpen(false)}
-                        ></div>
-
-                        <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 z-50 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 ring-4 ring-slate-900/5">
-                          <div className="flex justify-between items-center px-1 border-b border-slate-50 pb-2">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                              Availability List
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="3"
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
                             </span>
-                            {Array.isArray(
-                              formik.values.vehicleInformation.rtoWorkPending,
-                            ) &&
-                              formik.values.vehicleInformation.rtoWorkPending
-                                .length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    formik.setFieldValue(
-                                      "vehicleInformation.rtoWorkPending",
-                                      [],
-                                    );
-                                  }}
-                                  className="text-[9px] font-black text-red-400 uppercase hover:text-red-600 transition-colors"
-                                >
-                                  Clear All
-                                </button>
-                              )}
-                          </div>
+                          ),
+                        )
+                      ) : (
+                        <span className="text-slate-400 font-medium text-[11px]">
+                          Select RTO Tasks...
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 ml-auto">
+                      <svg
+                        className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-300 ${isRtoDropdownOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="3"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </div>
 
-                          <div className="grid grid-cols-1 gap-1 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
-                            {loadingOptions ? (
-                              <div className="py-8 text-center">
-                                <span className="text-xs italic text-slate-400">
-                                  Loading Intelligence...
-                                </span>
-                              </div>
-                            ) : (
-                              rtoOptions.map((opt) => (
-                                <label
-                                  key={opt}
-                                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer group transition-all ${Array.isArray(
+                  {/* Dropdown Menu - Positioned UPWARDS to avoid clipping at the bottom of the card */}
+                  {isRtoDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsRtoDropdownOpen(false)}
+                      ></div>
+
+                      <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 z-50 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 ring-4 ring-slate-900/5">
+                        <div className="flex justify-between items-center px-1 border-b border-slate-50 pb-2">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                            Availability List
+                          </span>
+                          {Array.isArray(
+                            formik.values.vehicleInformation.rtoWorkPending,
+                          ) &&
+                            formik.values.vehicleInformation.rtoWorkPending
+                              .length > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  formik.setFieldValue(
+                                    "vehicleInformation.rtoWorkPending",
+                                    [],
+                                  );
+                                }}
+                                className="text-[9px] font-black text-red-400 uppercase hover:text-red-600 transition-colors"
+                              >
+                                Clear All
+                              </button>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-1 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+                          {loadingOptions ? (
+                            <div className="py-8 text-center">
+                              <span className="text-xs italic text-slate-400">
+                                Loading Intelligence...
+                              </span>
+                            </div>
+                          ) : (
+                            rtoOptions.map((opt) => (
+                              <label
+                                key={opt}
+                                className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer group transition-all ${Array.isArray(
+                                  formik.values.vehicleInformation
+                                    .rtoWorkPending,
+                                ) &&
+                                    formik.values.vehicleInformation.rtoWorkPending.includes(
+                                      opt,
+                                    )
+                                    ? "bg-primary/5 border border-primary/10"
+                                    : "hover:bg-slate-50 border border-transparent"
+                                  }`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div
+                                  className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${Array.isArray(
                                     formik.values.vehicleInformation
                                       .rtoWorkPending,
                                   ) &&
                                       formik.values.vehicleInformation.rtoWorkPending.includes(
                                         opt,
                                       )
-                                      ? "bg-primary/5 border border-primary/10"
-                                      : "hover:bg-slate-50 border border-transparent"
+                                      ? "bg-primary border-primary"
+                                      : "bg-white border-slate-300 group-hover:border-primary"
                                     }`}
-                                  onClick={(e) => e.stopPropagation()}
                                 >
-                                  <div
-                                    className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${Array.isArray(
+                                  {Array.isArray(
+                                    formik.values.vehicleInformation
+                                      .rtoWorkPending,
+                                  ) &&
+                                    formik.values.vehicleInformation.rtoWorkPending.includes(
+                                      opt,
+                                    ) && (
+                                      <svg
+                                        className="w-3.5 h-3.5 text-white"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="4"
+                                          d="M5 13l4 4L19 7"
+                                        />
+                                      </svg>
+                                    )}
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  className="hidden"
+                                  checked={
+                                    Array.isArray(
                                       formik.values.vehicleInformation
                                         .rtoWorkPending,
                                     ) &&
-                                        formik.values.vehicleInformation.rtoWorkPending.includes(
-                                          opt,
-                                        )
-                                        ? "bg-primary border-primary"
-                                        : "bg-white border-slate-300 group-hover:border-primary"
-                                      }`}
-                                  >
-                                    {Array.isArray(
-                                      formik.values.vehicleInformation
-                                        .rtoWorkPending,
-                                    ) &&
-                                      formik.values.vehicleInformation.rtoWorkPending.includes(
-                                        opt,
-                                      ) && (
-                                        <svg
-                                          className="w-3.5 h-3.5 text-white"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="4"
-                                            d="M5 13l4 4L19 7"
-                                          />
-                                        </svg>
-                                      )}
-                                  </div>
-                                  <input
-                                    type="checkbox"
-                                    className="hidden"
-                                    checked={
-                                      Array.isArray(
-                                        formik.values.vehicleInformation
-                                          .rtoWorkPending,
-                                      ) &&
+                                    formik.values.vehicleInformation.rtoWorkPending.includes(
+                                      opt,
+                                    )
+                                  }
+                                  onChange={() =>
+                                    handleRtoCheckboxChange(opt)
+                                  }
+                                />
+                                <span
+                                  className={`text-sm font-bold transition-colors ${Array.isArray(
+                                    formik.values.vehicleInformation
+                                      .rtoWorkPending,
+                                  ) &&
                                       formik.values.vehicleInformation.rtoWorkPending.includes(
                                         opt,
                                       )
-                                    }
-                                    onChange={() =>
-                                      handleRtoCheckboxChange(opt)
-                                    }
-                                  />
-                                  <span
-                                    className={`text-sm font-bold transition-colors ${Array.isArray(
-                                      formik.values.vehicleInformation
-                                        .rtoWorkPending,
-                                    ) &&
-                                        formik.values.vehicleInformation.rtoWorkPending.includes(
-                                          opt,
-                                        )
-                                        ? "text-primary"
-                                        : "text-slate-600 group-hover:text-primary"
-                                      }`}
-                                  >
-                                    {opt}
-                                  </span>
-                                </label>
-                              ))
-                            )}
-                          </div>
+                                      ? "text-primary"
+                                      : "text-slate-600 group-hover:text-primary"
+                                    }`}
+                                >
+                                  {opt}
+                                </span>
+                              </label>
+                            ))
+                          )}
+                        </div>
 
-                          <div className="pt-4 border-t border-slate-100 space-y-4">
-                            <div>
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
-                                Custom RTO Task Entry
-                              </p>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="Task name..."
-                                  className="min-w-0 flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-slate-300"
-                                  value={customRto}
-                                  onChange={(e) => setCustomRto(e.target.value)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyPress={(e) => {
-                                    if (e.key === "Enter") {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      handleAddCustomRto();
-                                    }
-                                  }}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
+                        <div className="pt-4 border-t border-slate-100 space-y-4">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">
+                              Custom RTO Task Entry
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                placeholder="Task name..."
+                                className="min-w-0 flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-slate-300"
+                                value={customRto}
+                                onChange={(e) => setCustomRto(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyPress={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
                                     e.stopPropagation();
                                     handleAddCustomRto();
-                                  }}
-                                  className="flex-shrink-0 bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md active:scale-95"
-                                >
-                                  Add
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="pt-2">
+                                  }
+                                }}
+                              />
                               <button
                                 type="button"
-                                onClick={() => setIsRtoDropdownOpen(false)}
-                                className="w-full bg-primary text-white py-2.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-blue-700 transition-all active:scale-[0.98]"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddCustomRto();
+                                }}
+                                className="flex-shrink-0 bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md active:scale-95"
                               >
-                                Done
+                                Add
                               </button>
                             </div>
                           </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsRtoDropdownOpen(false)}
+                              className="w-full bg-primary text-white py-2.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-blue-700 transition-all active:scale-[0.98]"
+                            >
+                              Done
+                            </button>
+                          </div>
                         </div>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2 pt-1 border-b border-slate-100 pb-2">
-                    {Array.isArray(
-                      formik.values.vehicleInformation.rtoWorkPending,
-                    ) &&
-                      formik.values.vehicleInformation.rtoWorkPending.length >
-                      0 ? (
-                      formik.values.vehicleInformation.rtoWorkPending.map(
-                        (item) => (
-                          <span
-                            key={item}
-                            className="bg-slate-50 text-slate-500 text-[10px] font-black px-3 py-1 rounded-full border border-slate-100"
-                          >
-                            {item}
-                          </span>
-                        ),
-                      )
-                    ) : (
-                      <span className="text-sm italic text-slate-300 font-bold">
-                        None
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 pt-1 border-b border-slate-100 pb-2">
+                  {Array.isArray(
+                    formik.values.vehicleInformation.rtoWorkPending,
+                  ) &&
+                    formik.values.vehicleInformation.rtoWorkPending.length >
+                    0 ? (
+                    formik.values.vehicleInformation.rtoWorkPending.map(
+                      (item) => (
+                        <span
+                          key={item}
+                          className="bg-slate-50 text-slate-500 text-[10px] font-black px-3 py-1 rounded-full border border-slate-100"
+                        >
+                          {item}
+                        </span>
+                      ),
+                    )
+                  ) : (
+                    <span className="text-sm italic text-slate-300 font-bold">
+                      None
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                RTO Notes
+              </label>
+              <textarea
+                name="vehicleInformation.rtoNotes"
+                value={formik.values.vehicleInformation.rtoNotes || ""}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                readOnly={isViewOnly}
+                rows={2}
+                placeholder="e.g. Officer said stamp will be ready by Friday"
+                className={getFieldClass("vehicleInformation.rtoNotes") + " resize-none"}
+              />
             </div>
           </div>
 

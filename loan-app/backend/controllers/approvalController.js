@@ -429,6 +429,32 @@ const processApproval = asyncHandler(async (req, res, next) => {
 
             const extractIdValue = (val) => (val && typeof val === "object" ? val._id || val : val);
 
+            // Same RTO-section change detection as the direct-edit path
+            // (loanController.js updateLoan), so "Last Updated By" only
+            // moves when this section was actually touched.
+            let rtoWorkChanged = false;
+            if (vehicleInformation) {
+              const newRtoWork = Array.isArray(vehicleInformation.rtoWorkPending)
+                ? vehicleInformation.rtoWorkPending
+                : loan.rtoWorkPending || [];
+              const oldRtoWork = loan.rtoWorkPending || [];
+              const rtoWorkListChanged =
+                newRtoWork.length !== oldRtoWork.length ||
+                newRtoWork.some((w, i) => w !== oldRtoWork[i]);
+
+              const toDateKey = (d) => (d ? new Date(d).toISOString().split("T")[0] : "");
+
+              rtoWorkChanged =
+                rtoWorkListChanged ||
+                (vehicleInformation.hpEntry !== undefined && vehicleInformation.hpEntry !== loan.hpEntry) ||
+                (vehicleInformation.rtoWorkStatus !== undefined && vehicleInformation.rtoWorkStatus !== loan.rtoWorkStatus) ||
+                (vehicleInformation.rtoDocsSubmittedDate !== undefined &&
+                  toDateKey(vehicleInformation.rtoDocsSubmittedDate) !== toDateKey(loan.rtoDocsSubmittedDate)) ||
+                (vehicleInformation.rtoCompletedDate !== undefined &&
+                  toDateKey(vehicleInformation.rtoCompletedDate) !== toDateKey(loan.rtoCompletedDate)) ||
+                (vehicleInformation.rtoNotes !== undefined && vehicleInformation.rtoNotes !== (loan.rtoNotes || ""));
+            }
+
             const updateData = {
               ...(customerDetails && {
                 customerName: customerDetails.customerName,
@@ -469,6 +495,23 @@ const processApproval = asyncHandler(async (req, res, next) => {
                 insuranceDate: vehicleInformation.insuranceDate,
                 rtoWorkPending: vehicleInformation.rtoWorkPending,
                 hpEntry: vehicleInformation.hpEntry || loan.hpEntry,
+                rtoWorkStatus: vehicleInformation.rtoWorkStatus || loan.rtoWorkStatus,
+                rtoDocsSubmittedDate:
+                  vehicleInformation.rtoDocsSubmittedDate !== undefined
+                    ? vehicleInformation.rtoDocsSubmittedDate || null
+                    : loan.rtoDocsSubmittedDate,
+                rtoCompletedDate:
+                  vehicleInformation.rtoCompletedDate !== undefined
+                    ? vehicleInformation.rtoCompletedDate || null
+                    : loan.rtoCompletedDate,
+                rtoNotes:
+                  vehicleInformation.rtoNotes !== undefined
+                    ? vehicleInformation.rtoNotes
+                    : loan.rtoNotes,
+              }),
+              ...(rtoWorkChanged && {
+                rtoWorkUpdatedBy: approval.requestedBy,
+                rtoWorkUpdatedAt: new Date(),
               }),
               status:
                 statusObj?.status ||

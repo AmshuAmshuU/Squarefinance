@@ -68,6 +68,16 @@ const EditLoanPage = () => {
                 .toISOString()
                 .split("T")[0]
             : "",
+          rtoDocsSubmittedDate: data.vehicleInformation?.rtoDocsSubmittedDate
+            ? new Date(data.vehicleInformation.rtoDocsSubmittedDate)
+                .toISOString()
+                .split("T")[0]
+            : "",
+          rtoCompletedDate: data.vehicleInformation?.rtoCompletedDate
+            ? new Date(data.vehicleInformation.rtoCompletedDate)
+                .toISOString()
+                .split("T")[0]
+            : "",
         },
         status: {
           ...data.status,

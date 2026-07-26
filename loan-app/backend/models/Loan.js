@@ -154,6 +154,29 @@ const loanSchema = new mongoose.Schema(
       default: "Not done",
       trim: true,
     },
+    rtoWorkStatus: {
+      type: String,
+      enum: ["No work", "Yet to apply", "Applied", "Completed"],
+      default: "No work",
+      trim: true,
+    },
+    rtoDocsSubmittedDate: {
+      type: Date,
+    },
+    rtoCompletedDate: {
+      type: Date,
+    },
+    rtoNotes: {
+      type: String,
+      trim: true,
+    },
+    rtoWorkUpdatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    rtoWorkUpdatedAt: {
+      type: Date,
+    },
     isSeized: {
       type: Boolean,
       default: false,

@@ -44,6 +44,12 @@ const formatLoanResponse = (loanDoc) => {
       insuranceDate: loan.insuranceDate,
       rtoWorkPending: loan.rtoWorkPending || [],
       hpEntry: loan.hpEntry || "Not done",
+      rtoWorkStatus: loan.rtoWorkStatus || "No work",
+      rtoDocsSubmittedDate: loan.rtoDocsSubmittedDate || null,
+      rtoCompletedDate: loan.rtoCompletedDate || null,
+      rtoNotes: loan.rtoNotes || "",
+      rtoWorkUpdatedBy: loan.rtoWorkUpdatedBy || null,
+      rtoWorkUpdatedAt: loan.rtoWorkUpdatedAt || null,
     },
     repaymentStats: loan.repaymentStats || null,
     status:

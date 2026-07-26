@@ -27,6 +27,10 @@ const LOAN_FIELDS = {
   fcDate: "FC Date",
   insuranceDate: "Insurance Date",
   rtoWorkPending: "RTO Work Pending",
+  rtoWorkStatus: "RTO Work Status",
+  rtoDocsSubmittedDate: "RTO Docs Submitted Date",
+  rtoCompletedDate: "RTO Completed Date",
+  rtoNotes: "RTO Notes",
   remarks: "Remarks",
   // NOTE: clientResponse and nextFollowUpDate are intentionally excluded
   // They are handled freely by employees via the updateFollowup endpoint
