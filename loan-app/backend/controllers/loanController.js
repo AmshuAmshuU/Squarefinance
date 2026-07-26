@@ -2019,6 +2019,31 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Dashboard "RTO Work Accountability" card. Vehicle loans only - RTO work
+// doesn't apply to Weekly/Daily/Interest. "No work" and "Completed" loans
+// are deliberately excluded - only Applied/Yet to apply need surfacing for
+// Super Admin to keep an eye on. Scoped to status: "Active", same
+// convention as the Followup Accountability card above - a Closed/Seized
+// loan's RTO status isn't something anyone needs to act on anymore.
+const getRtoWorkDashboardSummary = asyncHandler(async (req, res, next) => {
+  const projection =
+    "loanNumber customerName vehicleNumber mobileNumbers rtoWorkPending rtoNotes";
+
+  const [applied, yetToApply] = await Promise.all([
+    Loan.find({ status: "Active", rtoWorkStatus: "Applied" })
+      .select(projection)
+      .lean(),
+    Loan.find({ status: "Active", rtoWorkStatus: "Yet to apply" })
+      .select(projection)
+      .lean(),
+  ]);
+
+  sendResponse(res, 200, "success", "RTO work dashboard summary fetched successfully", null, {
+    applied: { count: applied.length, items: applied },
+    yetToApply: { count: yetToApply.length, items: yetToApply },
+  });
+});
+
 const updateFollowup = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { loanModel, clientResponse, nextFollowUpDate } = req.body;
@@ -2649,6 +2674,7 @@ module.exports = {
   getPendingPayments,
   getFollowupLoans,
   getFollowupDashboardSummary,
+  getRtoWorkDashboardSummary,
   getPendingEmiDetails,
   updatePaymentStatus,
   getForeclosureLoans,

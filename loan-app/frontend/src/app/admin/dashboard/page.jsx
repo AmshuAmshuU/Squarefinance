@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import TodoDashboardSection from "../../../components/analytics/TodoDashboardSection";
 import FollowupAccountabilityCard from "../../../components/analytics/FollowupAccountabilityCard";
+import RtoWorkAccountabilityCard from "../../../components/analytics/RtoWorkAccountabilityCard";
 import { useUI } from "../../../context/UIContext";
 
 const DashboardPage = () => {
@@ -115,6 +116,11 @@ const DashboardPage = () => {
               {/* Followup Accountability */}
               <div className="mb-10">
                 <FollowupAccountabilityCard />
+              </div>
+
+              {/* RTO Work Accountability */}
+              <div className="mb-10">
+                <RtoWorkAccountabilityCard />
               </div>
 
               {/* Employee Management Counts - NEW SECTION */}

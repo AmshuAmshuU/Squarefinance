@@ -95,6 +95,12 @@ export const getFollowupDashboardSummary = async () => {
   });
 };
 
+export const getRtoWorkDashboardSummary = async () => {
+  return await apiHandler("/api/loans/rto-work-summary", {
+    method: "GET",
+  });
+};
+
 export const getPendingEmiDetails = async (id) => {
   return await apiHandler(`/api/loans/pending-details/${id}`, {
     method: "GET",
