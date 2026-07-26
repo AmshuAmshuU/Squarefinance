@@ -27,7 +27,7 @@ const generateTokens = (user) => {
 };
 
 const login = asyncHandler(async (req, res, next) => {
-  const { email, password, accessKey } = req.body;
+  const { email, password } = req.body;
 
   if (!email || !password) {
     return next(new ErrorHandler("Please enter email & password", 400));
@@ -41,16 +41,6 @@ const login = asyncHandler(async (req, res, next) => {
 
   if (!(await user.comparePassword(password))) {
     return next(new ErrorHandler("Password is incorrect", 401));
-  }
-
-  if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
-    const validAccessKey =
-      user.accessKey ||
-      (user.role === "SUPER_ADMIN" ? process.env.SUPER_ADMIN_ACCESS_KEY : null);
-
-    if (!accessKey || accessKey !== validAccessKey) {
-      return next(new ErrorHandler("Access key is incorrect", 403));
-    }
   }
 
   if (!user.isActive) {

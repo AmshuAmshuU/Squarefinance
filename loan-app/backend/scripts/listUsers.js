@@ -6,13 +6,12 @@ const list = async () => {
   await mongoose.connect(process.env.MONGODB_URI);
   console.log("Connected\n");
 
-  const users = await User.find({}, "name email role accessKey isActive");
+  const users = await User.find({}, "name email role isActive");
   console.log(`Found ${users.length} users:\n`);
   users.forEach(u => {
     console.log(`Name: ${u.name}`);
     console.log(`Email: ${u.email}`);
     console.log(`Role: ${u.role}`);
-    console.log(`Access Key: ${u.accessKey}`);
     console.log(`Active: ${u.isActive}`);
     console.log("---");
   });

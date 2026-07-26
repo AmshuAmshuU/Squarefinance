@@ -19,7 +19,6 @@ const AddEmployeePage = () => {
     email: "",
     password: "",
     role: "EMPLOYEE",
-    accessKey: "",
     permissions: {
       loans: { view: false, create: false, edit: false, delete: false },
       weeklyLoans: { view: false, create: false, edit: false, delete: false },
@@ -274,34 +273,18 @@ const AddEmployeePage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
-                        Set Password
-                      </label>
-                      <input
-                        type="password"
-                        name="password"
-                        required
-                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                        value={formData.password}
-                        onChange={handleChange}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
-                        Set Access Key
-                      </label>
-                      <input
-                        type="text"
-                        name="accessKey"
-                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-300 uppercase"
-                        placeholder="E.G. OP-44"
-                        value={formData.accessKey}
-                        onChange={handleChange}
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
+                      Set Password
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      required
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                      value={formData.password}
+                      onChange={handleChange}
+                    />
                   </div>
 
                   <button
@@ -451,23 +434,13 @@ const AddEmployeePage = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-10">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                          Email Address
-                        </p>
-                        <p className="font-bold text-slate-700">
-                          {formData.email}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                          Access Key
-                        </p>
-                        <p className="font-bold text-slate-700 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100 inline-block">
-                          {formData.accessKey || "NONE"}
-                        </p>
-                      </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                        Email Address
+                      </p>
+                      <p className="font-bold text-slate-700">
+                        {formData.email}
+                      </p>
                     </div>
 
                     <div className="pt-6 border-t border-slate-100">

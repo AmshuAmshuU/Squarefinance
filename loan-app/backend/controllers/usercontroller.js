@@ -5,7 +5,7 @@ const sendResponse = require("../utils/response");
 
 // Create Employee
 const createEmployee = asyncHandler(async (req, res, next) => {
-  const { name, email, password, role, accessKey, permissions } = req.body;
+  const { name, email, password, role, permissions } = req.body;
 
   // Check if user already exists
   const userExists = await User.findOne({ email });
@@ -18,7 +18,6 @@ const createEmployee = asyncHandler(async (req, res, next) => {
     email,
     password,
     role: role || "EMPLOYEE",
-    accessKey,
     permissions: permissions || {
       loans: { view: false, create: false, edit: false, delete: false },
       weeklyLoans: { view: false, create: false, edit: false, delete: false },
@@ -44,7 +43,6 @@ const createEmployee = asyncHandler(async (req, res, next) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      accessKey: user.accessKey,
     },
   );
 });
@@ -92,7 +90,7 @@ const getEmployeeById = asyncHandler(async (req, res, next) => {
 
 // Update Employee
 const updateEmployee = asyncHandler(async (req, res, next) => {
-  const { name, email, role, accessKey, password, permissions } = req.body;
+  const { name, email, role, password, permissions } = req.body;
 
   const user = await User.findById(req.params.id);
   if (!user) {
@@ -102,7 +100,6 @@ const updateEmployee = asyncHandler(async (req, res, next) => {
   user.name = name || user.name;
   user.email = email || user.email;
   user.role = role || user.role;
-  user.accessKey = accessKey || user.accessKey;
   user.permissions = permissions || user.permissions;
 
   if (password) {

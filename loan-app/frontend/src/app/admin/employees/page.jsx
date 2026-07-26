@@ -57,9 +57,7 @@ const EmployeesPage = () => {
   const filteredEmployees = employees.filter(
     (emp) =>
       emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (emp.accessKey &&
-        emp.accessKey.toLowerCase().includes(searchQuery.toLowerCase())),
+      emp.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -151,7 +149,7 @@ const EmployeesPage = () => {
                     <div className="pl-4 text-slate-400">🔍</div>
                     <input
                       type="text"
-                      placeholder="Search by Name, Email or Access Key"
+                      placeholder="Search by Name or Email"
                       className="w-full py-3 px-3 text-xs font-bold text-slate-700 focus:outline-none placeholder:text-slate-300 placeholder:font-bold uppercase"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -170,9 +168,6 @@ const EmployeesPage = () => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50/50 border-b border-slate-200">
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          Access Key
-                        </th>
                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           Operator Name
                         </th>
@@ -223,11 +218,6 @@ const EmployeesPage = () => {
                             key={emp._id}
                             className="hover:bg-slate-50/50 transition-colors"
                           >
-                            <td className="px-3 py-3">
-                              <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter">
-                                {emp.accessKey || "---"}
-                              </span>
-                            </td>
                             <td className="px-6 py-4 font-black text-slate-900 uppercase text-xs tracking-tighter">
                               {emp.name}
                             </td>

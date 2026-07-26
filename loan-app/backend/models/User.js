@@ -27,9 +27,6 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    accessKey: {
-      type: String,
-    },
     permissions: {
       loans: {
         view: { type: Boolean, default: false },

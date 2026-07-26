@@ -1,10 +1,10 @@
 import apiHandler from "./api";
 import { setToken } from "../utils/auth";
 
-export const login = async (email, password, accessKey = null) => {
+export const login = async (email, password) => {
   const result = await apiHandler("/api/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password, accessKey }),
+    body: JSON.stringify({ email, password }),
   });
 
   if (result.data && result.data.token) {

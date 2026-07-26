@@ -96,13 +96,11 @@ app.get("/api/seed-admin", async (req, res) => {
 
     const email = "squarefinance2025@gmail.com";
     const password = "12345678";
-    const accessKey = "admin123";
 
     let user = await User.findOne({ email });
     if (user) {
       user.password = password;
       user.role = "SUPER_ADMIN";
-      user.accessKey = accessKey;
       user.isActive = true;
       user.permissions = {
         loans: { view: true, create: true, edit: true, delete: true },
@@ -125,7 +123,6 @@ app.get("/api/seed-admin", async (req, res) => {
         email,
         password,
         role: "SUPER_ADMIN",
-        accessKey,
         isActive: true,
         permissions: {
           loans: { view: true, create: true, edit: true, delete: true },

@@ -4,14 +4,12 @@ import { useRouter } from "next/navigation";
 import { login } from "../../../services/auth.service";
 import { useToast } from "../../../context/ToastContext";
 import Logo from "../../../components/Logo";
-import { User, Lock, Key, Mail, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
+import { User, Lock, Mail, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [accessKey, setAccessKey] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showAccessKey, setShowAccessKey] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
@@ -21,7 +19,7 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login(email, password, accessKey);
+      await login(email, password);
       showToast("Welcome back! Authentication successful.", "success");
       router.push("/admin/dashboard");
     } catch (err) {
@@ -121,33 +119,6 @@ const LoginPage = () => {
                   suppressHydrationWarning
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase mb-1.5 tracking-[0.15em] ml-1">
-                Access Key
-              </label>
-              <div className="relative group/input">
-                <input
-                  type={showAccessKey ? "text" : "password"}
-                  value={accessKey}
-                  onChange={(e) => setAccessKey(e.target.value)}
-                  className="w-full px-5 pr-12 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/5 focus:border-primary outline-none transition-all text-sm font-bold text-slate-800 placeholder:text-slate-200"
-                  placeholder="••••••••"
-                  suppressHydrationWarning
-                />
-                <div className="absolute inset-y-0 right-12 flex items-center text-slate-400 group-focus-within/input:text-primary transition-colors duration-300 pointer-events-none">
-                  <Key className="w-4 h-4 opacity-50" />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAccessKey(!showAccessKey)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-primary transition-all p-1"
-                  suppressHydrationWarning
-                >
-                  {showAccessKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>

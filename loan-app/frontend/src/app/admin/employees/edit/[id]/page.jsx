@@ -23,7 +23,6 @@ const EditEmployeePage = () => {
     email: "",
     password: "",
     role: "EMPLOYEE",
-    accessKey: "",
     permissions: {
       loans: { view: false, create: false, edit: false, delete: false },
       weeklyLoans: { view: false, create: false, edit: false, delete: false },
@@ -44,12 +43,11 @@ const EditEmployeePage = () => {
     const fetchEmployee = async () => {
       try {
         const res = await getEmployeeById(id);
-        const { name, email, role, accessKey, permissions } = res.data;
+        const { name, email, role, permissions } = res.data;
         setFormData({
           name,
           email,
           role,
-          accessKey,
           password: "",
           permissions: {
             loans: { view: false, create: false, edit: false, delete: false, ...(permissions?.loans || {}) },
@@ -297,34 +295,18 @@ const EditEmployeePage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
-                        Update Password
-                      </label>
-                      <input
-                        type="password"
-                        name="password"
-                        placeholder="Leave blank to keep current"
-                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-300"
-                        value={formData.password}
-                        onChange={handleChange}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
-                        Access Key
-                      </label>
-                      <input
-                        type="text"
-                        name="accessKey"
-                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-300 uppercase"
-                        placeholder="E.G. OP-44"
-                        value={formData.accessKey}
-                        onChange={handleChange}
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
+                      Update Password
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      placeholder="Leave blank to keep current"
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-300"
+                      value={formData.password}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
 

@@ -17,7 +17,6 @@ const createSuperAdmin = async () => {
 
     const email = "squarefinance2025@gmail.com";
     const password = "12345678";
-    const accessKey = "admin123";
 
     let user = await User.findOne({ email });
 
@@ -25,7 +24,6 @@ const createSuperAdmin = async () => {
       console.log("User already exists. Updating to SUPER_ADMIN...");
       user.password = password;
       user.role = "SUPER_ADMIN";
-      user.accessKey = accessKey;
       user.isActive = true;
       // Grant all permissions for Super Admin
       user.permissions = {
@@ -49,7 +47,6 @@ const createSuperAdmin = async () => {
         email,
         password,
         role: "SUPER_ADMIN",
-        accessKey,
         isActive: true,
         permissions: {
           loans: { view: true, create: true, edit: true, delete: true },

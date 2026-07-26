@@ -294,14 +294,6 @@ const ViewEmployeePage = () => {
                           {employee.email}
                         </p>
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          Access Key
-                        </p>
-                        <p className="font-bold text-slate-700 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100 inline-block text-xs">
-                          {employee.accessKey || "NONE"}
-                        </p>
-                      </div>
                     </div>
 
                     <button
