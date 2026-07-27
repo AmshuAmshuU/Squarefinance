@@ -284,6 +284,9 @@ const loanSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.Mixed,
         ref: "User",
       },
+      paymentMode: {
+        type: String,
+      },
     },
   },
   {

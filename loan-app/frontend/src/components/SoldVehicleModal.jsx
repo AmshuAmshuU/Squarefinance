@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import PaymentModeSelector from "./PaymentModeSelector";
 
 const SoldVehicleModal = ({ isOpen, onClose, onConfirm, loan }) => {
   const [step, setStep] = useState(1); // 1: Input, 2: Preview
@@ -6,6 +7,7 @@ const SoldVehicleModal = ({ isOpen, onClose, onConfirm, loan }) => {
     sellAmount: "",
     miscellaneousAmount: "0",
     totalAmount: 0,
+    paymentMode: "Cash",
   });
   const [error, setError] = useState("");
 
@@ -116,6 +118,13 @@ const SoldVehicleModal = ({ isOpen, onClose, onConfirm, loan }) => {
                 </div>
               </div>
 
+              <PaymentModeSelector
+                value={formData.paymentMode}
+                onChange={(mode) =>
+                  setFormData({ ...formData, paymentMode: mode })
+                }
+              />
+
               <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
                 <p className="text-[9px] font-black text-emerald-600/60 uppercase tracking-widest text-center mb-1">
                   Total Sale Amount
@@ -152,6 +161,14 @@ const SoldVehicleModal = ({ isOpen, onClose, onConfirm, loan }) => {
                   </span>
                   <span className="text-sm font-bold text-slate-700">
                     ₹{parseFloat(formData.miscellaneousAmount).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b border-slate-50">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Payment Mode
+                  </span>
+                  <span className="text-sm font-bold text-slate-700">
+                    {formData.paymentMode}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-4 bg-slate-50 px-4 rounded-xl">
