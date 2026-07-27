@@ -401,6 +401,36 @@ const processApproval = asyncHandler(async (req, res, next) => {
           }
         }
       }
+    } else if (requestType === "VEHICLE_SOLD") {
+      const loan = await Loan.findById(targetId);
+      if (loan) {
+        const { seizedStatus, soldDetails } = requestedData;
+        const finalSoldDetails = {
+          ...soldDetails,
+          soldDate: soldDetails.soldDate || new Date(),
+          soldBy: approval.requestedBy,
+        };
+
+        loan.seizedStatus = seizedStatus;
+        loan.status = "Closed";
+        loan.soldDetails = finalSoldDetails;
+        loan.approvedBy = req.user._id;
+        loan.approvedAt = Date.now();
+        await loan.save();
+
+        await Payment.create({
+          loanId: loan._id,
+          loanModel: "Loan",
+          amount: parseFloat(soldDetails.sellAmount),
+          totalAmount: parseFloat(soldDetails.sellAmount),
+          mode: soldDetails.paymentMode || "Cash",
+          paymentDate: finalSoldDetails.soldDate,
+          paymentType: "Vehicle Sale",
+          status: "Success",
+          remarks: `Vehicle sold for loan ${loan.loanNumber} (approved)`,
+          collectedBy: approval.requestedBy,
+        });
+      }
     } else if (requestType === "LOAN_EDIT") {
       // Apply the approved changes to the loan document
       const { newValues } = approval.requestedData || {};

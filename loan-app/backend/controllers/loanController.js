@@ -2519,6 +2519,73 @@ const updateSeizedStatus = asyncHandler(async (req, res, next) => {
     );
   }
 
+  // Marking a vehicle Sold moves real money and closes the loan, same as a
+  // Foreclosure - so it needs the same approval-workflow gate. The other
+  // seizedStatus transitions (For Seizing/Seized/Re-activate) are just
+  // administrative labels, not financial events, so they stay direct.
+  if (seizedStatus === "Sold") {
+    const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+    const hasApprovalAuthority = req.user.permissions?.paymentApproval;
+
+    if (!soldDetails || !soldDetails.sellAmount) {
+      return next(new ErrorHandler("Please provide sale details", 400));
+    }
+
+    if (!isSuperAdmin && !hasApprovalAuthority) {
+      const Approval = require("../models/Approval");
+      const existingApproval = await Approval.findOne({
+        targetId: existingLoan._id,
+        status: "Pending",
+      });
+
+      if (existingApproval) {
+        return next(new ErrorHandler("This sale is already waiting for approval", 400));
+      }
+
+      await Approval.create({
+        requestType: "VEHICLE_SOLD",
+        targetId: existingLoan._id,
+        targetModel: "Loan",
+        loanNumber: existingLoan.loanNumber,
+        customerName: existingLoan.customerName || "Customer",
+        requestedData: {
+          seizedStatus,
+          soldDetails,
+          loanId: existingLoan._id,
+          // Top-level totalAmount/paymentMode so the Approvals page's
+          // existing generic row rendering (same fallback Foreclosure
+          // relies on) shows the sale amount correctly without needing
+          // any dedicated UI for this request type.
+          totalAmount: soldDetails.sellAmount,
+          paymentMode: soldDetails.paymentMode || "Cash",
+        },
+        requestedBy: req.user._id,
+        status: "Pending",
+      });
+
+      const { notifyApprovalCountChange, notifyAdmins } = require("./notificationController");
+      await notifyAdmins({
+        senderId: req.user._id,
+        type: "PAYMENT_REQUEST",
+        title: "New Vehicle Sold Approval Request",
+        message: `Employee ${req.user.name} requested approval for selling the vehicle on loan ${existingLoan.loanNumber} (${existingLoan.customerName}) for ₹${soldDetails.sellAmount}.`,
+        data: {
+          loanNumber: existingLoan.loanNumber,
+          customerName: existingLoan.customerName,
+          amount: soldDetails.sellAmount,
+          employeeName: req.user.name,
+          loanId: existingLoan._id,
+          loanType: "Loan",
+          targetId: existingLoan._id,
+        },
+      });
+
+      await notifyApprovalCountChange();
+
+      return sendResponse(res, 200, "success", "Vehicle sale submitted for approval", null, existingLoan);
+    }
+  }
+
   const updateData = { seizedStatus };
 
   // If status is changed to 'Seized', set the seizedDate to start countdown
@@ -2555,6 +2622,26 @@ const updateSeizedStatus = asyncHandler(async (req, res, next) => {
 
   if (!loan) {
     return next(new ErrorHandler("Loan not found", 404));
+  }
+
+  // Record the sale as a real Payment so it shows up in Collections, same
+  // as Foreclosure does - previously only saved inside soldDetails, which
+  // made it visible on the loan itself but invisible everywhere money
+  // collected is normally tracked.
+  if (seizedStatus === "Sold") {
+    const Payment = require("../models/Payment");
+    await Payment.create({
+      loanId: loan._id,
+      loanModel: "Loan",
+      amount: parseFloat(soldDetails.sellAmount),
+      totalAmount: parseFloat(soldDetails.sellAmount),
+      mode: soldDetails.paymentMode || "Cash",
+      paymentDate: updateData.soldDetails.soldDate,
+      paymentType: "Vehicle Sale",
+      status: "Success",
+      remarks: `Vehicle sold for loan ${loan.loanNumber}`,
+      collectedBy: req.user._id,
+    });
   }
 
   sendResponse(

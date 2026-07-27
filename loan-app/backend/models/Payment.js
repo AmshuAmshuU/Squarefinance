@@ -56,6 +56,7 @@ const paymentSchema = new mongoose.Schema(
         "Overdue",
         "Interest",
         "Foreclosure",
+        "Vehicle Sale",
       ],
       required: true,
     },

@@ -4,7 +4,7 @@ const approvalSchema = new mongoose.Schema(
   {
     requestType: {
       type: String,
-      enum: ["EMI_PAYMENT", "INTEREST_PAYMENT", "FORECLOSURE", "PRINCIPAL_PAYMENT", "LOAN_EDIT"],
+      enum: ["EMI_PAYMENT", "INTEREST_PAYMENT", "FORECLOSURE", "PRINCIPAL_PAYMENT", "LOAN_EDIT", "VEHICLE_SOLD"],
       required: true,
     },
     targetId: {
