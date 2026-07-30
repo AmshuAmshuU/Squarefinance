@@ -2349,6 +2349,17 @@ const forecloseLoan = asyncHandler(async (req, res, next) => {
     .populate("foreclosedBy", "name")
     .populate("updatedBy", "name");
 
+  // 1b. Close out any remaining (not-yet-paid) EMIs so the schedule displays
+  // cleanly - but flagged as closedWithoutPayment so the profit calculation
+  // never counts these as genuinely collected interest. Uses {timestamps:false}
+  // for the same reason schedule-sync elsewhere does: this isn't a real
+  // payment, so it must not touch updatedAt/appear as "Last Updated".
+  await EMI.updateMany(
+    { loanId: id, status: { $ne: "Paid" } },
+    { $set: { status: "Paid", paymentDate: pDate, closedWithoutPayment: true } },
+    { timestamps: false },
+  );
+
   // 2. Create Payment Records for each mode in breakdown
   let targetEmiId = null;
   const firstJustPaidEmi = await EMI.findOne({
@@ -2642,6 +2653,15 @@ const updateSeizedStatus = asyncHandler(async (req, res, next) => {
       remarks: `Vehicle sold for loan ${loan.loanNumber}`,
       collectedBy: req.user._id,
     });
+
+    // Close out any remaining (not-yet-paid) EMIs so the schedule displays
+    // cleanly, flagged so profit calculation never treats these as
+    // genuinely collected interest (see EMI.js schema comment).
+    await EMI.updateMany(
+      { loanId: loan._id, status: { $ne: "Paid" } },
+      { $set: { status: "Paid", paymentDate: updateData.soldDetails.soldDate, closedWithoutPayment: true } },
+      { timestamps: false },
+    );
   }
 
   sendResponse(

@@ -385,6 +385,15 @@ const processApproval = asyncHandler(async (req, res, next) => {
         loan.approvedAt = Date.now();
         await loan.save();
 
+        // Close out any remaining (not-yet-paid) EMIs so the schedule
+        // displays cleanly, flagged so profit calculation never treats
+        // these as genuinely collected interest (see EMI.js schema comment).
+        await EMI.updateMany(
+          { loanId: loan._id, status: { $ne: "Paid" } },
+          { $set: { status: "Paid", paymentDate: pDate, closedWithoutPayment: true } },
+          { timestamps: false },
+        );
+
         if (paymentBreakdown && Array.isArray(paymentBreakdown)) {
           for (const p of paymentBreakdown) {
             await Payment.create({
@@ -417,6 +426,15 @@ const processApproval = asyncHandler(async (req, res, next) => {
         loan.approvedBy = req.user._id;
         loan.approvedAt = Date.now();
         await loan.save();
+
+        // Close out any remaining (not-yet-paid) EMIs so the schedule
+        // displays cleanly, flagged so profit calculation never treats
+        // these as genuinely collected interest (see EMI.js schema comment).
+        await EMI.updateMany(
+          { loanId: loan._id, status: { $ne: "Paid" } },
+          { $set: { status: "Paid", paymentDate: finalSoldDetails.soldDate, closedWithoutPayment: true } },
+          { timestamps: false },
+        );
 
         await Payment.create({
           loanId: loan._id,

@@ -907,9 +907,12 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
     expectedVehicle,
     expectedInterestAgg,
   ] = await Promise.all([
-    // Vehicle EMI interest portion of fully-paid EMIs
+    // Vehicle EMI interest portion of fully-paid EMIs. Excludes EMIs that
+    // were bulk-closed (not genuinely paid) when a loan was foreclosed or
+    // its vehicle sold - those would otherwise count months of interest
+    // that were never actually collected in cash.
     EMI.aggregate([
-      { $match: { loanModel: "Loan", status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
+      { $match: { loanModel: "Loan", status: "Paid", closedWithoutPayment: { $ne: true }, paymentDate: { $gte: startDate, $lte: endDate } } },
       { $lookup: { from: "loans", localField: "loanId", foreignField: "_id", as: "loan" } },
       { $unwind: "$loan" },
       { $group: { _id: null, total: { $sum: interestPortionExpr } } },
@@ -919,13 +922,22 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
       { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
       { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
     ]),
-    // Vehicle foreclosure charge + misc fee, recognised on foreclosure date
+    // Vehicle foreclosure charge + misc fee + OD collected at foreclosure,
+    // recognised on foreclosure date
     Loan.aggregate([
       { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
       {
         $group: {
           _id: null,
-          total: { $sum: { $add: [{ $ifNull: ["$foreclosureChargeAmount", 0] }, { $ifNull: ["$miscellaneousFee", 0] }] } },
+          total: {
+            $sum: {
+              $add: [
+                { $ifNull: ["$foreclosureChargeAmount", 0] },
+                { $ifNull: ["$miscellaneousFee", 0] },
+                { $ifNull: ["$odAmount", 0] },
+              ],
+            },
+          },
         },
       },
     ]),
@@ -954,7 +966,7 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
 
     // Trend versions of the same 7 components, bucketed by date
     EMI.aggregate([
-      { $match: { loanModel: "Loan", status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
+      { $match: { loanModel: "Loan", status: "Paid", closedWithoutPayment: { $ne: true }, paymentDate: { $gte: startDate, $lte: endDate } } },
       { $lookup: { from: "loans", localField: "loanId", foreignField: "_id", as: "loan" } },
       { $unwind: "$loan" },
       { $group: { _id: { $dateToString: { format: groupFormat, date: "$paymentDate" } }, total: { $sum: interestPortionExpr } } },
@@ -968,7 +980,15 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
       {
         $group: {
           _id: { $dateToString: { format: groupFormat, date: "$foreclosureDate" } },
-          total: { $sum: { $add: [{ $ifNull: ["$foreclosureChargeAmount", 0] }, { $ifNull: ["$miscellaneousFee", 0] }] } },
+          total: {
+            $sum: {
+              $add: [
+                { $ifNull: ["$foreclosureChargeAmount", 0] },
+                { $ifNull: ["$miscellaneousFee", 0] },
+                { $ifNull: ["$odAmount", 0] },
+              ],
+            },
+          },
         },
       },
     ]),

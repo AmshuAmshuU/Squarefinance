@@ -86,6 +86,16 @@ const emiSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    // Set true ONLY when this EMI was bulk-marked "Paid" to close out a
+    // loan's remaining schedule after foreclosure/vehicle-sale (for clean
+    // EMI-table display), NOT when it was genuinely paid. The profit
+    // calculation (analyticsController.js getProfitStats) excludes these -
+    // otherwise it would count interest on months that were never actually
+    // collected in cash, just because the loan settled early.
+    closedWithoutPayment: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
