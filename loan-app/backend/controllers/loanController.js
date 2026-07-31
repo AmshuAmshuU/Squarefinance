@@ -817,8 +817,11 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     loan.updatedBy = req.user._id;
     await loan.save();
 
-    // Flatten customerDetails for diff comparison
-    const flatBody = { ...req.body, ...req.body.customerDetails, ...req.body.loanTerms, ...req.body.vehicleDetails };
+    // Flatten customerDetails for diff comparison. Uses vehicleInformation
+    // (not vehicleDetails - that key doesn't exist in the payload at all,
+    // which silently made every RTO-only change look like "no changes",
+    // since none of the RTO fields ever made it into flatBody below).
+    const flatBody = { ...req.body, ...req.body.customerDetails, ...req.body.loanTerms, ...req.body.vehicleInformation };
     const changes = computeLoanDiff(loan, flatBody);
 
     if (changes.length === 0) {
