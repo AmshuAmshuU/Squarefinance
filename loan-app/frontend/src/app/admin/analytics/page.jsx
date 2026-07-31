@@ -464,6 +464,12 @@ const AnalyticsPage = () => {
         .analytics-dark-mode .bg-slate-100 {
           background-color: #334155 !important;
         }
+        .analytics-dark-mode .bg-slate-50\/50 {
+          /* Solid, not translucent - a semi-transparent light-slate tile
+             over the dark-overridden card background produced a washed-out
+             grey with too little contrast against its own text. */
+          background-color: #334155 !important;
+        }
         .analytics-dark-mode .bg-slate-900 {
           background-color: #475569 !important;
         }
@@ -480,6 +486,9 @@ const AnalyticsPage = () => {
         }
         .analytics-dark-mode .bg-amber-50 {
           background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .analytics-dark-mode .bg-purple-50 {
+          background-color: rgba(147, 51, 234, 0.15) !important;
         }
         .analytics-dark-mode .bg-rose-50 {
           background-color: rgba(244, 63, 94, 0.15) !important;
