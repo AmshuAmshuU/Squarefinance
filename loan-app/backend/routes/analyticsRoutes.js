@@ -36,4 +36,11 @@ router.get(
   analyticsController.getProfitStats
 );
 
+router.get(
+  "/simple-stats",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  analyticsController.getSimpleStats
+);
+
 module.exports = router;

@@ -24,6 +24,7 @@ import CollectionTrendChart from "../../../components/analytics/CollectionTrendC
 import DistributionPieCharts from "../../../components/analytics/DistributionPieCharts";
 import PaymentModeTable from "../../../components/analytics/PaymentModeTable";
 import ProfitOverview from "../../../components/analytics/ProfitOverview";
+import SimpleStats from "../../../components/analytics/SimpleStats";
 
 const AnalyticsPage = () => {
   const [stats, setStats] = useState(null);
@@ -831,6 +832,9 @@ const AnalyticsPage = () => {
 
               {/* Profit Overview */}
               <ProfitOverview />
+
+              {/* Simple Stats */}
+              <SimpleStats />
 
               {/* Footer Note */}
               <div className="mt-12 text-center">

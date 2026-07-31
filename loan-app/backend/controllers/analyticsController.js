@@ -1070,10 +1070,101 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
   });
 });
 
+// "Simple Stats" - processing fees, OD collected, foreclosure charges, and
+// misc amount, filterable by the same interval/date-range options as the
+// Profit Overview card. These are separate from profit (which only counts
+// interest/EMI-derived income) - this card is closer to a raw fee ledger.
+const getSimpleStats = asyncHandler(async (req, res, next) => {
+  const { interval = "all", startDate: customStart, endDate: customEnd } = req.query;
+  const { startDate, endDate } = getProfitDateRange(interval, customStart, customEnd);
+
+  const [
+    vehicleProcessingFee,
+    interestProcessingFee,
+    vehicleEmiOverdue,
+    vehicleForeclosureOd,
+    weeklyEmiOverdue,
+    dailyEmiOverdue,
+    interestEmiOverdue,
+    vehicleForeclosureCharge,
+    vehicleMiscFee,
+  ] = await Promise.all([
+    Loan.aggregate([
+      { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
+    ]),
+    // Processing fee total for this card is Vehicle + Interest only
+    // (deliberately excludes Weekly/Daily, per Karthik's explicit ask -
+    // different scope than the Profit Overview card, which excludes
+    // Interest instead since Interest loans' processingFee field is never
+    // used for profit purposes).
+    InterestLoan.aggregate([
+      { $match: { startDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
+    ]),
+    EMI.aggregate([
+      { $match: { loanModel: "Loan" } },
+      { $unwind: "$overdue" },
+      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
+    ]),
+    Loan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$odAmount", 0] } } } },
+    ]),
+    EMI.aggregate([
+      { $match: { loanModel: "WeeklyLoan" } },
+      { $unwind: "$overdue" },
+      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
+    ]),
+    EMI.aggregate([
+      { $match: { loanModel: "DailyLoan" } },
+      { $unwind: "$overdue" },
+      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
+    ]),
+    InterestEMI.aggregate([
+      { $unwind: "$overdue" },
+      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
+    ]),
+    Loan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureChargeAmount", 0] } } } },
+    ]),
+    Loan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$miscellaneousFee", 0] } } } },
+    ]),
+  ]);
+
+  const totalProcessingFees = Math.round(
+    sumTotal(vehicleProcessingFee) + sumTotal(interestProcessingFee),
+  );
+  const totalOdAmount = Math.round(
+    sumTotal(vehicleEmiOverdue) +
+      sumTotal(vehicleForeclosureOd) +
+      sumTotal(weeklyEmiOverdue) +
+      sumTotal(dailyEmiOverdue) +
+      sumTotal(interestEmiOverdue),
+  );
+  const totalForeclosureCharges = Math.round(sumTotal(vehicleForeclosureCharge));
+  const totalMiscAmount = Math.round(sumTotal(vehicleMiscFee));
+
+  sendResponse(res, 200, "success", "Simple stats fetched successfully", null, {
+    totalProcessingFees,
+    totalOdAmount,
+    totalForeclosureCharges,
+    totalMiscAmount,
+  });
+});
+
 module.exports = {
   getAnalyticsStats,
   exportAllData,
   getTrendStats,
   getProfitStats,
+  getSimpleStats,
   getConsolidatedReportData,
 };

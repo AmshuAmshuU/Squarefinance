@@ -22,6 +22,13 @@ export const getProfitStats = async (interval, startDate, endDate) => {
   return await apiHandler(url);
 };
 
+export const getSimpleStats = async (interval, startDate, endDate) => {
+  let url = `/api/analytics/simple-stats?interval=${interval}`;
+  if (startDate) url += `&startDate=${startDate}`;
+  if (endDate) url += `&endDate=${endDate}`;
+  return await apiHandler(url);
+};
+
 export const getDataHealthCheck = async () => {
   return await apiHandler("/api/reports/health-check");
 };
