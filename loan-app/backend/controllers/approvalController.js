@@ -10,6 +10,7 @@ const ErrorHandler = require("../utils/ErrorHandler");
 const sendResponse = require("../utils/response");
 const { addMonths } = require("date-fns");
 const { sendNotification } = require("./notificationController");
+const { syncEmiPayments } = require("../utils/syncEmiPayments");
 
 // Mirrors loanController.js's calculateEMI (flat interest) so approved
 // LOAN_EDIT changes can recompute monthlyEMI/totalInterestAmount the same way.
@@ -63,8 +64,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
       const emi = await EMI.findById(targetId);
       if (emi) {
         const { remarks, dateGroups, overdue } = requestedData;
-        const oldHistory = emi.paymentHistory ? JSON.parse(JSON.stringify(emi.paymentHistory)) : [];
-        
+
         if (dateGroups && Array.isArray(dateGroups)) {
           emi.paymentHistory = [];
           for (const group of dateGroups) {
@@ -72,45 +72,13 @@ const processApproval = asyncHandler(async (req, res, next) => {
               for (const p of group.payments) {
                 const amount = parseFloat(p.amount);
                 if (amount > 0) {
-                  const paymentDate = new Date(group.date);
-                  
-                  // Check if this specific payment entry already exists in history to avoid duplicates in Payment collection
-                  const isAlreadyRecorded = oldHistory.some(oh => 
-                    oh.mode === p.mode && 
-                    parseFloat(oh.amount) === amount && 
-                    new Date(oh.date).toISOString().split('T')[0] === group.date
-                  );
-
                   emi.paymentHistory.push({
                     amount,
                     mode: p.mode || "Cash",
                     chequeNumber: p.chequeNumber || "",
-                    date: paymentDate,
+                    date: new Date(group.date),
                     addedBy: approval.requestedBy,
                   });
-
-                  // ONLY create a Payment record if it's new
-                  if (!isAlreadyRecorded) {
-                    let pType = "Monthly";
-                    if (emi.loanModel === "DailyLoan") pType = "Daily";
-                    else if (emi.loanModel === "WeeklyLoan") pType = "Weekly";
-
-                    await Payment.create({
-                      emiId: emi._id,
-                      loanId: emi.loanId,
-                      loanModel: emi.loanModel || "Loan",
-                      amount: amount,
-                      emiAmount: amount, // Categorize as EMI amount
-                      totalAmount: amount,
-                      mode: p.mode || "Cash",
-                      chequeNumber: p.chequeNumber || "",
-                      paymentDate: paymentDate,
-                      paymentType: pType,
-                      status: "Success",
-                      remarks: remarks || "",
-                      collectedBy: approval.requestedBy,
-                    });
-                  }
                 }
               }
             }
@@ -118,40 +86,25 @@ const processApproval = asyncHandler(async (req, res, next) => {
         }
 
         if (overdue !== undefined && Array.isArray(overdue)) {
-            const oldOverdue = emi.overdue ? JSON.parse(JSON.stringify(emi.overdue)) : [];
-            
-            // Create Payment records for new overdue entries
-            for (const ov of overdue) {
-              const amount = parseFloat(ov.amount);
-              if (amount > 0 && ov.date) {
-                const ovDateStr = new Date(ov.date).toISOString().split('T')[0];
-                const isAlreadyRecorded = oldOverdue.some(oov => 
-                   oov.mode === ov.mode && 
-                   parseFloat(oov.amount) === amount && 
-                   new Date(oov.date).toISOString().split('T')[0] === ovDateStr
-                );
-
-                if (!isAlreadyRecorded) {
-                   await Payment.create({
-                      emiId: emi._id,
-                      loanId: emi.loanId,
-                      loanModel: emi.loanModel || "Loan",
-                      amount: amount,
-                      overdueAmount: amount, // Categorize as Overdue amount
-                      totalAmount: amount,
-                      mode: ov.mode || "Cash",
-                      chequeNumber: ov.chequeNumber || "",
-                      paymentDate: new Date(ov.date),
-                      paymentType: "Overdue",
-                      status: "Success",
-                      remarks: "Overdue Payment Approved",
-                      collectedBy: approval.requestedBy,
-                   });
-                }
-              }
-            }
-            emi.overdue = overdue;
+          emi.overdue = overdue;
         }
+
+        // Rebuild this EMI's Payment records from scratch, matching its
+        // (now-finalized) paymentHistory/overdue exactly - see
+        // syncEmiPayments.js for why this replaced the old per-entry
+        // dedup approach (it never removed a superseded Payment record on
+        // edit, causing duplicates).
+        let pType = "Monthly";
+        if (emi.loanModel === "DailyLoan") pType = "Daily";
+        else if (emi.loanModel === "WeeklyLoan") pType = "Weekly";
+        await syncEmiPayments({
+          emi,
+          loanId: emi.loanId,
+          loanModel: emi.loanModel || "Loan",
+          emiPaymentType: pType,
+          collectedBy: approval.requestedBy,
+          remarks,
+        });
 
         const newAmountPaid = emi.paymentHistory.reduce((acc, curr) => acc + curr.amount, 0);
         emi.amountPaid = newAmountPaid;
@@ -249,7 +202,6 @@ const processApproval = asyncHandler(async (req, res, next) => {
       const emi = await InterestEMI.findById(targetId);
       if (emi) {
         const { remarks, dateGroups, overdue } = requestedData;
-        const oldHistory = emi.paymentHistory ? JSON.parse(JSON.stringify(emi.paymentHistory)) : [];
 
         if (dateGroups && Array.isArray(dateGroups)) {
           emi.paymentHistory = [];
@@ -258,40 +210,13 @@ const processApproval = asyncHandler(async (req, res, next) => {
               for (const p of group.payments) {
                 const amount = parseFloat(p.amount);
                 if (amount > 0) {
-                  const paymentDate = new Date(group.date);
-
-                  // Check if this specific payment entry already exists in history to avoid duplicates in Payment collection
-                  const isAlreadyRecorded = oldHistory.some(oh => 
-                    oh.mode === p.mode && 
-                    parseFloat(oh.amount) === amount && 
-                    new Date(oh.date).toISOString().split('T')[0] === group.date
-                  );
-
                   emi.paymentHistory.push({
                     amount,
                     mode: p.mode || "Cash",
                     chequeNumber: p.chequeNumber || "",
-                    date: paymentDate,
+                    date: new Date(group.date),
                     addedBy: approval.requestedBy,
                   });
-
-                  if (!isAlreadyRecorded) {
-                    await Payment.create({
-                      emiId: emi._id,
-                      loanId: emi.interestLoanId,
-                      loanModel: "InterestLoan",
-                      amount: amount,
-                      emiAmount: amount, // Categorize as EMI amount (Interest)
-                      totalAmount: amount,
-                      mode: p.mode || "Cash",
-                      chequeNumber: p.chequeNumber || "",
-                      paymentDate: paymentDate,
-                      paymentType: "Interest",
-                      status: "Success",
-                      remarks: remarks || "",
-                      collectedBy: approval.requestedBy,
-                    });
-                  }
                 }
               }
             }
@@ -299,39 +224,21 @@ const processApproval = asyncHandler(async (req, res, next) => {
         }
 
         if (overdue !== undefined && Array.isArray(overdue)) {
-            const oldOverdue = emi.overdue ? JSON.parse(JSON.stringify(emi.overdue)) : [];
-            
-            for (const ov of overdue) {
-              const amount = parseFloat(ov.amount);
-              if (amount > 0 && ov.date) {
-                const ovDateStr = new Date(ov.date).toISOString().split('T')[0];
-                const isAlreadyRecorded = oldOverdue.some(oov => 
-                   oov.mode === ov.mode && 
-                   parseFloat(oov.amount) === amount && 
-                   new Date(oov.date).toISOString().split('T')[0] === ovDateStr
-                );
-
-                if (!isAlreadyRecorded) {
-                   await Payment.create({
-                      emiId: emi._id,
-                      loanId: emi.interestLoanId,
-                      loanModel: "InterestLoan",
-                      amount: amount,
-                      overdueAmount: amount,
-                      totalAmount: amount,
-                      mode: ov.mode || "Cash",
-                      chequeNumber: ov.chequeNumber || "",
-                      paymentDate: new Date(ov.date),
-                      paymentType: "Overdue",
-                      status: "Success",
-                      remarks: "Overdue Interest Payment Approved",
-                      collectedBy: approval.requestedBy,
-                   });
-                }
-              }
-            }
-            emi.overdue = overdue;
+          emi.overdue = overdue;
         }
+
+        // Rebuild this EMI's Payment records from scratch - see
+        // syncEmiPayments.js for why this replaced the old per-entry
+        // dedup approach (it never removed a superseded Payment record on
+        // edit, causing duplicates - this is what happened to loan M4).
+        await syncEmiPayments({
+          emi,
+          loanId: emi.interestLoanId,
+          loanModel: "InterestLoan",
+          emiPaymentType: "Interest",
+          collectedBy: approval.requestedBy,
+          remarks,
+        });
 
         const newAmountPaid = emi.paymentHistory.reduce((acc, curr) => acc + curr.amount, 0);
         emi.paymentMode = [...new Set(emi.paymentHistory.map(ph => ph.mode))].filter(Boolean).join(", ");

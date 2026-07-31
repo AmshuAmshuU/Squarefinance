@@ -11,6 +11,7 @@ const {
   parseDateInLocalFormat,
   normalizeToMidnight,
 } = require("../utils/dateUtils");
+const { syncEmiPayments } = require("../utils/syncEmiPayments");
 
 // Helper to recalculate pending EMIs when principal changes
 const recalculatePendingEMIs = async (interestLoanId) => {
@@ -551,32 +552,6 @@ exports.payInterestEMI = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Interest loan not found", 404));
   }
 
-  const originalEmi = await InterestEMI.findById(id).lean();
-  const buckets = {};
-  const getGroupKey = (date) =>
-    normalizeToMidnight(new Date(date)).toISOString();
-
-  const addToBucket = (date, mode, chequeNumber, type, amount, isNew) => {
-    const key = getGroupKey(date);
-    if (!buckets[key]) {
-      buckets[key] = {
-        date: normalizeToMidnight(new Date(date)),
-        modes: new Set(),
-        chequeNumbers: new Set(),
-        emiDelta: 0,
-        overdueDelta: 0,
-      };
-    }
-    const val = parseFloat(amount) || 0;
-    if (type === "EMI") buckets[key].emiDelta += isNew ? val : -val;
-    else buckets[key].overdueDelta += isNew ? val : -val;
-
-    if (isNew && val > 0) {
-      if (mode) buckets[key].modes.add(normalizePaymentMode(mode));
-      if (chequeNumber) buckets[key].chequeNumbers.add(chequeNumber);
-    }
-  };
-
   if (dateGroups && Array.isArray(dateGroups)) {
     emi.paymentHistory = [];
     dateGroups.forEach((group) => {
@@ -592,7 +567,6 @@ exports.payInterestEMI = asyncHandler(async (req, res, next) => {
               date: new Date(group.date),
               addedBy: req.user._id,
             });
-            addToBucket(group.date, normalizedMode, p.chequeNumber, "EMI", amount, true);
           }
         });
       }
@@ -602,51 +576,20 @@ exports.payInterestEMI = asyncHandler(async (req, res, next) => {
   if (Array.isArray(overdue)) emi.overdue = overdue;
   if (remarks !== undefined) emi.remarks = remarks;
 
-  if (Array.isArray(originalEmi.paymentHistory)) {
-    originalEmi.paymentHistory.forEach((p) =>
-      addToBucket(p.date, p.mode, p.chequeNumber, "EMI", p.amount, false)
-    );
-  }
-  if (Array.isArray(originalEmi.overdue)) {
-    originalEmi.overdue.forEach((p) =>
-      addToBucket(p.date, p.mode, p.chequeNumber, "Overdue", p.amount, false)
-    );
-  }
-
-  if (Array.isArray(emi.paymentHistory)) {
-    emi.paymentHistory.forEach((p) =>
-      addToBucket(p.date, p.mode, p.chequeNumber, "EMI", p.amount, true)
-    );
-  }
-  if (Array.isArray(emi.overdue)) {
-    emi.overdue.forEach((p) =>
-      addToBucket(p.date, p.mode, p.chequeNumber, "Overdue", p.amount, true)
-    );
-  }
-
-  for (const key in buckets) {
-    const { date, modes, chequeNumbers, emiDelta, overdueDelta } = buckets[key];
-    const totalDelta = emiDelta + overdueDelta;
-
-    if (totalDelta !== 0 || emiDelta !== 0 || overdueDelta !== 0) {
-      const combinedMode = modes.size > 0 ? Array.from(modes).join(", ") : "Cash";
-      const combinedChequeNo = chequeNumbers.size > 0 ? Array.from(chequeNumbers).join(", ") : "";
-
-      await Payment.create({
-        emiId: emi._id,
-        loanId: emi.interestLoanId,
-        loanModel: "InterestLoan",
-        amount: totalDelta,
-        mode: combinedMode,
-        chequeNumber: combinedChequeNo,
-        paymentDate: date,
-        paymentType: "Interest",
-        status: "Success",
-        remarks: remarks || "",
-        collectedBy: req.user._id,
-      });
-    }
-  }
+  // Rebuild this EMI's Payment records from scratch, matching its
+  // (now-finalized) paymentHistory/overdue exactly - see syncEmiPayments.js
+  // for why this replaced the old delta/bucket approach (it double-counted
+  // every new payment against the old history, producing a spurious
+  // duplicate Payment record on any edit that resubmitted the same amount
+  // - this is what happened to loan M4).
+  await syncEmiPayments({
+    emi,
+    loanId: emi.interestLoanId,
+    loanModel: "InterestLoan",
+    emiPaymentType: "Interest",
+    collectedBy: req.user._id,
+    remarks,
+  });
 
   const newAmountPaid = emi.paymentHistory.reduce((acc, curr) => acc + curr.amount, 0);
   emi.amountPaid = newAmountPaid;
