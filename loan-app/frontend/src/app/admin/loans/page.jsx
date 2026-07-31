@@ -43,6 +43,13 @@ const LoansPage = () => {
     setSelectedRowId((prev) => (prev === id ? null : id));
   };
 
+  const formatFollowUpDate = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date)) return null;
+    return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -441,6 +448,11 @@ const LoansPage = () => {
                                 >
                                   {loan.status.clientResponse || "—"}
                                 </span>
+                                {formatFollowUpDate(loan.status.nextFollowUpDate) && (
+                                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                                    Follow-up: {formatFollowUpDate(loan.status.nextFollowUpDate)}
+                                  </span>
+                                )}
                               </td>
                               <td
                                 className={`px-3 py-3 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
@@ -706,6 +718,11 @@ const LoansPage = () => {
                                 >
                                   {loan.status.clientResponse || "—"}
                                 </span>
+                                {formatFollowUpDate(loan.status.nextFollowUpDate) && (
+                                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                                    Follow-up: {formatFollowUpDate(loan.status.nextFollowUpDate)}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-3 py-3 whitespace-nowrap text-center">
                                 <div className="flex justify-center items-center gap-3">

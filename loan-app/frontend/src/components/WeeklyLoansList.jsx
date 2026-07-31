@@ -35,6 +35,13 @@ const WeeklyLoansList = ({ type, title }) => {
     setSelectedRowId((prev) => (prev === id ? null : id));
   };
 
+  const formatFollowUpDate = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date)) return null;
+    return format(date, "dd MMM yyyy");
+  };
+
   const user = getUserFromToken();
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const canCreate = isSuperAdmin || user?.permissions?.weeklyLoans?.create;
@@ -362,6 +369,11 @@ const WeeklyLoansList = ({ type, title }) => {
                         <span className="text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 block max-h-[60px] overflow-y-auto whitespace-normal break-words scrollbar-none mx-auto">
                           {loan.clientResponse || "—"}
                         </span>
+                        {formatFollowUpDate(loan.nextFollowUpDate) && (
+                          <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-100">
+                            Follow-up: {formatFollowUpDate(loan.nextFollowUpDate)}
+                          </span>
+                        )}
                       </td>
                       <td
                         className={`px-4 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
@@ -578,6 +590,11 @@ const WeeklyLoansList = ({ type, title }) => {
                       <span className="text-[10px] font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 block max-h-[80px] overflow-y-auto whitespace-normal break-words scrollbar-none mx-auto min-w-[120px]">
                         {loan.clientResponse || "—"}
                       </span>
+                      {formatFollowUpDate(loan.nextFollowUpDate) && (
+                        <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                          Follow-up: {formatFollowUpDate(loan.nextFollowUpDate)}
+                        </span>
+                      )}
                     </td>
                     <td
                       className={`px-6 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${

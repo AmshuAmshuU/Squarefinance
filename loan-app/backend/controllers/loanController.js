@@ -370,7 +370,7 @@ const getAllLoans = asyncHandler(async (req, res, next) => {
   } else {
     const findQuery = Loan.find(query)
       .select(
-        "loanNumber customerName mobileNumbers guarantorName guarantorMobileNumbers monthlyEMI tenureMonths status isSeized clientResponse createdBy updatedBy createdAt principalAmount vehicleNumber chassisNumber engineNumber typeOfVehicle modelYear ywBoard dealerName dealerNumber hpEntry fcDate insuranceDate rtoWorkPending annualInterestRate processingFee emiStartDate emiEndDate",
+        "loanNumber customerName mobileNumbers guarantorName guarantorMobileNumbers monthlyEMI tenureMonths status isSeized clientResponse nextFollowUpDate createdBy updatedBy createdAt principalAmount vehicleNumber chassisNumber engineNumber typeOfVehicle modelYear ywBoard dealerName dealerNumber hpEntry fcDate insuranceDate rtoWorkPending annualInterestRate processingFee emiStartDate emiEndDate",
       )
       .sort(sortConfig)
       .skip(skip)
@@ -430,6 +430,7 @@ const getAllLoans = asyncHandler(async (req, res, next) => {
         status: loan.status,
         isSeized: loan.isSeized,
         clientResponse: loan.clientResponse,
+        nextFollowUpDate: loan.nextFollowUpDate,
         docChecklist: loan.docChecklist,
         remarks: loan.remarks,
       },
