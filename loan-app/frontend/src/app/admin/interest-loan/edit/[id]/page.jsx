@@ -84,20 +84,30 @@ const EditInterestLoanPage = () => {
         .interest-loan-edit-dark-mode .bg-white {
           background-color: #1e293b !important;
         }
-        .interest-loan-edit-dark-mode .bg-slate-50 {
+        .interest-loan-edit-dark-mode .bg-slate-50,
+        .interest-loan-edit-dark-mode .bg-slate-50\/50,
+        .interest-loan-edit-dark-mode .bg-slate-50\/80 {
           background-color: #334155 !important;
         }
         .interest-loan-edit-dark-mode .bg-emerald-50 {
           background-color: rgba(16, 185, 129, 0.15) !important;
         }
-        .interest-loan-edit-dark-mode .hover\:bg-slate-50:hover {
+        .interest-loan-edit-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .interest-loan-edit-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .interest-loan-edit-dark-mode .hover\:bg-slate-50:hover,
+        .interest-loan-edit-dark-mode .hover\:bg-slate-50\/50:hover {
           background-color: #334155 !important;
         }
         .interest-loan-edit-dark-mode .text-slate-900 {
           color: #f1f5f9 !important;
         }
         .interest-loan-edit-dark-mode .text-slate-600,
-        .interest-loan-edit-dark-mode .text-slate-500 {
+        .interest-loan-edit-dark-mode .text-slate-500,
+        .interest-loan-edit-dark-mode .text-slate-400 {
           color: #94a3b8 !important;
         }
         .interest-loan-edit-dark-mode .border-slate-100,

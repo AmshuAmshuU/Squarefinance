@@ -383,15 +383,28 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
       }
     },
     {
+      $lookup: {
+        from: "interestloans",
+        localField: "_id.loanId",
+        foreignField: "_id",
+        as: "interestLoanInfo"
+      }
+    },
+    {
       $addFields: {
         collector: { $arrayElemAt: ["$collectorInfo", 0] },
         loanFallback: {
           $ifNull: [
             { $arrayElemAt: ["$monthlyLoanInfo", 0] },
-            { 
+            {
               $ifNull: [
                 { $arrayElemAt: ["$weeklyLoanInfo", 0] },
-                { $arrayElemAt: ["$dailyLoanInfo", 0] }
+                {
+                  $ifNull: [
+                    { $arrayElemAt: ["$dailyLoanInfo", 0] },
+                    { $arrayElemAt: ["$interestLoanInfo", 0] }
+                  ]
+                }
               ]
             }
           ]

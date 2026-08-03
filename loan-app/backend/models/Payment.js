@@ -57,6 +57,7 @@ const paymentSchema = new mongoose.Schema(
         "Interest",
         "Foreclosure",
         "Vehicle Sale",
+        "Interest Loan Principal",
       ],
       required: true,
     },

@@ -571,13 +571,91 @@ const processApproval = asyncHandler(async (req, res, next) => {
               }
             }
           }
+        } else if (targetModel === "InterestLoan") {
+          // InterestLoan submits an already-flat payload like Weekly/Daily,
+          // but a blind $set of safeValues (the old generic branch below)
+          // left remainingPrincipalAmount stale and never auto-closed the
+          // loan - approving an employee's principal-payment edit would
+          // update principalPayments but not the derived totals. Mirrors
+          // the same recompute-and-maybe-auto-close logic now used by the
+          // direct-edit path in interestLoanController.updateInterestLoan.
+          const loan = await InterestLoan.findById(targetId);
+          if (loan) {
+            const directFields = [
+              "loanNumber", "customerName", "address", "ownRent", "mobileNumbers",
+              "guarantorName", "guarantorMobileNumbers", "panNumber", "aadharNumber",
+              "pledgedItemDetails", "interestRate", "processingFeeRate", "processingFee",
+              "startDate", "emiStartDate", "paymentMode", "remarks", "clientResponse",
+              "status",
+            ];
+            for (const field of directFields) {
+              if (newValues[field] !== undefined) loan[field] = newValues[field];
+            }
+            if (newValues.nextFollowUpDate !== undefined) {
+              loan.nextFollowUpDate = newValues.nextFollowUpDate ? new Date(newValues.nextFollowUpDate) : null;
+            }
+            const oldPrincipalPaymentsCount = (loan.principalPayments || []).length;
+            if (newValues.disbursement !== undefined) loan.disbursement = newValues.disbursement;
+            if (newValues.principalPayments !== undefined) loan.principalPayments = newValues.principalPayments;
+
+            if (newValues.disbursement !== undefined || newValues.principalPayments !== undefined) {
+              const disbursementArr = Array.isArray(loan.disbursement) ? loan.disbursement : [];
+              const initialP = disbursementArr.length > 0
+                ? disbursementArr.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0)
+                : (loan.initialPrincipalAmount || 0);
+              const paidP = (loan.principalPayments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+              loan.initialPrincipalAmount = initialP;
+              loan.remainingPrincipalAmount = Math.max(0, initialP - paidP);
+              if (loan.remainingPrincipalAmount <= 0) loan.status = "Closed";
+            }
+
+            loan.approvedBy = req.user._id;
+            loan.approvedAt = Date.now();
+            await loan.save();
+
+            // Same Collections-visibility fix as the direct-edit path:
+            // paymentType "Interest Loan Principal" (distinct from "Monthly",
+            // which already means "Vehicle loan EMI" in Collections) so it
+            // shows as a collection with zero profit impact (Interest-loan
+            // profit only ever comes from InterestEMI.interestAmount, never
+            // Payment records).
+            const newlyAddedPayments = (loan.principalPayments || []).slice(oldPrincipalPaymentsCount);
+            if (newlyAddedPayments.length > 0) {
+              await Payment.create(
+                newlyAddedPayments.map((p) => ({
+                  loanId: loan._id,
+                  loanModel: "InterestLoan",
+                  amount: parseFloat(p.amount) || 0,
+                  totalAmount: parseFloat(p.amount) || 0,
+                  mode: p.paymentMode || "Cash",
+                  paymentDate: p.paymentDate || new Date(),
+                  paymentType: "Interest Loan Principal",
+                  status: "Success",
+                  remarks: p.remarks || "Principal Payment Approved",
+                  collectedBy: approval.requestedBy,
+                }))
+              );
+            }
+
+            const pendingEmis = await InterestEMI.find({
+              interestLoanId: loan._id,
+              status: { $in: ["Pending", "Partially Paid"] },
+            });
+            for (const emi of pendingEmis) {
+              const newInterestAmount = Math.ceil(loan.remainingPrincipalAmount * (loan.interestRate / 100));
+              emi.interestAmount = newInterestAmount;
+              if (emi.amountPaid >= emi.interestAmount) emi.status = "Paid";
+              else if (emi.amountPaid > 0) emi.status = "Partially Paid";
+              else emi.status = "Pending";
+              await emi.save();
+            }
+          }
         } else {
-          // WeeklyLoan / DailyLoan / InterestLoan submit an already-flat
-          // payload, so the direct $set continues to work correctly here.
+          // WeeklyLoan / DailyLoan submit an already-flat payload, so the
+          // direct $set continues to work correctly here.
           let LoanModel;
           if (targetModel === "WeeklyLoan") LoanModel = require("../models/WeeklyLoan");
           else if (targetModel === "DailyLoan") LoanModel = require("../models/DailyLoan");
-          else if (targetModel === "InterestLoan") LoanModel = require("../models/InterestLoan");
 
           if (LoanModel) {
             // Remove fields that shouldn't be directly set
@@ -609,7 +687,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
           amount: pAmount,
           mode: paymentMode || "Cash",
           paymentDate: pDate,
-          paymentType: "Monthly", // Categorize as Monthly for collections summary to include it in standard loan repayments
+          paymentType: "Interest Loan Principal", // Distinct from "Monthly" (Vehicle loan EMI) so Collections doesn't conflate the two
           status: "Success",
           remarks: remarks || "Principal Payment Approved",
           collectedBy: approval.requestedBy,

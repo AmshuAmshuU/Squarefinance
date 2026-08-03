@@ -401,6 +401,53 @@ exports.addPrincipalPayment = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Invalid payment amount", 400));
   }
 
+  // Route through approval for non-Super-Admins - this previously applied
+  // directly for every role, with no approval gate at all (unlike every
+  // other payment-recording endpoint in this app).
+  const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+  const hasApprovalAuthority = req.user.permissions?.paymentApproval;
+  if (!isSuperAdmin && !hasApprovalAuthority) {
+    const Approval = require("../models/Approval");
+    const existingApproval = await Approval.findOne({
+      targetId: loan._id,
+      status: "Pending",
+    });
+    if (existingApproval) {
+      return next(new ErrorHandler("This principal payment is already waiting for approval", 400));
+    }
+
+    await Approval.create({
+      requestType: "PRINCIPAL_PAYMENT",
+      targetId: loan._id,
+      targetModel: "InterestLoan",
+      loanNumber: loan.loanNumber,
+      customerName: loan.customerName || "Customer",
+      requestedData: { amount: pAmount, paymentMode: paymentMode || "Cash", paymentDate, remarks },
+      requestedBy: req.user._id,
+      status: "Pending",
+    });
+
+    const { notifyApprovalCountChange, notifyAdmins } = require("./notificationController");
+    await notifyAdmins({
+      senderId: req.user._id,
+      type: "PAYMENT_REQUEST",
+      title: "New Principal Payment Approval Request",
+      message: `Employee ${req.user.name} requested approval for a principal payment of ₹${pAmount} on loan ${loan.loanNumber} (${loan.customerName}).`,
+      data: {
+        loanNumber: loan.loanNumber,
+        customerName: loan.customerName,
+        amount: pAmount,
+        employeeName: req.user.name,
+        loanId: loan._id,
+        loanType: "InterestLoan",
+        targetId: loan._id,
+      },
+    });
+    await notifyApprovalCountChange();
+
+    return sendResponse(res, 200, "success", "Principal payment submitted for approval", null, loan);
+  }
+
   loan.principalPayments.push({
     amount: pAmount,
     paymentMode: paymentMode || "Cash",
@@ -416,7 +463,23 @@ exports.addPrincipalPayment = asyncHandler(async (req, res, next) => {
   }
 
   await loan.save();
-  
+
+  // Same Collections-visibility fix as updateInterestLoan's direct-edit
+  // path - without this, this payment updates the loan but never shows up
+  // in Collections at all.
+  await Payment.create({
+    loanId: loan._id,
+    loanModel: "InterestLoan",
+    amount: pAmount,
+    totalAmount: pAmount,
+    mode: paymentMode || "Cash",
+    paymentDate: paymentDate || new Date(),
+    paymentType: "Interest Loan Principal",
+    status: "Success",
+    remarks: remarks || "Principal Payment",
+    collectedBy: req.user._id,
+  });
+
   // Recalculate future EMIs based on the new remaining principal
   await recalculatePendingEMIs(loan._id);
 
@@ -703,7 +766,12 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
   // If employee, create approval request instead of saving directly
   const isSuperAdmin = req.user.role === "SUPER_ADMIN";
   if (!isSuperAdmin) {
-    const { computeLoanDiff } = require("../utils/loanDiff");
+    // computeInterestLoanDiff, not computeLoanDiff - the latter is
+    // Vehicle-loan-specific field names (principalAmount, tenureMonths,
+    // vehicleNumber, etc.), none of which exist on an InterestLoan, so it
+    // always reported "no changes" here - including for a genuine principal
+    // payment, which needs its own array-length check anyway.
+    const { computeInterestLoanDiff } = require("../utils/loanDiff");
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
 
@@ -713,7 +781,7 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
     loan.updatedBy = req.user._id;
     await loan.save();
 
-    const changes = computeLoanDiff(loan, req.body);
+    const changes = computeInterestLoanDiff(loan, req.body);
     if (changes.length === 0) {
       return sendResponse(res, 200, "success", "No changes detected", null, loan);
     }
@@ -821,18 +889,81 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
     }
   }
 
-  if (req.body.disbursement || req.body.principalPayments) {
-    const initialP = (req.body.disbursement || loan.disbursement || []).reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
-    const paidP = (req.body.principalPayments || loan.principalPayments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    req.body.initialPrincipalAmount = initialP;
-    req.body.remainingPrincipalAmount = initialP - paidP;
-    if (req.body.remainingPrincipalAmount <= 0) req.body.status = "Closed";
+  // Apply the edit onto the already-fetched document via explicit,
+  // whitelisted field assignment + loan.save(), instead of a blind
+  // findByIdAndUpdate(req.params.id, req.body) $set of the raw Formik
+  // payload. The form echoes back extra fields on every submit
+  // (createdBy/updatedBy/createdAt/updatedAt, loanNumber, etc.) - a blind
+  // $set of that whole object was the actual cause of principal-payment
+  // edits appearing to succeed (client-side stats update instantly from
+  // local form state) but never truly persisting: reopening the loan
+  // fetched fresh from the DB and showed no change at all. Mirrors the
+  // same explicit-field-flattening pattern already used for Vehicle loans
+  // in loanController.js's updateLoan.
+  const directFields = [
+    "loanNumber", "customerName", "address", "ownRent", "mobileNumbers",
+    "guarantorName", "guarantorMobileNumbers", "panNumber", "aadharNumber",
+    "pledgedItemDetails", "interestRate", "processingFeeRate", "processingFee",
+    "startDate", "emiStartDate", "paymentMode", "remarks", "clientResponse",
+    "status",
+  ];
+  for (const field of directFields) {
+    if (req.body[field] !== undefined) loan[field] = req.body[field];
+  }
+  if (req.body.nextFollowUpDate !== undefined) {
+    loan.nextFollowUpDate = req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null;
+  }
+  const oldPrincipalPaymentsCount = (loan.principalPayments || []).length;
+  if (req.body.disbursement !== undefined) loan.disbursement = req.body.disbursement;
+  if (req.body.principalPayments !== undefined) loan.principalPayments = req.body.principalPayments;
+
+  if (req.body.disbursement !== undefined || req.body.principalPayments !== undefined) {
+    // Only recompute initialPrincipalAmount from disbursement when the
+    // submitted array genuinely has entries - most Interest loans never
+    // use the disbursement feature, so the form always submits an empty
+    // (but truthy) [] for it, which used to zero out initialPrincipalAmount
+    // and send remainingPrincipalAmount negative on every principal payment.
+    const disbursementArr = Array.isArray(loan.disbursement) ? loan.disbursement : [];
+    const initialP = disbursementArr.length > 0
+      ? disbursementArr.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0)
+      : (loan.initialPrincipalAmount || 0);
+    const paidP = (loan.principalPayments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    loan.initialPrincipalAmount = initialP;
+    loan.remainingPrincipalAmount = Math.max(0, initialP - paidP);
+    if (loan.remainingPrincipalAmount <= 0) loan.status = "Closed";
   }
 
-  req.body.updatedBy = req.user._id;
-  const updatedLoan = await InterestLoan.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  await recalculatePendingEMIs(updatedLoan._id);
-  sendResponse(res, 200, "success", "Loan updated successfully", null, updatedLoan);
+  loan.updatedBy = req.user._id;
+  await loan.save();
+
+  // Record newly-added principal payments in Collections. paymentType
+  // "Interest Loan Principal" (not "Monthly" - that label already means
+  // "Vehicle loan EMI" elsewhere in Collections, and not "Interest" - that
+  // means interest collected) so this never gets counted as profit -
+  // Interest-loan profit is sourced entirely from InterestEMI.interestAmount
+  // (see analyticsController.getProfitStats), never from Payment records,
+  // so a principal repayment showing up here is pure collections/cash-flow
+  // tracking with zero profit impact, matching what a principal payment is.
+  const newlyAddedPayments = (loan.principalPayments || []).slice(oldPrincipalPaymentsCount);
+  if (newlyAddedPayments.length > 0) {
+    await Payment.create(
+      newlyAddedPayments.map((p) => ({
+        loanId: loan._id,
+        loanModel: "InterestLoan",
+        amount: parseFloat(p.amount) || 0,
+        totalAmount: parseFloat(p.amount) || 0,
+        mode: p.paymentMode || "Cash",
+        paymentDate: p.paymentDate || new Date(),
+        paymentType: "Interest Loan Principal",
+        status: "Success",
+        remarks: p.remarks || "Principal Payment",
+        collectedBy: req.user._id,
+      }))
+    );
+  }
+
+  await recalculatePendingEMIs(loan._id);
+  sendResponse(res, 200, "success", "Loan updated successfully", null, loan);
 });
 
 // Get Interest Followup Loans
