@@ -351,8 +351,13 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
     getAggSum(loanSoldArr)
   );
 
-  // Interest collected from InterestEMI paymentHistory (most accurate — avoids duplicate Payment records)
-  const interestCollected = Math.round(getAggSum(emiInterestPayArr));
+  // Interest collected = interest paid (InterestEMI paymentHistory, avoids
+  // duplicate Payment records) + principal repaid (InterestLoan.principalPayments -
+  // e.g. a loan closed out via a lump-sum principal payment, like M2/M3).
+  // The principalCollected facet above was already being computed but never
+  // actually added in here, silently excluding closed-out principal from
+  // Total Collected.
+  const interestCollected = Math.round(getAggSum(emiInterestPayArr) + getSum(interestMetrics, "principalCollected"));
   const totalCollectedAmount = monthlyCollected + dailyCollected + weeklyCollected + interestCollected;
 
   // 3. Global Counts
@@ -656,9 +661,13 @@ const getConsolidatedReportData = async () => {
   // Enhance interest loans with total collected
   const enhancedInterest = await Promise.all(interestLoans.map(async (loan) => {
     const emis = await InterestEMI.find({ interestLoanId: loan._id }).lean();
-    const totalCollected = emis.reduce((s, e) => {
+    const interestPaid = emis.reduce((s, e) => {
       return s + (e.paymentHistory || []).reduce((ps, p) => ps + (p.amount || 0), 0);
-    }, 0) + (loan.processingFee || 0);
+    }, 0);
+    // Principal repaid (e.g. a loan closed out via a lump-sum principal
+    // payment) was missing here, same gap as the main analytics cards.
+    const principalPaid = (loan.principalPayments || []).reduce((ps, p) => ps + (parseFloat(p.amount) || 0), 0);
+    const totalCollected = interestPaid + principalPaid + (loan.processingFee || 0);
     const clientResponse = loan.status?.clientResponse || loan.clientResponse || "";
     return { ...loan, totalCollected, clientResponse };
   }));
