@@ -83,7 +83,7 @@ const loanSchema = new mongoose.Schema(
     paymentMode: {
       type: String,
       enum: ["Cash", "Online", "Cheque"],
-      default: "Cash",
+      default: "Online",
     },
     chequeNumber: {
       type: String,
@@ -95,7 +95,7 @@ const loanSchema = new mongoose.Schema(
         mode: {
           type: String,
           enum: ["Cash", "Online", "Cheque"],
-          default: "Cash",
+          default: "Online",
         },
         chequeNumber: { type: String, trim: true },
         date: { type: Date, required: true },

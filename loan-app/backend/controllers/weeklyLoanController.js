@@ -123,7 +123,7 @@ exports.createWeeklyLoan = asyncHandler(async (req, res, next) => {
     clientResponse,
     guarantorName,
     guarantorMobileNumbers,
-    paymentMode: paymentMode || "Cash",
+    paymentMode: paymentMode || "Online",
     chequeNumber,
     disbursement: req.body.disbursement || [],
     status: status || "Active",
@@ -148,7 +148,7 @@ exports.createWeeklyLoan = asyncHandler(async (req, res, next) => {
         status: isPaid ? "Paid" : "Pending",
         amountPaid: isPaid ? emiAmount : 0,
         paymentDate: isPaid ? new Date(eStartDate) : null,
-        paymentMode: isPaid ? "CASH" : "",
+        paymentMode: isPaid ? "ONLINE" : "",
         overdue: [],
       });
       currentEmiDateArr.setDate(currentEmiDateArr.getDate() + 7);
@@ -227,7 +227,7 @@ exports.getWeeklyLoanEMIs = asyncHandler(async (req, res, next) => {
         paymentDate: isPaid
           ? new Date(weeklyLoan.emiStartDate || weeklyLoan.startDate)
           : null,
-        paymentMode: isPaid ? "CASH" : "",
+        paymentMode: isPaid ? "ONLINE" : "",
       });
       currentEmiDateArr.setDate(currentEmiDateArr.getDate() + 7);
     }

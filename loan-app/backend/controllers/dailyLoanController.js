@@ -103,7 +103,7 @@ exports.createDailyLoan = asyncHandler(async (req, res, next) => {
     clientResponse,
     guarantorName,
     guarantorMobileNumbers,
-    paymentMode: paymentMode || "Cash",
+    paymentMode: paymentMode || "Online",
     chequeNumber,
     disbursement: req.body.disbursement || [],
     status: status || "Active",
@@ -128,7 +128,7 @@ exports.createDailyLoan = asyncHandler(async (req, res, next) => {
         status: isPaid ? "Paid" : "Pending",
         amountPaid: isPaid ? emiAmount : 0,
         paymentDate: isPaid ? new Date(eStartDate) : null,
-        paymentMode: isPaid ? "CASH" : "",
+        paymentMode: isPaid ? "ONLINE" : "",
         overdue: [],
       });
       currentEmiDateArr.setDate(currentEmiDateArr.getDate() + 1);
@@ -186,7 +186,7 @@ exports.getDailyLoanEMIs = asyncHandler(async (req, res, next) => {
         status: isPaid ? "Paid" : "Pending",
         amountPaid: isPaid ? Math.ceil(emiAmt) : 0,
         paymentDate: isPaid ? new Date(dailyLoan.startDate) : null,
-        paymentMode: isPaid ? "CASH" : "",
+        paymentMode: isPaid ? "ONLINE" : "",
       });
       currentEmiDateArr.setDate(currentEmiDateArr.getDate() + 1);
     }

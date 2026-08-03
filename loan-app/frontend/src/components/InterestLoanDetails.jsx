@@ -13,7 +13,7 @@ const InterestLoanDetails = ({ loan, emis, onRefresh }) => {
   const [principalModalOpen, setPrincipalModalOpen] = useState(false);
   const [principalPayment, setPrincipalPayment] = useState({
     amount: "",
-    paymentMode: "Cash",
+    paymentMode: "Online",
     paymentDate: format(new Date(), "yyyy-MM-dd"),
     remarks: "",
   });
@@ -22,7 +22,7 @@ const InterestLoanDetails = ({ loan, emis, onRefresh }) => {
   const [selectedEMI, setSelectedEMI] = useState(null);
   const [interestPayment, setInterestPayment] = useState({
     amountPaid: "",
-    paymentMode: "Cash",
+    paymentMode: "Online",
     paymentDate: format(new Date(), "yyyy-MM-dd"),
     remarks: "",
   });
@@ -61,7 +61,7 @@ const InterestLoanDetails = ({ loan, emis, onRefresh }) => {
     setSelectedEMI(emi);
     setInterestPayment({
       amountPaid: emi.interestAmount - (emi.amountPaid || 0),
-      paymentMode: "Cash",
+      paymentMode: "Online",
       paymentDate: format(new Date(), "yyyy-MM-dd"),
       remarks: "",
     });

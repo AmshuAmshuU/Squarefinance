@@ -112,7 +112,7 @@ const InterestLoanForm = ({
       principalPayments: initialData?.principalPayments || [],
       remarks: initialData?.remarks || "",
       clientResponse: initialData?.clientResponse || "",
-      paymentMode: initialData?.paymentMode || "Cash",
+      paymentMode: initialData?.paymentMode || "Online",
       nextFollowUpDate: formatDateForInput(initialData?.nextFollowUpDate),
       createdBy: initialData?.createdBy || null,
       updatedBy: initialData?.updatedBy || null,

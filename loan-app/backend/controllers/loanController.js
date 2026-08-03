@@ -113,7 +113,7 @@ const createLoan = asyncHandler(async (req, res, next) => {
     emiEndDate: loanTerms.emiEndDate,
     monthlyEMI,
     totalInterestAmount: calculatedTotalInterest,
-    paymentMode: loanTerms.paymentMode || "Cash",
+    paymentMode: loanTerms.paymentMode || "Online",
     chequeNumber: loanTerms.chequeNumber,
     disbursement: loanTerms.disbursement || [],
 
@@ -2344,7 +2344,7 @@ const forecloseLoan = asyncHandler(async (req, res, next) => {
       odAmount: od || 0,
       miscellaneousFee: miscellaneousFee || 0,
       remainingPrincipal: 0,
-      paymentMode: paymentMode || "Cash",
+      paymentMode: paymentMode || "Online",
       chequeNumber: paymentMode === "Cheque" ? chequeNumber : undefined,
     },
     { new: true },
@@ -2572,7 +2572,7 @@ const updateSeizedStatus = asyncHandler(async (req, res, next) => {
           // relies on) shows the sale amount correctly without needing
           // any dedicated UI for this request type.
           totalAmount: soldDetails.sellAmount,
-          paymentMode: soldDetails.paymentMode || "Cash",
+          paymentMode: soldDetails.paymentMode || "Online",
         },
         requestedBy: req.user._id,
         status: "Pending",
@@ -2650,7 +2650,7 @@ const updateSeizedStatus = asyncHandler(async (req, res, next) => {
       loanModel: "Loan",
       amount: parseFloat(soldDetails.sellAmount),
       totalAmount: parseFloat(soldDetails.sellAmount),
-      mode: soldDetails.paymentMode || "Cash",
+      mode: soldDetails.paymentMode || "Online",
       paymentDate: updateData.soldDetails.soldDate,
       paymentType: "Vehicle Sale",
       status: "Success",

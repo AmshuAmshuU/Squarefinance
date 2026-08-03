@@ -7,7 +7,7 @@ const SoldVehicleModal = ({ isOpen, onClose, onConfirm, loan }) => {
     sellAmount: "",
     miscellaneousAmount: "0",
     totalAmount: 0,
-    paymentMode: "Cash",
+    paymentMode: "Online",
   });
   const [error, setError] = useState("");
 

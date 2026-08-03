@@ -30,7 +30,7 @@ const ForeclosurePage = () => {
     od: 0,
     miscellaneousFee: 0,
     remarks: "",
-    paymentMode: "Cash",
+    paymentMode: "Online",
     chequeNumber: "",
   });
 
@@ -193,7 +193,7 @@ const ForeclosurePage = () => {
         od: 0,
         miscellaneousFee: 0,
         remarks: "",
-        paymentMode: "Cash",
+        paymentMode: "Online",
         chequeNumber: "",
       });
       setPaymentData({

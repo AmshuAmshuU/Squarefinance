@@ -103,7 +103,7 @@ const DailyLoanForm = ({
       initialData?.dateLoanDisbursed || initialData?.startDate,
     ),
     processingFeeRate: initialData?.processingFeeRate ?? 10,
-    paymentMode: initialData?.paymentMode || "Cash",
+    paymentMode: initialData?.paymentMode || "Online",
     chequeNumber: initialData?.chequeNumber || "",
     disbursement: Array.isArray(initialData?.disbursement) ? initialData.disbursement : [],
   };

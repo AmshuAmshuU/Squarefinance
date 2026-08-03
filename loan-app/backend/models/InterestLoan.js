@@ -77,7 +77,7 @@ const interestLoanSchema = new mongoose.Schema(
     paymentMode: {
       type: String,
       enum: ["Cash", "Online", "Cheque"],
-      default: "Cash",
+      default: "Online",
     },
 
     // Payments tracking
@@ -87,7 +87,7 @@ const interestLoanSchema = new mongoose.Schema(
         paymentMode: {
           type: String,
           enum: ["Cash", "Online", "Cheque"],
-          default: "Cash",
+          default: "Online",
         },
         paymentDate: { type: Date, required: true },
         remarks: { type: String, trim: true },
@@ -101,7 +101,7 @@ const interestLoanSchema = new mongoose.Schema(
         mode: {
           type: String,
           enum: ["Cash", "Online", "Cheque"],
-          default: "Cash",
+          default: "Online",
         },
         chequeNumber: { type: String, trim: true },
         date: { type: Date, required: true },

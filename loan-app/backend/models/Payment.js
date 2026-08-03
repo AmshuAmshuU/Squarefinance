@@ -36,7 +36,7 @@ const paymentSchema = new mongoose.Schema(
     mode: {
       type: String,
       required: true,
-      default: "Cash",
+      default: "Online",
     },
     chequeNumber: {
       type: String,

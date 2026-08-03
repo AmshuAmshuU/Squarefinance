@@ -96,7 +96,7 @@ const DailyLoanPendingViewPage = ({ params: paramsPromise }) => {
       {
         id: Date.now(),
         date: new Date().toISOString().split("T")[0],
-        payments: [{ id: Date.now() + 1, mode: "CASH", amount: "", chequeNumber: "" }],
+        payments: [{ id: Date.now() + 1, mode: "ONLINE", amount: "", chequeNumber: "" }],
       },
     ]);
   };
@@ -595,7 +595,7 @@ const DailyLoanPendingViewPage = ({ params: paramsPromise }) => {
                                           mode:
                                             (emi.paymentMode || "").split(
                                               ", ",
-                                            )[0] || "CASH",
+                                            )[0] || "ONLINE",
                                           amount: emi.amountPaid,
                                         },
                                       ],
@@ -611,7 +611,7 @@ const DailyLoanPendingViewPage = ({ params: paramsPromise }) => {
                                       payments: [
                                         {
                                           id: Date.now() + 1,
-                                          mode: "CASH",
+                                          mode: "ONLINE",
                                           amount: "",
                                         },
                                       ],

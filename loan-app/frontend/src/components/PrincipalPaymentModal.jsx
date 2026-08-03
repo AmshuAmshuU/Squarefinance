@@ -19,7 +19,7 @@ const PrincipalPaymentModal = ({ isOpen, onClose, onApply, initialData = [], loa
           }
           group.items.push({
             amount: curr.amount || "",
-            mode: curr.paymentMode || "Cash",
+            mode: curr.paymentMode || "Online",
             remarks: curr.remarks || "",
             _id: curr._id,
           });
@@ -30,7 +30,7 @@ const PrincipalPaymentModal = ({ isOpen, onClose, onApply, initialData = [], loa
         queueMicrotask(() => setGroups([{ 
           id: Date.now(),
           date: format(new Date(), "yyyy-MM-dd"), 
-          items: [{ id: Date.now() + 1, mode: "Cash", amount: "", remarks: "" }] 
+          items: [{ id: Date.now() + 1, mode: "Online", amount: "", remarks: "" }]
         }]));
       }
     }
@@ -40,7 +40,7 @@ const PrincipalPaymentModal = ({ isOpen, onClose, onApply, initialData = [], loa
     setGroups([...groups, { 
       id: Date.now(),
       date: format(new Date(), "yyyy-MM-dd"), 
-      items: [{ id: Date.now() + 1, mode: "Cash", amount: "", remarks: "" }] 
+      items: [{ id: Date.now() + 1, mode: "Online", amount: "", remarks: "" }]
     }]);
   };
 
@@ -50,7 +50,7 @@ const PrincipalPaymentModal = ({ isOpen, onClose, onApply, initialData = [], loa
 
   const handleAddItem = (groupIndex) => {
     const newGroups = [...groups];
-    newGroups[groupIndex].items.push({ id: Date.now(), mode: "Cash", amount: "", remarks: "" });
+    newGroups[groupIndex].items.push({ id: Date.now(), mode: "Online", amount: "", remarks: "" });
     setGroups(newGroups);
   };
 

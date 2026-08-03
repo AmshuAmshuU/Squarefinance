@@ -74,7 +74,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
                 if (amount > 0) {
                   emi.paymentHistory.push({
                     amount,
-                    mode: p.mode || "Cash",
+                    mode: p.mode || "Online",
                     chequeNumber: p.chequeNumber || "",
                     date: new Date(group.date),
                     addedBy: approval.requestedBy,
@@ -212,7 +212,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
                 if (amount > 0) {
                   emi.paymentHistory.push({
                     amount,
-                    mode: p.mode || "Cash",
+                    mode: p.mode || "Online",
                     chequeNumber: p.chequeNumber || "",
                     date: new Date(group.date),
                     addedBy: approval.requestedBy,
@@ -285,7 +285,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
         loan.odAmount = od || 0;
         loan.miscellaneousFee = miscellaneousFee || 0;
         loan.remainingPrincipal = 0;
-        loan.paymentMode = paymentMode || "Cash";
+        loan.paymentMode = paymentMode || "Online";
         loan.chequeNumber = paymentMode === "Cheque" ? chequeNumber : undefined;
         
         loan.approvedBy = req.user._id;
@@ -348,7 +348,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
           loanModel: "Loan",
           amount: parseFloat(soldDetails.sellAmount),
           totalAmount: parseFloat(soldDetails.sellAmount),
-          mode: soldDetails.paymentMode || "Cash",
+          mode: soldDetails.paymentMode || "Online",
           paymentDate: finalSoldDetails.soldDate,
           paymentType: "Vehicle Sale",
           status: "Success",
@@ -627,7 +627,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
                   loanModel: "InterestLoan",
                   amount: parseFloat(p.amount) || 0,
                   totalAmount: parseFloat(p.amount) || 0,
-                  mode: p.paymentMode || "Cash",
+                  mode: p.paymentMode || "Online",
                   paymentDate: p.paymentDate || new Date(),
                   paymentType: "Interest Loan Principal",
                   status: "Success",
@@ -674,7 +674,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
 
         loan.principalPayments.push({
           amount: pAmount,
-          paymentMode: paymentMode || "Cash",
+          paymentMode: paymentMode || "Online",
           paymentDate: pDate,
           remarks,
           addedBy: approval.requestedBy,
@@ -685,7 +685,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
           loanId: loan._id,
           loanModel: "InterestLoan",
           amount: pAmount,
-          mode: paymentMode || "Cash",
+          mode: paymentMode || "Online",
           paymentDate: pDate,
           paymentType: "Interest Loan Principal", // Distinct from "Monthly" (Vehicle loan EMI) so Collections doesn't conflate the two
           status: "Success",

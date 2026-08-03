@@ -219,16 +219,16 @@ const updateEMI = asyncHandler(async (req, res, next) => {
         (group.payments || []).forEach(p => {
           const match = currentHistory.find(hp => 
             hp.amount === parseFloat(p.amount) && 
-            hp.mode === (p.mode || "CASH") && 
+            hp.mode === (p.mode || "ONLINE") &&
             new Date(hp.date).toDateString() === new Date(group.date).toDateString()
           );
           if (!match) {
-            newPayments.push({ mode: p.mode || "CASH", amount: parseFloat(p.amount) });
+            newPayments.push({ mode: p.mode || "ONLINE", amount: parseFloat(p.amount) });
           }
         });
       });
     } else if (req.body.addedAmount) {
-       newPayments.push({ mode: req.body.paymentMode || "CASH", amount: parseFloat(req.body.addedAmount) });
+       newPayments.push({ mode: req.body.paymentMode || "ONLINE", amount: parseFloat(req.body.addedAmount) });
     }
 
     // Check if there's already a pending approval for this EMI
@@ -354,7 +354,7 @@ const updateEMI = asyncHandler(async (req, res, next) => {
           if (amount > 0) {
             emi.paymentHistory.push({
               amount: amount,
-              mode: p.mode || "CASH",
+              mode: p.mode || "ONLINE",
               chequeNumber: p.chequeNumber || "",
               date: new Date(group.date),
               addedBy: req.user._id,
@@ -366,7 +366,7 @@ const updateEMI = asyncHandler(async (req, res, next) => {
   } else if (addedAmount && parseFloat(addedAmount) > 0) {
     emi.paymentHistory.push({
       amount: parseFloat(addedAmount),
-      mode: paymentMode || "CASH",
+      mode: paymentMode || "ONLINE",
       date: normalizeToMidnight(parseDateInLocalFormat(paymentDate || new Date())),
     });
   }
@@ -414,7 +414,7 @@ const updateEMI = asyncHandler(async (req, res, next) => {
 
   // Update properties on the document indirectly (final sync)
   emi.amountPaid = newAmountPaid;
-  emi.paymentMode = modesFromHistory || emi.paymentMode || "CASH";
+  emi.paymentMode = modesFromHistory || emi.paymentMode || "ONLINE";
   emi.paymentDate =
     paymentDate ||
     (emi.paymentHistory.length > 0

@@ -38,9 +38,9 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
     
     setEditData({
       overdue: (pendingData.overdue && pendingData.overdue.length > 0)
-        ? pendingData.overdue.map(ov => ({ ...ov, id: Math.random(), mode: ov.mode || "Cash", chequeNumber: ov.chequeNumber || "" }))
+        ? pendingData.overdue.map(ov => ({ ...ov, id: Math.random(), mode: ov.mode || "Online", chequeNumber: ov.chequeNumber || "" }))
         : (emi.overdue && Array.isArray(emi.overdue) && emi.overdue.length > 0)
-          ? emi.overdue.map(ov => ({ ...ov, id: Math.random(), mode: ov.mode || "Cash", chequeNumber: ov.chequeNumber || "" }))
+          ? emi.overdue.map(ov => ({ ...ov, id: Math.random(), mode: ov.mode || "Online", chequeNumber: ov.chequeNumber || "" }))
           : [],
       status: emi.status || "Pending",
       remarks: pendingData.remarks || emi.remarks || "",
@@ -84,7 +84,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
           payments: [
             {
               id: Date.now() + 1,
-              mode: (emi.paymentMode || "").split(", ")[0] || "Cash",
+              mode: (emi.paymentMode || "").split(", ")[0] || "Online",
               amount: emi.amountPaid,
               chequeNumber: "",
             },
@@ -96,7 +96,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
         {
           id: Date.now(),
           date: new Date().toISOString().split("T")[0],
-          payments: [{ id: Date.now() + 1, mode: "Cash", amount: "", chequeNumber: "" }],
+          payments: [{ id: Date.now() + 1, mode: "Online", amount: "", chequeNumber: "" }],
         },
       ]);
     }
@@ -109,7 +109,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
       {
         id: Date.now(),
         date: new Date().toISOString().split("T")[0],
-        payments: [{ id: Date.now() + 1, mode: "Cash", amount: "", chequeNumber: "" }],
+        payments: [{ id: Date.now() + 1, mode: "Online", amount: "", chequeNumber: "" }],
       },
     ]);
   };
@@ -122,7 +122,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
             ...group,
             payments: [
               ...group.payments,
-              { id: Date.now(), mode: "Cash", amount: "", chequeNumber: "" },
+              { id: Date.now(), mode: "Online", amount: "", chequeNumber: "" },
             ],
           };
         }
@@ -274,7 +274,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
       ...prev,
       overdue: [
         ...prev.overdue,
-        { id: Date.now(), date: new Date().toISOString().split("T")[0], amount: "", mode: "Cash", chequeNumber: "" },
+        { id: Date.now(), date: new Date().toISOString().split("T")[0], amount: "", mode: "Online", chequeNumber: "" },
       ],
     }));
   };

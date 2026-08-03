@@ -141,7 +141,7 @@ exports.createInterestLoan = asyncHandler(async (req, res, next) => {
     disbursement: disbursement || [],
     principalPayments: principalPayments || [],
     createdBy: req.user._id,
-    paymentMode: paymentMode || "Cash",
+    paymentMode: paymentMode || "Online",
     status: remainingP <= 0 ? "Closed" : (req.body.status || "Active"),
     remarks,
   });
@@ -168,13 +168,13 @@ exports.createInterestLoan = asyncHandler(async (req, res, next) => {
       amountPaid: shouldAutoPay ? emiInterestAmount : 0,
       status: shouldAutoPay ? "Paid" : "Pending",
       paymentDate: shouldAutoPay ? new Date(interestLoan.startDate) : null,
-      paymentMode: shouldAutoPay ? paymentMode || "Cash" : "",
+      paymentMode: shouldAutoPay ? paymentMode || "Online" : "",
       remarks: shouldAutoPay ? "Auto-paid First EMI" : "",
       paymentHistory: shouldAutoPay
         ? [
             {
               amount: emiInterestAmount,
-              mode: paymentMode || "Cash",
+              mode: paymentMode || "Online",
               date: new Date(interestLoan.startDate),
               addedBy: req.user._id,
             },
@@ -190,7 +190,7 @@ exports.createInterestLoan = asyncHandler(async (req, res, next) => {
         loanId: interestLoan._id,
         loanModel: "InterestLoan",
         amount: emiInterestAmount,
-        mode: paymentMode || "Cash",
+        mode: paymentMode || "Online",
         paymentDate: new Date(interestLoan.startDate),
         paymentType: "Interest",
         status: "Success",
@@ -321,13 +321,13 @@ exports.getInterestLoanById = asyncHandler(async (req, res, next) => {
         amountPaid: shouldAutoPay ? firstAmount : 0,
         status: shouldAutoPay ? "Paid" : "Pending",
         paymentDate: shouldAutoPay ? new Date(loan.startDate) : null,
-        paymentMode: shouldAutoPay ? loan.paymentMode || "Cash" : "",
+        paymentMode: shouldAutoPay ? loan.paymentMode || "Online" : "",
         remarks: shouldAutoPay ? "Auto-paid First EMI" : "",
         paymentHistory: shouldAutoPay
           ? [
               {
                 amount: firstAmount,
-                mode: loan.paymentMode || "Cash",
+                mode: loan.paymentMode || "Online",
                 date: new Date(loan.startDate),
                 addedBy: req.user._id,
               },
@@ -342,7 +342,7 @@ exports.getInterestLoanById = asyncHandler(async (req, res, next) => {
           loanId: loan._id,
           loanModel: "InterestLoan",
           amount: firstAmount,
-          mode: loan.paymentMode || "Cash",
+          mode: loan.paymentMode || "Online",
           paymentDate: new Date(loan.startDate),
           paymentType: "Interest",
           status: "Success",
@@ -422,7 +422,7 @@ exports.addPrincipalPayment = asyncHandler(async (req, res, next) => {
       targetModel: "InterestLoan",
       loanNumber: loan.loanNumber,
       customerName: loan.customerName || "Customer",
-      requestedData: { amount: pAmount, paymentMode: paymentMode || "Cash", paymentDate, remarks },
+      requestedData: { amount: pAmount, paymentMode: paymentMode || "Online", paymentDate, remarks },
       requestedBy: req.user._id,
       status: "Pending",
     });
@@ -450,7 +450,7 @@ exports.addPrincipalPayment = asyncHandler(async (req, res, next) => {
 
   loan.principalPayments.push({
     amount: pAmount,
-    paymentMode: paymentMode || "Cash",
+    paymentMode: paymentMode || "Online",
     paymentDate: paymentDate || new Date(),
     remarks,
     addedBy: req.user._id,
@@ -472,7 +472,7 @@ exports.addPrincipalPayment = asyncHandler(async (req, res, next) => {
     loanModel: "InterestLoan",
     amount: pAmount,
     totalAmount: pAmount,
-    mode: paymentMode || "Cash",
+    mode: paymentMode || "Online",
     paymentDate: paymentDate || new Date(),
     paymentType: "Interest Loan Principal",
     status: "Success",
@@ -488,7 +488,7 @@ exports.addPrincipalPayment = asyncHandler(async (req, res, next) => {
 
 // Update/Pay Interest EMI
 const normalizePaymentMode = (mode) => {
-  if (!mode) return "Cash";
+  if (!mode) return "Online";
   const m = mode.trim().toLowerCase();
   if (m === "cash") return "Cash";
   if (m === "online") return "Online";
@@ -527,16 +527,16 @@ exports.payInterestEMI = asyncHandler(async (req, res, next) => {
         (group.payments || []).forEach(p => {
           const match = currentHistory.find(hp => 
             hp.amount === parseFloat(p.amount) && 
-            hp.mode === (p.mode || "Cash") && 
+            hp.mode === (p.mode || "Online") &&
             new Date(hp.date).toDateString() === new Date(group.date).toDateString()
           );
           if (!match) {
-            newPayments.push({ mode: p.mode || "Cash", amount: parseFloat(p.amount) });
+            newPayments.push({ mode: p.mode || "Online", amount: parseFloat(p.amount) });
           }
         });
       });
     } else if (req.body.addedAmount) {
-       newPayments.push({ mode: req.body.paymentMode || "Cash", amount: parseFloat(req.body.addedAmount) });
+       newPayments.push({ mode: req.body.paymentMode || "Online", amount: parseFloat(req.body.addedAmount) });
     }
 
     const Approval = require("../models/Approval");
@@ -872,15 +872,15 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
           amountPaid: shouldAutoPay ? emiInterestAmount : 0,
           status: shouldAutoPay ? "Paid" : "Pending",
           paymentDate: shouldAutoPay ? new Date(req.body.startDate || loan.startDate) : null,
-          paymentMode: shouldAutoPay ? req.body.paymentMode || loan.paymentMode || "Cash" : "",
+          paymentMode: shouldAutoPay ? req.body.paymentMode || loan.paymentMode || "Online" : "",
           remarks: shouldAutoPay ? "Auto-paid First EMI" : "",
-          paymentHistory: shouldAutoPay ? [{ amount: emiInterestAmount, mode: req.body.paymentMode || loan.paymentMode || "Cash", date: new Date(req.body.startDate || loan.startDate), addedBy: req.user._id }] : [],
+          paymentHistory: shouldAutoPay ? [{ amount: emiInterestAmount, mode: req.body.paymentMode || loan.paymentMode || "Online", date: new Date(req.body.startDate || loan.startDate), addedBy: req.user._id }] : [],
           updatedBy: shouldAutoPay ? req.user._id : undefined,
         });
 
         if (shouldAutoPay) {
           const Payment = require("../models/Payment");
-          await Payment.create({ emiId: emi._id, loanId: loan._id, loanModel: "InterestLoan", amount: emiInterestAmount, mode: req.body.paymentMode || loan.paymentMode || "Cash", paymentDate: new Date(req.body.startDate || loan.startDate), paymentType: "Interest", status: "Success", remarks: "Auto-paid First EMI", collectedBy: req.user._id });
+          await Payment.create({ emiId: emi._id, loanId: loan._id, loanModel: "InterestLoan", amount: emiInterestAmount, mode: req.body.paymentMode || loan.paymentMode || "Online", paymentDate: new Date(req.body.startDate || loan.startDate), paymentType: "Interest", status: "Success", remarks: "Auto-paid First EMI", collectedBy: req.user._id });
         }
         emiNum++;
         currentEmiDate = addMonths(currentEmiDate, 1);
@@ -952,7 +952,7 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
         loanModel: "InterestLoan",
         amount: parseFloat(p.amount) || 0,
         totalAmount: parseFloat(p.amount) || 0,
-        mode: p.paymentMode || "Cash",
+        mode: p.paymentMode || "Online",
         paymentDate: p.paymentDate || new Date(),
         paymentType: "Interest Loan Principal",
         status: "Success",

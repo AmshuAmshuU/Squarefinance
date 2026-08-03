@@ -50,7 +50,7 @@ const emiSchema = new mongoose.Schema(
         {
           date: { type: Date, required: true },
           amount: { type: Number, required: true },
-          mode: { type: String, default: "CASH" },
+          mode: { type: String, default: "ONLINE" },
           chequeNumber: { type: String, default: "" },
         },
       ],

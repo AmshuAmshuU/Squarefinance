@@ -92,7 +92,7 @@ const InterestLoanPendingViewPage = ({ params: paramsPromise }) => {
       {
         id: Date.now(),
         date: new Date().toISOString().split("T")[0],
-        payments: [{ id: Date.now() + 1, mode: "Cash", amount: "", chequeNumber: "" }],
+        payments: [{ id: Date.now() + 1, mode: "Online", amount: "", chequeNumber: "" }],
       },
     ]);
   };
@@ -105,7 +105,7 @@ const InterestLoanPendingViewPage = ({ params: paramsPromise }) => {
             ...group,
             payments: [
               ...group.payments,
-              { id: Date.now(), mode: "Cash", amount: "", chequeNumber: "" },
+              { id: Date.now(), mode: "Online", amount: "", chequeNumber: "" },
             ],
           };
         }
@@ -592,7 +592,7 @@ const InterestLoanPendingViewPage = ({ params: paramsPromise }) => {
                                           mode:
                                             (emi.paymentMode || "").split(
                                               ", ",
-                                            )[0] || "Cash",
+                                            )[0] || "Online",
                                           amount: emi.amountPaid,
                                           chequeNumber: emi.chequeNumber || "",
                                         },
@@ -609,7 +609,7 @@ const InterestLoanPendingViewPage = ({ params: paramsPromise }) => {
                                       payments: [
                                         {
                                           id: Date.now() + 1,
-                                          mode: "Cash",
+                                          mode: "Online",
                                           amount: "",
                                           chequeNumber: "",
                                         },

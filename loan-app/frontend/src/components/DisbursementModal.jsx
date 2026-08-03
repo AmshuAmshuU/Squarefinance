@@ -19,7 +19,7 @@ const DisbursementModal = ({ isOpen, onClose, onApply, initialData = [] }) => {
           }
           group.items.push({
             amount: curr.amount || "",
-            mode: curr.mode || "Cash",
+            mode: curr.mode || "Online",
             chequeNumber: curr.chequeNumber || "",
             _id: curr._id,
             addedAt: curr.addedAt
@@ -33,14 +33,14 @@ const DisbursementModal = ({ isOpen, onClose, onApply, initialData = [] }) => {
         // Start with one empty group
         queueMicrotask(() => setGroups([{ 
           date: format(new Date(), "yyyy-MM-dd"), 
-          items: [{ mode: "Cash", amount: "", chequeNumber: "" }] 
+          items: [{ mode: "Online", amount: "", chequeNumber: "" }] 
         }]));
       }
     }
   }, [isOpen, initialData]);
 
   const handleAddDateGroup = () => {
-    setGroups([...groups, { date: format(new Date(), "yyyy-MM-dd"), items: [{ mode: "Cash", amount: "", chequeNumber: "" }] }]);
+    setGroups([...groups, { date: format(new Date(), "yyyy-MM-dd"), items: [{ mode: "Online", amount: "", chequeNumber: "" }] }]);
   };
 
   const handleRemoveDateGroup = (groupIndex) => {
@@ -49,7 +49,7 @@ const DisbursementModal = ({ isOpen, onClose, onApply, initialData = [] }) => {
 
   const handleAddItem = (groupIndex) => {
     const newGroups = [...groups];
-    newGroups[groupIndex].items.push({ mode: "Cash", amount: "", chequeNumber: "" });
+    newGroups[groupIndex].items.push({ mode: "Online", amount: "", chequeNumber: "" });
     setGroups(newGroups);
   };
 

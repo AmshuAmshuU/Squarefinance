@@ -198,7 +198,7 @@ const LoanForm = ({
         emiEndDate: initialData?.loanTerms?.emiEndDate || "",
         monthlyEMI: initialData?.loanTerms?.monthlyEMI || 0,
         totalInterestAmount: initialData?.loanTerms?.totalInterestAmount || 0,
-        paymentMode: initialData?.loanTerms?.paymentMode || "Cash",
+        paymentMode: initialData?.loanTerms?.paymentMode || "Online",
         chequeNumber: initialData?.loanTerms?.chequeNumber || "",
         disbursement: Array.isArray(initialData?.loanTerms?.disbursement)
           ? initialData.loanTerms.disbursement
