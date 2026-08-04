@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
@@ -26,6 +27,8 @@ import PaymentModeTable from "../../../components/analytics/PaymentModeTable";
 import ProfitOverview from "../../../components/analytics/ProfitOverview";
 import SimpleStats from "../../../components/analytics/SimpleStats";
 import BusinessROI from "../../../components/analytics/BusinessROI";
+import CompanyValuation from "../../../components/analytics/CompanyValuation";
+import { getUserFromToken } from "../../../utils/auth";
 
 const AnalyticsPage = () => {
   const [stats, setStats] = useState(null);
@@ -34,8 +37,28 @@ const AnalyticsPage = () => {
   const [error, setError] = useState(null);
   const { isDarkMode: isDark } = useUI();
   const { showToast } = useToast();
+  const router = useRouter();
+  const currentUser = getUserFromToken();
+  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+  const isAdmin = currentUser?.role === "ADMIN";
+  // "Total Growth Trend" onward - SUPER_ADMIN/ADMIN only, regardless of
+  // the analytics.view permission toggle below (Karthik's explicit
+  // instruction, 2026-08-05).
+  const canSeeAdvancedAnalytics = isSuperAdmin || isAdmin;
+  // The rest of the page (first part) - the existing "Analytics" permission
+  // toggle from the Employees section. Mirrors Sidebar.jsx's exact
+  // convention: it only ever restricts EMPLOYEE-role accounts, same as
+  // every other sidebar-gated module - ADMIN/SUPER_ADMIN always pass.
+  const canViewAnalytics = currentUser?.role !== "EMPLOYEE" || currentUser?.permissions?.analytics?.view === true;
 
   useEffect(() => {
+    if (currentUser && !canViewAnalytics) {
+      router.replace("/admin/dashboard");
+    }
+  }, [currentUser, canViewAnalytics, router]);
+
+  useEffect(() => {
+    if (!canViewAnalytics) return;
     const fetchStats = async () => {
       try {
         setLoading(true);
@@ -51,7 +74,7 @@ const AnalyticsPage = () => {
     };
 
     fetchStats();
-  }, []);
+  }, [canViewAnalytics]);
 
   const handleExport = async () => {
     try {
@@ -445,6 +468,18 @@ const AnalyticsPage = () => {
 // ... loading component remains same
   }
 
+  if (!canViewAnalytics) {
+    // Redirect effect above is already firing - this just avoids a flash
+    // of the full page's content in the moment before it completes.
+    return (
+      <AuthGuard>
+        <div className="flex items-center justify-center min-h-screen bg-[#F8FAFC]">
+          <div className="text-slate-400 font-bold text-sm uppercase tracking-widest">Redirecting...</div>
+        </div>
+      </AuthGuard>
+    );
+  }
+
   return (
     <AuthGuard>
       <style jsx global>{`
@@ -835,19 +870,33 @@ const AnalyticsPage = () => {
                 </div>
               </div>
 
-              {/* Cumulative Growth Chart */}
-              <div className="mt-10 min-h-[500px]">
-                <CollectionTrendChart isCumulative={true} initialInterval="yearly" />
-              </div>
+              {/* Everything from here down (Total Growth Trend onward) is
+                  SUPER_ADMIN/ADMIN only, not EMPLOYEE - Karthik's explicit
+                  2026-08-05 instruction. Matching backend route restrictions
+                  live in analyticsRoutes.js for /profit, /simple-stats,
+                  /roi, /valuation - /trend-stats itself stays open since
+                  the "Disbursement vs Collection" chart above (visible to
+                  everyone) shares that same endpoint. */}
+              {canSeeAdvancedAnalytics && (
+                <>
+                  {/* Cumulative Growth Chart */}
+                  <div className="mt-10 min-h-[500px]">
+                    <CollectionTrendChart isCumulative={true} initialInterval="yearly" />
+                  </div>
 
-              {/* Profit Overview */}
-              <ProfitOverview />
+                  {/* Profit Overview */}
+                  <ProfitOverview />
 
-              {/* Simple Stats */}
-              <SimpleStats />
+                  {/* Simple Stats */}
+                  <SimpleStats />
 
-              {/* Return on Investment - very bottom, on-demand only */}
-              <BusinessROI />
+                  {/* Return on Investment - on-demand only */}
+                  <BusinessROI />
+
+                  {/* Company Valuation - very bottom, on-demand only */}
+                  <CompanyValuation />
+                </>
+              )}
 
               {/* Footer Note */}
               <div className="mt-12 text-center">

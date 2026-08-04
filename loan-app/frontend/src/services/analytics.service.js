@@ -38,3 +38,7 @@ export const getBusinessROI = async (endDate) => {
   if (endDate) url += `?endDate=${endDate}`;
   return await apiHandler(url);
 };
+
+export const getCompanyValuation = async () => {
+  return await apiHandler("/api/analytics/valuation");
+};

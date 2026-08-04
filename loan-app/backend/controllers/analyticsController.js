@@ -1177,11 +1177,12 @@ const getSimpleStats = asyncHandler(async (req, res, next) => {
 // = now) is user-controlled, to answer "what would this have looked like
 // if I checked as of [a past date]". Same methodology as the per-loan ROI
 // card - see backend/utils/loanROI.js for the full write-up.
-const getBusinessROI = asyncHandler(async (req, res, next) => {
-  const { endDate } = req.query;
-  const asOfDate = endDate ? new Date(`${endDate}T23:59:59.999+05:30`) : new Date();
-
-  const { vehicleLoanFlows, weeklyDailyLoanFlows, interestLoanFlows, computeROI } = require("../utils/loanROI");
+// Shared by getBusinessROI and getCompanyValuation - walks every loan
+// across all 4 types and builds the combined cash-flow ledger as of a
+// given date. Heavy (touches every loan/EMI), so both callers are
+// on-demand-only endpoints, never part of the main stats calls.
+const buildAllLoanFlows = async (asOfDate) => {
+  const { vehicleLoanFlows, weeklyDailyLoanFlows, interestLoanFlows } = require("../utils/loanROI");
 
   const allHist = [];
   const allFuture = [];
@@ -1234,12 +1235,73 @@ const getBusinessROI = asyncHandler(async (req, res, next) => {
     allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
   }
 
+  return { allHist, allFuture, allPending, earliestDate };
+};
+
+const getBusinessROI = asyncHandler(async (req, res, next) => {
+  const { endDate } = req.query;
+  const asOfDate = endDate ? new Date(`${endDate}T23:59:59.999+05:30`) : new Date();
+
+  const { computeROI } = require("../utils/loanROI");
+  const { allHist, allFuture, allPending, earliestDate } = await buildAllLoanFlows(asOfDate);
   const roi = computeROI(allHist, allFuture, allPending, asOfDate);
 
   sendResponse(res, 200, "success", "Business ROI calculated", null, {
     ...roi,
     asOfDate: asOfDate.toISOString(),
     inceptionDate: earliestDate ? earliestDate.toISOString() : null,
+  });
+});
+
+// Company Valuation - on-demand only (same reason as getBusinessROI: walks
+// every loan in the business). Methodology agreed with Karthik (2026-08-05,
+// revised same day after a real-data test run): the business reinvests
+// everything immediately, so there's no idle cash sitting outside the loan
+// book at any point - which means a literal "cash on hand" residual
+// (collected - disbursed - expenses) isn't meaningful on its own; it comes
+// out deeply negative not because the business is in trouble, but because
+// that gap is exactly the capital the founders have put in over time (no
+// external debt, so there's no other source it could be). Rather than
+// track individual founder contributions (explicitly out of scope -
+// Karthik wants stake/dilution math handled privately, outside the app),
+// that same gap is surfaced as one simple, positive reference figure:
+//   Our Investment = Total Disbursed + Total Expenses - Total Collected
+// Since idle cash is ~0 by assumption, the whole company's worth reduces
+// to just the loan book itself:
+//   Company Valuation = Outstanding Loan Book (principal + interest still
+//     owed on every active loan, at full face value - same "no risk, no
+//     discount" basis as the ROI card, deliberately consistent with it).
+// "Our Investment" is NOT subtracted from this - it's shown alongside as
+// context (how much capital it took to reach this valuation), with the
+// ratio between them as a simple growth multiple.
+// Always "as of now" - no historical date picker (unlike ROI), since this
+// is meant as a regular here-and-now check-in, not a historical lookback.
+const getCompanyValuation = asyncHandler(async (req, res, next) => {
+  const asOfDate = new Date();
+
+  const { computeROI } = require("../utils/loanROI");
+  const [{ allHist, allFuture, allPending }, expenseAgg] = await Promise.all([
+    buildAllLoanFlows(asOfDate),
+    Expense.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
+  ]);
+
+  const roi = computeROI(allHist, allFuture, allPending, asOfDate);
+  const totalExpenses = expenseAgg[0]?.total || 0;
+
+  const outstandingLoanBook = roi.outstanding;
+  const ourInvestment = roi.disbursed + totalExpenses - roi.collectedSoFar;
+  const companyValuation = outstandingLoanBook;
+  const growthMultiple = ourInvestment > 0 ? companyValuation / ourInvestment : null;
+
+  sendResponse(res, 200, "success", "Company valuation calculated", null, {
+    companyValuation,
+    outstandingLoanBook,
+    ourInvestment,
+    growthMultiple,
+    totalCollected: roi.collectedSoFar,
+    totalDisbursed: roi.disbursed,
+    totalExpenses,
+    asOfDate: asOfDate.toISOString(),
   });
 });
 
@@ -1250,5 +1312,6 @@ module.exports = {
   getProfitStats,
   getSimpleStats,
   getConsolidatedReportData,
+  getCompanyValuation,
   getBusinessROI,
 };
