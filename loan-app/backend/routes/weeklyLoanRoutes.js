@@ -4,6 +4,7 @@ const {
   createWeeklyLoan,
   getAllWeeklyLoans,
   getWeeklyLoanById,
+  getWeeklyLoanROI,
   updateWeeklyLoan,
   deleteWeeklyLoan,
   getWeeklyLoanEMIs,
@@ -29,6 +30,8 @@ router
   .route("/")
   .get(getAllWeeklyLoans)
   .post(authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"), authorizePermissions("weeklyLoans.create"), createWeeklyLoan);
+
+router.get("/:id/roi", getWeeklyLoanROI);
 
 router
   .route("/:id")

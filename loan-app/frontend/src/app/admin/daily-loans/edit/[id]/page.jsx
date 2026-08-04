@@ -6,6 +6,8 @@ import Navbar from "../../../../../components/Navbar";
 import AuthGuard from "../../../../../components/AuthGuard";
 import DailyLoanForm from "../../../../../components/DailyLoanForm";
 import EMITable from "../../../../../components/EMITable";
+import LoanROICard from "../../../../../components/LoanROICard";
+import { getDailyLoanROI } from "../../../../../services/dailyLoan.service";
 import {
   getDailyLoanById,
   updateDailyLoan,
@@ -184,6 +186,8 @@ const EditDailyLoanPage = () => {
                       onUpdateSuccess={fetchData}
                     />
                   </div>
+
+                  <LoanROICard fetchFn={getDailyLoanROI} loanId={id} />
                 </>
               )}
             </div>

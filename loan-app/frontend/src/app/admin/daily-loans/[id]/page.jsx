@@ -12,6 +12,8 @@ import {
 } from "../../../../services/dailyLoan.service";
 import { getFollowupHistory } from "../../../../services/loan.service";
 import FollowupHistory from "../../../../components/FollowupHistory";
+import LoanROICard from "../../../../components/LoanROICard";
+import { getDailyLoanROI } from "../../../../services/dailyLoan.service";
 import { useToast } from "../../../../context/ToastContext";
 import { format } from "date-fns";
 import LoanStatusBadge from "../../../../components/LoanStatusBadge";
@@ -140,6 +142,8 @@ const ViewDailyLoanPage = ({ params: paramsPromise }) => {
                   </div>
 
                   <FollowupHistory history={history} loading={historyLoading} />
+
+                  <LoanROICard fetchFn={getDailyLoanROI} loanId={params.id} />
                 </>
               )}
             </div>

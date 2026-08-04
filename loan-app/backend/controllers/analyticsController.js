@@ -1169,6 +1169,80 @@ const getSimpleStats = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Business-wide ROI (XIRR + absolute return) - on-demand only (heavy: walks
+// every loan/EMI in the business), never part of the main stats calls.
+// Karthik's explicit requirement (2026-08-05): start date is always the
+// business's actual inception (earliest disbursement) - not adjustable.
+// Only the END date (query param `endDate`, optional - default "all time"
+// = now) is user-controlled, to answer "what would this have looked like
+// if I checked as of [a past date]". Same methodology as the per-loan ROI
+// card - see backend/utils/loanROI.js for the full write-up.
+const getBusinessROI = asyncHandler(async (req, res, next) => {
+  const { endDate } = req.query;
+  const asOfDate = endDate ? new Date(`${endDate}T23:59:59.999+05:30`) : new Date();
+
+  const { vehicleLoanFlows, weeklyDailyLoanFlows, interestLoanFlows, computeROI } = require("../utils/loanROI");
+
+  const allHist = [];
+  const allFuture = [];
+  let allPending = 0;
+  let earliestDate = null;
+  const trackEarliest = (flows) => {
+    flows.forEach((f) => {
+      if (!earliestDate || f.date < earliestDate) earliestDate = f.date;
+    });
+  };
+
+  const [vehicleLoans, vehicleEmis, weeklyLoans, weeklyEmis, dailyLoans, dailyEmis, interestLoans, interestEmis] = await Promise.all([
+    Loan.find({}).lean(),
+    EMI.find({ loanModel: "Loan" }).lean(),
+    WeeklyLoan.find({}).lean(),
+    EMI.find({ loanModel: "WeeklyLoan" }).lean(),
+    DailyLoan.find({}).lean(),
+    EMI.find({ loanModel: "DailyLoan" }).lean(),
+    InterestLoan.find({}).lean(),
+    InterestEMI.find({}).lean(),
+  ]);
+
+  const groupBy = (arr, key) => {
+    const map = {};
+    arr.forEach((e) => {
+      const k = String(e[key]);
+      (map[k] = map[k] || []).push(e);
+    });
+    return map;
+  };
+  const vehicleEmisByLoan = groupBy(vehicleEmis, "loanId");
+  const weeklyEmisByLoan = groupBy(weeklyEmis, "loanId");
+  const dailyEmisByLoan = groupBy(dailyEmis, "loanId");
+  const interestEmisByLoan = groupBy(interestEmis, "interestLoanId");
+
+  for (const loan of vehicleLoans) {
+    const { hist, future, pending } = vehicleLoanFlows(loan, vehicleEmisByLoan[String(loan._id)] || [], asOfDate);
+    allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
+  }
+  for (const loan of weeklyLoans) {
+    const { hist, future, pending } = weeklyDailyLoanFlows(loan, weeklyEmisByLoan[String(loan._id)] || [], asOfDate);
+    allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
+  }
+  for (const loan of dailyLoans) {
+    const { hist, future, pending } = weeklyDailyLoanFlows(loan, dailyEmisByLoan[String(loan._id)] || [], asOfDate);
+    allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
+  }
+  for (const loan of interestLoans) {
+    const { hist, future, pending } = interestLoanFlows(loan, interestEmisByLoan[String(loan._id)] || [], asOfDate);
+    allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
+  }
+
+  const roi = computeROI(allHist, allFuture, allPending, asOfDate);
+
+  sendResponse(res, 200, "success", "Business ROI calculated", null, {
+    ...roi,
+    asOfDate: asOfDate.toISOString(),
+    inceptionDate: earliestDate ? earliestDate.toISOString() : null,
+  });
+});
+
 module.exports = {
   getAnalyticsStats,
   exportAllData,
@@ -1176,4 +1250,5 @@ module.exports = {
   getProfitStats,
   getSimpleStats,
   getConsolidatedReportData,
+  getBusinessROI,
 };

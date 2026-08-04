@@ -387,6 +387,20 @@ exports.getInterestLoanById = asyncHandler(async (req, res, next) => {
   });
 });
 
+// ROI (XIRR + absolute return) - on-demand only
+exports.getInterestLoanROI = asyncHandler(async (req, res, next) => {
+  const loan = await InterestLoan.findById(req.params.id).lean();
+  if (!loan) {
+    return next(new ErrorHandler("Interest loan not found", 404));
+  }
+  const emis = await InterestEMI.find({ interestLoanId: loan._id }).lean();
+  const { interestLoanFlows, computeROI } = require("../utils/loanROI");
+  const { hist, future, pending } = interestLoanFlows(loan, emis);
+  const roi = computeROI(hist, future, pending);
+
+  sendResponse(res, 200, "success", "Interest loan ROI calculated", null, roi);
+});
+
 // Add Principal Payment
 exports.addPrincipalPayment = asyncHandler(async (req, res, next) => {
   const { amount, paymentMode, paymentDate, remarks } = req.body;

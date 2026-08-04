@@ -5,6 +5,7 @@ const {
   getAllLoans,
   getLoanByLoanNumber,
   getLoanById,
+  getLoanROI,
   updateLoan,
   toggleSeizedStatus,
   calculateEMIApi,
@@ -103,6 +104,8 @@ router.post(
   authorizePermissions("loans.create"),
   forecloseLoan,
 );
+
+router.get("/:id/roi", getLoanROI);
 
 router
   .route("/:id")

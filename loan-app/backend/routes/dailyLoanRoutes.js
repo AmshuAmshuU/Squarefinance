@@ -3,6 +3,7 @@ const {
   createDailyLoan,
   getAllDailyLoans,
   getDailyLoanById,
+  getDailyLoanROI,
   updateDailyLoan,
   deleteDailyLoan,
   getDailyLoanEMIs,
@@ -42,6 +43,11 @@ router.get(
   "/emis/:id",
   authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
   getDailyLoanEMIs,
+);
+router.get(
+  "/:id/roi",
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  getDailyLoanROI,
 );
 router.get(
   "/:id",

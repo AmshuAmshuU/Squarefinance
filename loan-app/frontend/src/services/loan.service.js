@@ -191,3 +191,9 @@ export const checkLoanNumberUniqueness = async (loanNumber) => {
     method: "GET",
   });
 };
+
+export const getLoanROI = async (id) => {
+  return await apiHandler(`/api/loans/${id}/roi`, {
+    method: "GET",
+  });
+};

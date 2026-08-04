@@ -67,3 +67,9 @@ export const getWeeklyPendingEmiDetails = async (id) => {
     method: "GET",
   });
 };
+
+export const getWeeklyLoanROI = async (id) => {
+  return await apiHandler(`/api/weekly-loans/${id}/roi`, {
+    method: "GET",
+  });
+};

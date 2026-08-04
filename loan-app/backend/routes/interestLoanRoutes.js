@@ -4,6 +4,7 @@ const {
   createInterestLoan,
   getAllInterestLoans,
   getInterestLoanById,
+  getInterestLoanROI,
   updateInterestLoan,
   deleteInterestLoan,
   addPrincipalPayment,
@@ -30,6 +31,8 @@ router.route("/")
 router.route("/pending").get(getInterestPendingPayments);
 router.route("/followup-payments").get(getInterestFollowupLoans);
 router.get("/pending-details/:id", getInterestPendingEmiDetails);
+
+router.get("/:id/roi", getInterestLoanROI);
 
 router.route("/:id")
   .get(getInterestLoanById)

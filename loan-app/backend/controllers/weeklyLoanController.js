@@ -421,6 +421,20 @@ exports.getWeeklyLoanById = asyncHandler(async (req, res, next) => {
   sendResponse(res, 200, "success", "Weekly loan found", null, weeklyLoan);
 });
 
+// ROI (XIRR + absolute return) - on-demand only
+exports.getWeeklyLoanROI = asyncHandler(async (req, res, next) => {
+  const loan = await WeeklyLoan.findById(req.params.id).lean();
+  if (!loan) {
+    return next(new ErrorHandler("Weekly loan not found", 404));
+  }
+  const emis = await EMI.find({ loanId: loan._id, loanModel: "WeeklyLoan" }).lean();
+  const { weeklyDailyLoanFlows, computeROI } = require("../utils/loanROI");
+  const { hist, future, pending } = weeklyDailyLoanFlows(loan, emis);
+  const roi = computeROI(hist, future, pending);
+
+  sendResponse(res, 200, "success", "Weekly loan ROI calculated", null, roi);
+});
+
 // Update Weekly Loan
 exports.updateWeeklyLoan = asyncHandler(async (req, res, next) => {
   let weeklyLoan = await WeeklyLoan.findById(req.params.id);

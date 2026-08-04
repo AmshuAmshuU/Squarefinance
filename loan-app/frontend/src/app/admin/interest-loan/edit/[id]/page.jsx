@@ -5,6 +5,7 @@ import AuthGuard from "@/components/AuthGuard";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import InterestLoanForm from "@/components/InterestLoanForm";
+import LoanROICard from "@/components/LoanROICard";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
 import { useUI } from "@/context/UIContext";
@@ -153,14 +154,18 @@ const EditInterestLoanPage = () => {
               {loading ? (
                 <div className="text-center py-12 text-slate-400 font-bold">Loading...</div>
               ) : (
-                <InterestLoanForm 
-                  initialData={loan} 
-                  onSubmit={handleSubmit} 
-                  submitting={submitting} 
-                  emis={emis}
-                  onRefresh={fetchLoan}
-                  onCancel={() => router.push(returnTo)} 
-                />
+                <>
+                  <InterestLoanForm
+                    initialData={loan}
+                    onSubmit={handleSubmit}
+                    submitting={submitting}
+                    emis={emis}
+                    onRefresh={fetchLoan}
+                    onCancel={() => router.push(returnTo)}
+                  />
+
+                  <LoanROICard fetchFn={interestLoanService.getLoanROI} loanId={id} />
+                </>
               )}
             </div>
           </main>

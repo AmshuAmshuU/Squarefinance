@@ -6,6 +6,8 @@ import Navbar from "../../../../../components/Navbar";
 import Sidebar from "../../../../../components/Sidebar";
 import LoanForm from "../../../../../components/LoanForm";
 import EMITable from "../../../../../components/EMITable";
+import LoanROICard from "../../../../../components/LoanROICard";
+import { getLoanROI } from "../../../../../services/loan.service";
 import { useToast } from "../../../../../context/ToastContext";
 import {
   getLoanById,
@@ -405,6 +407,8 @@ const EditLoanPage = () => {
                       onUpdateSuccess={handleEMIUpdate}
                     />
                   </div>
+
+                  <LoanROICard fetchFn={getLoanROI} loanId={id} />
                 </>
               )}
             </div>

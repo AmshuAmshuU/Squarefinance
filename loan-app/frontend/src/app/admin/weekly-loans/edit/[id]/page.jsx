@@ -6,6 +6,8 @@ import Navbar from "../../../../../components/Navbar";
 import AuthGuard from "../../../../../components/AuthGuard";
 import WeeklyLoanForm from "../../../../../components/WeeklyLoanForm";
 import EMITable from "../../../../../components/EMITable";
+import LoanROICard from "../../../../../components/LoanROICard";
+import { getWeeklyLoanROI } from "../../../../../services/weeklyLoan.service";
 import {
   getWeeklyLoanById,
   updateWeeklyLoan,
@@ -192,6 +194,8 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
                       onUpdateSuccess={refreshEMIs}
                     />
                   </div>
+
+                  <LoanROICard fetchFn={getWeeklyLoanROI} loanId={params.id} />
                 </>
               )}
             </div>

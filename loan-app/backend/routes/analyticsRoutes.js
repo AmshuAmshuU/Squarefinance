@@ -43,4 +43,11 @@ router.get(
   analyticsController.getSimpleStats
 );
 
+router.get(
+  "/roi",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  analyticsController.getBusinessROI
+);
+
 module.exports = router;

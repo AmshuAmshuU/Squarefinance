@@ -32,3 +32,9 @@ export const getSimpleStats = async (interval, startDate, endDate) => {
 export const getDataHealthCheck = async () => {
   return await apiHandler("/api/reports/health-check");
 };
+
+export const getBusinessROI = async (endDate) => {
+  let url = "/api/analytics/roi";
+  if (endDate) url += `?endDate=${endDate}`;
+  return await apiHandler(url);
+};

@@ -25,6 +25,7 @@ import DistributionPieCharts from "../../../components/analytics/DistributionPie
 import PaymentModeTable from "../../../components/analytics/PaymentModeTable";
 import ProfitOverview from "../../../components/analytics/ProfitOverview";
 import SimpleStats from "../../../components/analytics/SimpleStats";
+import BusinessROI from "../../../components/analytics/BusinessROI";
 
 const AnalyticsPage = () => {
   const [stats, setStats] = useState(null);
@@ -844,6 +845,9 @@ const AnalyticsPage = () => {
 
               {/* Simple Stats */}
               <SimpleStats />
+
+              {/* Return on Investment - very bottom, on-demand only */}
+              <BusinessROI />
 
               {/* Footer Note */}
               <div className="mt-12 text-center">

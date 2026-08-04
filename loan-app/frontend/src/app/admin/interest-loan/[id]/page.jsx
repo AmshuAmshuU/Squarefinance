@@ -5,6 +5,7 @@ import AuthGuard from "@/components/AuthGuard";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import InterestLoanDetails from "@/components/InterestLoanDetails";
+import LoanROICard from "@/components/LoanROICard";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
 import { useUI } from "@/context/UIContext";
@@ -84,6 +85,8 @@ const ViewInterestLoanPage = () => {
                     </button>
                   </div>
                   <InterestLoanDetails loan={loan} emis={emis} onRefresh={fetchLoanData} />
+
+                  <LoanROICard fetchFn={interestLoanService.getLoanROI} loanId={id} />
                 </>
               ) : (
                 <div className="text-center py-12 text-red-400 font-bold">Loan not found</div>

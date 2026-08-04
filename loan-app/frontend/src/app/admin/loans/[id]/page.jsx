@@ -14,6 +14,8 @@ import {
 import { getEMIsByLoanId } from "../../../../services/customer";
 import { flattenLoan } from "../../../../utils/loanUtils";
 import FollowupHistory from "../../../../components/FollowupHistory";
+import LoanROICard from "../../../../components/LoanROICard";
+import { getLoanROI } from "../../../../services/loan.service";
 import LoanStatusBadge from "../../../../components/LoanStatusBadge";
 import { useUI } from "../../../../context/UIContext";
 
@@ -340,6 +342,8 @@ const ViewLoanPage = () => {
                   </div>
 
                   <FollowupHistory history={history} loading={historyLoading} />
+
+                  <LoanROICard fetchFn={getLoanROI} loanId={id} />
                 </>
               )}
             </div>

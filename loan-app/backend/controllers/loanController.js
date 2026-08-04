@@ -790,6 +790,25 @@ const getLoanById = asyncHandler(async (req, res, next) => {
   sendResponse(res, 200, "success", "Loan found", null, formattedLoan);
 });
 
+// ROI (XIRR + absolute return) for a single loan - on-demand only, not
+// part of the main loan fetch, since it isn't needed until the ROI card
+// at the bottom of the loan page is actually viewed.
+const getLoanROI = asyncHandler(async (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return next(new ErrorHandler("Invalid Loan ID provided", 400));
+  }
+  const loan = await Loan.findById(req.params.id).lean();
+  if (!loan) {
+    return next(new ErrorHandler("Loan not found", 404));
+  }
+  const emis = await EMI.find({ loanId: loan._id, loanModel: "Loan" }).lean();
+  const { vehicleLoanFlows, computeROI } = require("../utils/loanROI");
+  const { hist, future, pending } = vehicleLoanFlows(loan, emis);
+  const roi = computeROI(hist, future, pending);
+
+  sendResponse(res, 200, "success", "Loan ROI calculated", null, roi);
+});
+
 const updateLoan = asyncHandler(async (req, res, next) => {
   if (
     !mongoose.Types.ObjectId.isValid(req.params.id) ||
@@ -2779,6 +2798,7 @@ module.exports = {
   getAllLoans,
   getLoanByLoanNumber,
   getLoanById,
+  getLoanROI,
   updateLoan,
   toggleSeizedStatus,
   calculateEMIApi,

@@ -76,6 +76,12 @@ const interestLoanService = {
       method: "GET",
     });
   },
+
+  getLoanROI: async (id) => {
+    return await apiHandler(`/api/interest-loans/${id}/roi`, {
+      method: "GET",
+    });
+  },
 };
 
 export default interestLoanService;

@@ -67,3 +67,9 @@ export const getDailyPendingEmiDetails = async (id) => {
     method: "GET",
   });
 };
+
+export const getDailyLoanROI = async (id) => {
+  return await apiHandler(`/api/daily-loans/${id}/roi`, {
+    method: "GET",
+  });
+};
