@@ -70,22 +70,55 @@ const getCollectionReport = asyncHandler(async (req, res, next) => {
                       $and: [
                         "$$isOverdue",
                         {
-                          $anyElementTrue: {
-                            $map: {
-                              input: { $ifNull: ["$emiDetails.overdue", []] },
-                              as: "ov",
-                              in: { 
-                                $and: [
-                                  { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ov.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
-                                  { $eq: [{ $toDouble: "$$ov.amount" }, "$$paymentAmount"] }
-                                  // Mode is intentionally NOT part of this match: a mode-only
-                                  // correction (e.g. Online -> Cash) leaves the Payment record's
-                                  // mode stale, but the date+amount still correctly identify the
-                                  // same transaction, so it must still show in Collections.
-                                ]
+                          $or: [
+                            // Legacy pattern: one Payment record per individual
+                            // overdue entry - still real historical data for any
+                            // EMI that hasn't been re-saved since syncEmiPayments
+                            // started grouping by date (see below).
+                            {
+                              $anyElementTrue: {
+                                $map: {
+                                  input: { $ifNull: ["$emiDetails.overdue", []] },
+                                  as: "ov",
+                                  in: {
+                                    $and: [
+                                      { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ov.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
+                                      { $eq: [{ $toDouble: "$$ov.amount" }, "$$paymentAmount"] }
+                                      // Mode is intentionally NOT part of this match: a mode-only
+                                      // correction (e.g. Online -> Cash) leaves the Payment record's
+                                      // mode stale, but the date+amount still correctly identify the
+                                      // same transaction, so it must still show in Collections.
+                                    ]
+                                  }
+                                }
                               }
+                            },
+                            // Current pattern: syncEmiPayments (utils/syncEmiPayments.js)
+                            // sums every overdue entry sharing a date into ONE
+                            // Payment record - e.g. a payment split Cash+Online on
+                            // the same day. Without this, that combined amount never
+                            // equals any single entry above and silently vanishes
+                            // from Collections (the exact bug reported for loan 111,
+                            // 2026-08-05 - same fix applies to paymentHistory below).
+                            {
+                              $eq: [
+                                {
+                                  $reduce: {
+                                    input: {
+                                      $filter: {
+                                        input: { $ifNull: ["$emiDetails.overdue", []] },
+                                        as: "ov2",
+                                        cond: { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ov2.date", timezone: "+05:30" } }, "$$paymentDateStr"] }
+                                      }
+                                    },
+                                    initialValue: 0,
+                                    in: { $add: ["$$value", { $toDouble: "$$this.amount" }] }
+                                  }
+                                },
+                                "$$paymentAmount"
+                              ]
                             }
-                          }
+                          ]
                         }
                       ]
                     },
@@ -93,20 +126,46 @@ const getCollectionReport = asyncHandler(async (req, res, next) => {
                       $and: [
                         { $not: "$$isOverdue" },
                         {
-                          $anyElementTrue: {
-                            $map: {
-                              input: { $ifNull: ["$emiDetails.paymentHistory", []] },
-                              as: "ph",
-                              in: { 
-                                $and: [
-                                  { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ph.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
-                                  { $eq: [{ $toDouble: "$$ph.amount" }, "$$paymentAmount"] }
-                                  // Mode intentionally not matched here either — see the
-                                  // overdue branch above for why.
-                                ]
+                          $or: [
+                            // Legacy pattern - see overdue branch above for why
+                            // both patterns need to be checked.
+                            {
+                              $anyElementTrue: {
+                                $map: {
+                                  input: { $ifNull: ["$emiDetails.paymentHistory", []] },
+                                  as: "ph",
+                                  in: {
+                                    $and: [
+                                      { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ph.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
+                                      { $eq: [{ $toDouble: "$$ph.amount" }, "$$paymentAmount"] }
+                                      // Mode intentionally not matched here either — see the
+                                      // overdue branch above for why.
+                                    ]
+                                  }
+                                }
                               }
+                            },
+                            // Current pattern - syncEmiPayments sums same-date
+                            // paymentHistory entries into one Payment record.
+                            {
+                              $eq: [
+                                {
+                                  $reduce: {
+                                    input: {
+                                      $filter: {
+                                        input: { $ifNull: ["$emiDetails.paymentHistory", []] },
+                                        as: "ph2",
+                                        cond: { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ph2.date", timezone: "+05:30" } }, "$$paymentDateStr"] }
+                                      }
+                                    },
+                                    initialValue: 0,
+                                    in: { $add: ["$$value", { $toDouble: "$$this.amount" }] }
+                                  }
+                                },
+                                "$$paymentAmount"
+                              ]
                             }
-                          }
+                          ]
                         }
                       ]
                     }
@@ -244,22 +303,55 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
                       $and: [
                         "$$isOverdue",
                         {
-                          $anyElementTrue: {
-                            $map: {
-                              input: { $ifNull: ["$emiDetails.overdue", []] },
-                              as: "ov",
-                              in: { 
-                                $and: [
-                                  { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ov.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
-                                  { $eq: [{ $toDouble: "$$ov.amount" }, "$$paymentAmount"] }
-                                  // Mode is intentionally NOT part of this match: a mode-only
-                                  // correction (e.g. Online -> Cash) leaves the Payment record's
-                                  // mode stale, but the date+amount still correctly identify the
-                                  // same transaction, so it must still show in Collections.
-                                ]
+                          $or: [
+                            // Legacy pattern: one Payment record per individual
+                            // overdue entry - still real historical data for any
+                            // EMI that hasn't been re-saved since syncEmiPayments
+                            // started grouping by date (see below).
+                            {
+                              $anyElementTrue: {
+                                $map: {
+                                  input: { $ifNull: ["$emiDetails.overdue", []] },
+                                  as: "ov",
+                                  in: {
+                                    $and: [
+                                      { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ov.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
+                                      { $eq: [{ $toDouble: "$$ov.amount" }, "$$paymentAmount"] }
+                                      // Mode is intentionally NOT part of this match: a mode-only
+                                      // correction (e.g. Online -> Cash) leaves the Payment record's
+                                      // mode stale, but the date+amount still correctly identify the
+                                      // same transaction, so it must still show in Collections.
+                                    ]
+                                  }
+                                }
                               }
+                            },
+                            // Current pattern: syncEmiPayments (utils/syncEmiPayments.js)
+                            // sums every overdue entry sharing a date into ONE
+                            // Payment record - e.g. a payment split Cash+Online on
+                            // the same day. Without this, that combined amount never
+                            // equals any single entry above and silently vanishes
+                            // from Collections (the exact bug reported for loan 111,
+                            // 2026-08-05 - same fix applies to paymentHistory below).
+                            {
+                              $eq: [
+                                {
+                                  $reduce: {
+                                    input: {
+                                      $filter: {
+                                        input: { $ifNull: ["$emiDetails.overdue", []] },
+                                        as: "ov2",
+                                        cond: { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ov2.date", timezone: "+05:30" } }, "$$paymentDateStr"] }
+                                      }
+                                    },
+                                    initialValue: 0,
+                                    in: { $add: ["$$value", { $toDouble: "$$this.amount" }] }
+                                  }
+                                },
+                                "$$paymentAmount"
+                              ]
                             }
-                          }
+                          ]
                         }
                       ]
                     },
@@ -267,20 +359,46 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
                       $and: [
                         { $not: "$$isOverdue" },
                         {
-                          $anyElementTrue: {
-                            $map: {
-                              input: { $ifNull: ["$emiDetails.paymentHistory", []] },
-                              as: "ph",
-                              in: { 
-                                $and: [
-                                  { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ph.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
-                                  { $eq: [{ $toDouble: "$$ph.amount" }, "$$paymentAmount"] }
-                                  // Mode intentionally not matched here either — see the
-                                  // overdue branch above for why.
-                                ]
+                          $or: [
+                            // Legacy pattern - see overdue branch above for why
+                            // both patterns need to be checked.
+                            {
+                              $anyElementTrue: {
+                                $map: {
+                                  input: { $ifNull: ["$emiDetails.paymentHistory", []] },
+                                  as: "ph",
+                                  in: {
+                                    $and: [
+                                      { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ph.date", timezone: "+05:30" } }, "$$paymentDateStr"] },
+                                      { $eq: [{ $toDouble: "$$ph.amount" }, "$$paymentAmount"] }
+                                      // Mode intentionally not matched here either — see the
+                                      // overdue branch above for why.
+                                    ]
+                                  }
+                                }
                               }
+                            },
+                            // Current pattern - syncEmiPayments sums same-date
+                            // paymentHistory entries into one Payment record.
+                            {
+                              $eq: [
+                                {
+                                  $reduce: {
+                                    input: {
+                                      $filter: {
+                                        input: { $ifNull: ["$emiDetails.paymentHistory", []] },
+                                        as: "ph2",
+                                        cond: { $eq: [{ $dateToString: { format: "%Y-%m-%d", date: "$$ph2.date", timezone: "+05:30" } }, "$$paymentDateStr"] }
+                                      }
+                                    },
+                                    initialValue: 0,
+                                    in: { $add: ["$$value", { $toDouble: "$$this.amount" }] }
+                                  }
+                                },
+                                "$$paymentAmount"
+                              ]
                             }
-                          }
+                          ]
                         }
                       ]
                     }
