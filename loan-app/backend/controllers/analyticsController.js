@@ -608,6 +608,18 @@ const getConsolidatedReportData = async () => {
   const userNameById = {};
   allUsers.forEach((u) => (userNameById[u._id.toString()] = u.name));
 
+  // Vehicle loans' "Total Collected" used to read from the Payment
+  // collection - rebuilt 2026-08-06 to read EMI/Loan data directly (see
+  // utils/collectionEvents.js), same fix as the Collections page.
+  const { getAllCollectionEvents } = require("../utils/collectionEvents");
+  const collectionEventsForExport = await getAllCollectionEvents({});
+  const collectedByLoanId = {};
+  collectionEventsForExport.forEach((e) => {
+    if (e.loanModel !== "Loan") return;
+    const key = String(e.loanId);
+    collectedByLoanId[key] = (collectedByLoanId[key] || 0) + (e.totalAmount || 0);
+  });
+
   const vehicleEmis = allEmis.filter((e) => e.loanModel === "Loan");
   const weeklyEmis = allEmis.filter((e) => e.loanModel === "WeeklyLoan");
   const dailyEmis = allEmis.filter((e) => e.loanModel === "DailyLoan");
@@ -629,9 +641,9 @@ const getConsolidatedReportData = async () => {
       ? (loan.foreclosureAmount ? 0 : loan.soldDetails?.totalAmount ? 0 : 0)
       : Math.max(0, Math.round(principal - (paidEmis * emiAmount * interestRate / (1 - Math.pow(1 + interestRate, -(loan.tenureMonths || 1))))));
 
-    // Total collected from Payment records
-    const payments = await Payment.find({ loanId: loan._id, loanModel: "Loan", status: "Success" }).lean();
-    const totalCollected = payments.reduce((s, p) => s + (p.amount || 0), 0);
+    // Total collected - EMI payments + OD + foreclosure + vehicle sale,
+    // matching exactly what the loan's own edit page shows (LoanForm.jsx).
+    const totalCollected = collectedByLoanId[String(loan._id)] || 0;
 
     // Client response
     const clientResponse = loan.status?.clientResponse || loan.clientResponse || "";
@@ -711,6 +723,20 @@ const exportAllData = asyncHandler(async (req, res, next) => {
   sendResponse(res, 200, "success", "Export data fetched successfully", null, data);
 });
 
+// JS equivalent of Mongo's $dateToString for the groupFormat patterns used
+// below - deliberately UTC (no +05:30 offset) to match the existing
+// Disbursements $dateToString calls in this function, which also default
+// to UTC.
+const formatDateUTC = (date, groupFormat) => {
+  const Y = date.getUTCFullYear();
+  const M = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const D = String(date.getUTCDate()).padStart(2, "0");
+  const H = String(date.getUTCHours()).padStart(2, "0");
+  if (groupFormat === "%Y-%m-%d %H:00") return `${Y}-${M}-${D} ${H}:00`;
+  if (groupFormat === "%Y-%m-%d") return `${Y}-${M}-${D}`;
+  return `${Y}-${M}`;
+};
+
 const getTrendStats = asyncHandler(async (req, res, next) => {
   try {
     const { range = "max", interval = "all", startDate: customStart, endDate: customEnd } = req.query;
@@ -755,16 +781,21 @@ const getTrendStats = asyncHandler(async (req, res, next) => {
       groupFormat = "%Y-%m";
     }
 
-    // 1. Collections
-    const collectionStats = await Payment.aggregate([
-      { $match: { paymentDate: { $gte: startDate, $lte: endDate }, status: "Success" } },
-      {
-        $group: {
-          _id: { $dateToString: { format: groupFormat, date: "$paymentDate" } },
-          total: { $sum: "$amount" }
-        }
-      }
-    ]);
+    // 1. Collections - reads EMI/Loan data directly (utils/collectionEvents.js)
+    // instead of the Payment collection, same rebuild as Collections page.
+    // Bucketing intentionally uses UTC (no +05:30 offset) via formatDateUTC
+    // to match the Disbursements $dateToString calls below, which also
+    // don't specify a timezone - keeping both sides on the same clock so
+    // the two lines on the trend chart stay aligned to the same buckets.
+    const { getAllCollectionEvents } = require("../utils/collectionEvents");
+    const allCollectionEvents = await getAllCollectionEvents({});
+    const collectionMap = {};
+    allCollectionEvents.forEach((e) => {
+      const d = new Date(e.date);
+      if (d < startDate || d > endDate) return;
+      const key = formatDateUTC(d, groupFormat);
+      collectionMap[key] = (collectionMap[key] || 0) + (e.totalAmount || 0);
+    });
 
     // 2. Disbursements
     const aggregateModelDisbursements = async (Model, amountField, dateFields) => {
@@ -801,11 +832,6 @@ const getTrendStats = asyncHandler(async (req, res, next) => {
     const disbursementMap = {};
     disResults.flat().forEach(item => {
       if (item._id) disbursementMap[item._id] = (disbursementMap[item._id] || 0) + item.total;
-    });
-
-    const collectionMap = {};
-    collectionStats.forEach(item => {
-      if (item._id) collectionMap[item._id] = item.total;
     });
 
     let allDates = [...new Set([...Object.keys(disbursementMap), ...Object.keys(collectionMap)])].sort();
