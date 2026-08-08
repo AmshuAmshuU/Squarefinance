@@ -53,13 +53,19 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
     users,
   ] = await Promise.all([
     Loan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode soldDetails").lean(),
-    EMI.find({ loanModel: "Loan" }).select("loanId emiNumber paymentHistory overdue").lean(),
+    // updatedBy is required here even though paymentHistory entries carry
+    // their own addedBy - overdue entries have no per-entry attribution
+    // field, so addEmiEvents() below falls back to the EMI's own updatedBy
+    // for Overdue-type events. Omitting it here silently made every
+    // Overdue row's collector show "System" regardless of who actually
+    // collected it (found 2026-08-08, loan 16 EMI 11).
+    EMI.find({ loanModel: "Loan" }).select("loanId emiNumber paymentHistory overdue updatedBy").lean(),
     WeeklyLoan.find({}).select("loanNumber customerName").lean(),
-    EMI.find({ loanModel: "WeeklyLoan" }).select("loanId emiNumber paymentHistory overdue").lean(),
+    EMI.find({ loanModel: "WeeklyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy").lean(),
     DailyLoan.find({}).select("loanNumber customerName").lean(),
-    EMI.find({ loanModel: "DailyLoan" }).select("loanId emiNumber paymentHistory overdue").lean(),
+    EMI.find({ loanModel: "DailyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy").lean(),
     InterestLoan.find({}).select("loanNumber customerName principalPayments").lean(),
-    InterestEMI.find({}).select("interestLoanId emiNumber paymentHistory overdue").lean(),
+    InterestEMI.find({}).select("interestLoanId emiNumber paymentHistory overdue updatedBy").lean(),
     User.find({}).select("name").lean(),
   ]);
 
