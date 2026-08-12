@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import InterestLoanForm from "@/components/InterestLoanForm";
 import LoanROICard from "@/components/LoanROICard";
+import CustomerLocationPanel from "@/components/CustomerLocationPanel";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
 import { useUI } from "@/context/UIContext";
@@ -163,6 +164,16 @@ const EditInterestLoanPage = () => {
                     onRefresh={fetchLoan}
                     onCancel={() => router.push(returnTo)}
                   />
+
+                  <div className="mt-6">
+                    <CustomerLocationPanel
+                      lat={loan?.lastLocationLat}
+                      lng={loan?.lastLocationLng}
+                      lastLocationAt={loan?.lastLocationAt}
+                      loanModel="InterestLoan"
+                      loanId={id}
+                    />
+                  </div>
 
                   <LoanROICard fetchFn={interestLoanService.getLoanROI} loanId={id} />
                 </>

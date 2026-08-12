@@ -11,6 +11,7 @@ const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
 const { addDays } = require("date-fns");
+const { generateLocationToken } = require("../utils/customerLocation");
 
 // Create Weekly Loan
 exports.createWeeklyLoan = asyncHandler(async (req, res, next) => {
@@ -97,6 +98,7 @@ exports.createWeeklyLoan = asyncHandler(async (req, res, next) => {
   const weeklyLoan = await WeeklyLoan.create({
     loanNumber,
     customerName,
+    locationToken: generateLocationToken(),
     mobileNumbers,
     disbursementAmount: amount,
     startDate: disburseDate,

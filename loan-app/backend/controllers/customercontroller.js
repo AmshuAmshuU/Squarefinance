@@ -9,6 +9,7 @@ const { parseDateInLocalFormat, normalizeToMidnight } = require('../utils/dateUt
 const sendResponse = require("../utils/response");
 const { notifyAdmins } = require("./notificationController");
 const { syncEmiPayments } = require("../utils/syncEmiPayments");
+const { generateLocationToken } = require("../utils/customerLocation");
 
 const calculateEMI = (principal, roi, tenureMonths) => {
   const p = parseFloat(principal);
@@ -78,6 +79,7 @@ const createCustomerLoan = asyncHandler(async (req, res, next) => {
   const loan = await Loan.create({
     loanNumber,
     customerName,
+    locationToken: generateLocationToken(),
     mobileNumbers,
     alternateMobile,
     address,

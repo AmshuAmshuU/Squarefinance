@@ -5,6 +5,10 @@ const formatLoanResponse = (loanDoc) => {
 
   return {
     _id: loan._id,
+    locationToken: loan.locationToken,
+    lastLocationLat: loan.lastLocationLat,
+    lastLocationLng: loan.lastLocationLng,
+    lastLocationAt: loan.lastLocationAt,
     customerDetails: {
       customerName: loan.customerName,
       address: loan.address,

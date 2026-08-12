@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import InterestLoanDetails from "@/components/InterestLoanDetails";
 import LoanROICard from "@/components/LoanROICard";
+import CustomerLocationPanel from "@/components/CustomerLocationPanel";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
 import { useUI } from "@/context/UIContext";
@@ -85,6 +86,16 @@ const ViewInterestLoanPage = () => {
                     </button>
                   </div>
                   <InterestLoanDetails loan={loan} emis={emis} onRefresh={fetchLoanData} />
+
+                  <div className="mt-6">
+                    <CustomerLocationPanel
+                      lat={loan?.lastLocationLat}
+                      lng={loan?.lastLocationLng}
+                      lastLocationAt={loan?.lastLocationAt}
+                      loanModel="InterestLoan"
+                      loanId={id}
+                    />
+                  </div>
 
                   <LoanROICard fetchFn={interestLoanService.getLoanROI} loanId={id} />
                 </>

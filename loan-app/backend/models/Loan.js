@@ -288,6 +288,24 @@ const loanSchema = new mongoose.Schema(
         type: String,
       },
     },
+    // Permanent per-loan link a customer taps to share their current
+    // location (WhatsApp signup/reminder messages) - see
+    // utils/customerLocation.js. locationToken never changes once set;
+    // lastLocation* is overwritten on every tap, no history kept.
+    locationToken: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    lastLocationLat: {
+      type: Number,
+    },
+    lastLocationLng: {
+      type: Number,
+    },
+    lastLocationAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

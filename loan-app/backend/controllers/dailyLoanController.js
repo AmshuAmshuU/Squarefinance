@@ -10,6 +10,7 @@ const SeizedVehicle = require("../models/SeizedVehicle");
 const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
+const { generateLocationToken } = require("../utils/customerLocation");
 
 // Create Daily Loan
 exports.createDailyLoan = asyncHandler(async (req, res, next) => {
@@ -79,6 +80,7 @@ exports.createDailyLoan = asyncHandler(async (req, res, next) => {
   const dailyLoan = await DailyLoan.create({
     loanNumber,
     customerName,
+    locationToken: generateLocationToken(),
     mobileNumbers,
     disbursementAmount: amount,
     startDate: disburseDate,

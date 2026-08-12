@@ -13,6 +13,7 @@ import {
 import { getFollowupHistory } from "../../../../services/loan.service";
 import FollowupHistory from "../../../../components/FollowupHistory";
 import LoanROICard from "../../../../components/LoanROICard";
+import CustomerLocationPanel from "../../../../components/CustomerLocationPanel";
 import { getWeeklyLoanROI } from "../../../../services/weeklyLoan.service";
 import { useToast } from "../../../../context/ToastContext";
 import { format } from "date-fns";
@@ -135,6 +136,16 @@ const ViewWeeklyLoanPage = ({ params: paramsPromise }) => {
                   </div>
 
                   <FollowupHistory history={history} loading={historyLoading} />
+
+                  <div className="mt-6">
+                    <CustomerLocationPanel
+                      lat={loanData?.lastLocationLat}
+                      lng={loanData?.lastLocationLng}
+                      lastLocationAt={loanData?.lastLocationAt}
+                      loanModel="WeeklyLoan"
+                      loanId={params.id}
+                    />
+                  </div>
 
                   <LoanROICard fetchFn={getWeeklyLoanROI} loanId={params.id} />
                 </>

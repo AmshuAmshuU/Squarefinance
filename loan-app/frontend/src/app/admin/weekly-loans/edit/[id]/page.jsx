@@ -7,6 +7,7 @@ import AuthGuard from "../../../../../components/AuthGuard";
 import WeeklyLoanForm from "../../../../../components/WeeklyLoanForm";
 import EMITable from "../../../../../components/EMITable";
 import LoanROICard from "../../../../../components/LoanROICard";
+import CustomerLocationPanel from "../../../../../components/CustomerLocationPanel";
 import { getWeeklyLoanROI } from "../../../../../services/weeklyLoan.service";
 import {
   getWeeklyLoanById,
@@ -192,6 +193,16 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
                       emis={emis}
                       isEditMode={true}
                       onUpdateSuccess={refreshEMIs}
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <CustomerLocationPanel
+                      lat={loanData?.lastLocationLat}
+                      lng={loanData?.lastLocationLng}
+                      lastLocationAt={loanData?.lastLocationAt}
+                      loanModel="WeeklyLoan"
+                      loanId={params.id}
                     />
                   </div>
 

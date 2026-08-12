@@ -20,6 +20,7 @@ const interestLoanRoutes = require("./routes/interestLoanRoutes");
 const approvalRoutes = require("./routes/approvalRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const locationRoutes = require("./routes/locationRoutes");
 const { checkLoanNumberUniqueness } = require("./controllers/loanController");
 const compression = require("compression");
 
@@ -167,6 +168,7 @@ app.use("/api/interest-loans", interestLoanRoutes);
 app.use("/api/approvals", approvalRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/location", locationRoutes);
 
 // Error Middleware
 app.use(errorMiddleware);

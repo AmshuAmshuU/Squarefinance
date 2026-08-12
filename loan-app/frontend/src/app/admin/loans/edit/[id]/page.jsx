@@ -7,6 +7,7 @@ import Sidebar from "../../../../../components/Sidebar";
 import LoanForm from "../../../../../components/LoanForm";
 import EMITable from "../../../../../components/EMITable";
 import LoanROICard from "../../../../../components/LoanROICard";
+import CustomerLocationPanel from "../../../../../components/CustomerLocationPanel";
 import { getLoanROI } from "../../../../../services/loan.service";
 import { useToast } from "../../../../../context/ToastContext";
 import {
@@ -405,6 +406,16 @@ const EditLoanPage = () => {
                       }
                       isEditMode={true}
                       onUpdateSuccess={handleEMIUpdate}
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <CustomerLocationPanel
+                      lat={loan?.lastLocationLat}
+                      lng={loan?.lastLocationLng}
+                      lastLocationAt={loan?.lastLocationAt}
+                      loanModel="Loan"
+                      loanId={id}
                     />
                   </div>
 

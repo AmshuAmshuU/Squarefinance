@@ -13,6 +13,7 @@ const { addMonths } = require("date-fns");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
 const { formatLoanResponse } = require("../utils/loanFormatter");
+const { generateLocationToken } = require("../utils/customerLocation");
 const { notifyAdmins } = require("./notificationController");
 
 const extractId = (val) => {
@@ -89,6 +90,7 @@ const createLoan = asyncHandler(async (req, res, next) => {
   const calculatedTotalInterest = Math.ceil(p * (r / 100) * t);
 
   const loan = await Loan.create({
+    locationToken: generateLocationToken(),
     // customerDetails
     customerName: customerDetails.customerName,
     address: customerDetails.address,

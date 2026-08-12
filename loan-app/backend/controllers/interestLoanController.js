@@ -12,6 +12,7 @@ const {
   normalizeToMidnight,
 } = require("../utils/dateUtils");
 const { syncEmiPayments } = require("../utils/syncEmiPayments");
+const { generateLocationToken } = require("../utils/customerLocation");
 
 // Helper to recalculate pending EMIs when principal changes
 const recalculatePendingEMIs = async (interestLoanId) => {
@@ -124,6 +125,7 @@ exports.createInterestLoan = asyncHandler(async (req, res, next) => {
   const interestLoan = await InterestLoan.create({
     loanNumber,
     customerName,
+    locationToken: generateLocationToken(),
     address,
     ownRent,
     mobileNumbers,

@@ -15,6 +15,7 @@ import { getEMIsByLoanId } from "../../../../services/customer";
 import { flattenLoan } from "../../../../utils/loanUtils";
 import FollowupHistory from "../../../../components/FollowupHistory";
 import LoanROICard from "../../../../components/LoanROICard";
+import CustomerLocationPanel from "../../../../components/CustomerLocationPanel";
 import { getLoanROI } from "../../../../services/loan.service";
 import LoanStatusBadge from "../../../../components/LoanStatusBadge";
 import { useUI } from "../../../../context/UIContext";
@@ -342,6 +343,16 @@ const ViewLoanPage = () => {
                   </div>
 
                   <FollowupHistory history={history} loading={historyLoading} />
+
+                  <div className="mt-6">
+                    <CustomerLocationPanel
+                      lat={loan?.lastLocationLat}
+                      lng={loan?.lastLocationLng}
+                      lastLocationAt={loan?.lastLocationAt}
+                      loanModel="Loan"
+                      loanId={id}
+                    />
+                  </div>
 
                   <LoanROICard fetchFn={getLoanROI} loanId={id} />
                 </>

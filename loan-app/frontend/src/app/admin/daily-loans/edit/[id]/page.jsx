@@ -7,6 +7,7 @@ import AuthGuard from "../../../../../components/AuthGuard";
 import DailyLoanForm from "../../../../../components/DailyLoanForm";
 import EMITable from "../../../../../components/EMITable";
 import LoanROICard from "../../../../../components/LoanROICard";
+import CustomerLocationPanel from "../../../../../components/CustomerLocationPanel";
 import { getDailyLoanROI } from "../../../../../services/dailyLoan.service";
 import {
   getDailyLoanById,
@@ -184,6 +185,16 @@ const EditDailyLoanPage = () => {
                       emis={emis}
                       isEditMode={true}
                       onUpdateSuccess={fetchData}
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <CustomerLocationPanel
+                      lat={loanData?.lastLocationLat}
+                      lng={loanData?.lastLocationLng}
+                      lastLocationAt={loanData?.lastLocationAt}
+                      loanModel="DailyLoan"
+                      loanId={id}
                     />
                   </div>
 
