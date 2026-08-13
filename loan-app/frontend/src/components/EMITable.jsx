@@ -342,6 +342,12 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
         .emi-table-dark-mode .bg-red-100 {
           background-color: rgba(239, 68, 68, 0.15) !important;
         }
+        .emi-table-dark-mode .bg-emerald-100\/80 {
+          background-color: rgba(16, 185, 129, 0.12) !important;
+        }
+        .emi-table-dark-mode .hover\:bg-emerald-200\/80:hover {
+          background-color: rgba(16, 185, 129, 0.18) !important;
+        }
         .emi-table-dark-mode .text-slate-900 {
           color: #f1f5f9 !important;
         }
@@ -483,7 +489,9 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
                 className={`cursor-pointer transition-colors group ${
                   selectedRowId === emi._id
                     ? "bg-blue-50/80"
-                    : "hover:bg-slate-50/50"
+                    : emi.status === "Paid"
+                      ? "bg-emerald-100/80 hover:bg-emerald-200/80"
+                      : "hover:bg-slate-50/50"
                 }`}
               >
                 <td className="px-6 py-4 text-xs font-bold text-slate-900">
