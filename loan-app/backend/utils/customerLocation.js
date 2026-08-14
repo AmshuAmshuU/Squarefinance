@@ -48,11 +48,15 @@ async function updateLocationByToken(token, lat, lng) {
 }
 
 // The customer-facing link must always point at the real live site, never
-// whatever origin the staff member happened to be using to click "Send" -
-// FRONTEND_URL is a comma-separated CORS allowlist (can include
-// localhost for local admin testing), so pick the first non-localhost
-// entry rather than reusing it as-is.
+// whatever origin the staff member happened to be using to click "Send".
+// Deliberately a dedicated env var rather than guessing from FRONTEND_URL
+// (a comma-separated CORS allowlist that can also list old preview/dev
+// domains, e.g. loanapp-dev.vercel.app) - picking "the first non-localhost
+// entry" from that list picked the wrong one in practice (found 2026-08-14).
 function getPublicAppUrl() {
+  if (process.env.PUBLIC_APP_URL) {
+    return process.env.PUBLIC_APP_URL.trim().replace(/\/$/, "");
+  }
   const origins = (process.env.FRONTEND_URL || "")
     .split(",")
     .map((o) => o.trim().replace(/\/$/, ""))
