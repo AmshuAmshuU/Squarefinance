@@ -12,7 +12,7 @@ const {
   getPublicAppUrl,
   MODELS,
 } = require("../utils/customerLocation");
-const { sendWhatsAppMessage } = require("../utils/whatsapp");
+const { sendLocationLinkMessage } = require("../utils/whatsapp");
 
 const getLoanByLocationToken = asyncHandler(async (req, res, next) => {
   const result = await findLoanByLocationToken(req.params.token);
@@ -65,9 +65,8 @@ const sendLocationLink = asyncHandler(async (req, res, next) => {
   }
 
   const link = `${getPublicAppUrl()}/loan-update/${loan.locationToken}`;
-  const message = `Your Square finance loan is pending. Please click the following link to check your loan status: ${link}`;
 
-  await sendWhatsAppMessage(phone, message);
+  await sendLocationLinkMessage(phone, link);
 
   sendResponse(res, 200, "success", "Link sent to customer", null, null);
 });

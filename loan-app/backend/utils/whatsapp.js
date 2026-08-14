@@ -1,9 +1,14 @@
-// Sends a WhatsApp message via Meta's WhatsApp Cloud API. Reads
-// WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN from env - not set as
-// of 2026-08-13, waiting on Karthik's Meta Business account confirmation.
-// Until those are added to backend/.env (and Render's env for production),
-// this throws a clear, specific error rather than failing silently.
-const sendWhatsAppMessage = async (toPhoneNumber, message) => {
+// Sends the "loan_update" WhatsApp message template via Meta's WhatsApp
+// Cloud API. Reads WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN from
+// env (set on Render 2026-08-14). Business-initiated messages (a cold
+// message to a customer who hasn't messaged first) can ONLY be sent as an
+// approved template, not freeform text - Meta accepts a freeform "text"
+// send with a 200 OK but silently never delivers it, which is why the
+// first version of this function looked like it worked but nothing ever
+// arrived. Template body (approved, do not edit without resubmitting for
+// review): "Your Square finance loan is pending. Please click the
+// following link to check your loan status: {{1}}\n\n- Square Finance"
+const sendLocationLinkMessage = async (toPhoneNumber, link) => {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
@@ -27,8 +32,17 @@ const sendWhatsAppMessage = async (toPhoneNumber, message) => {
     body: JSON.stringify({
       messaging_product: "whatsapp",
       to,
-      type: "text",
-      text: { body: message },
+      type: "template",
+      template: {
+        name: "loan_update",
+        language: { code: "en" },
+        components: [
+          {
+            type: "body",
+            parameters: [{ type: "text", text: link }],
+          },
+        ],
+      },
     }),
   });
 
@@ -39,4 +53,4 @@ const sendWhatsAppMessage = async (toPhoneNumber, message) => {
   return data;
 };
 
-module.exports = { sendWhatsAppMessage };
+module.exports = { sendLocationLinkMessage };
