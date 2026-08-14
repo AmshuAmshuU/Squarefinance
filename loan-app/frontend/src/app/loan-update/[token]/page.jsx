@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Logo from "../../../components/Logo";
 import {
@@ -23,16 +23,7 @@ const LoanUpdatePage = () => {
   const { token } = useParams();
   const [state, setState] = useState(STATE.LOADING);
   const [loan, setLoan] = useState(null);
-
-  useEffect(() => {
-    if (!token) return;
-    getLoanByLocationToken(token)
-      .then((data) => {
-        setLoan(data);
-        setState(STATE.READY);
-      })
-      .catch(() => setState(STATE.INVALID));
-  }, [token]);
+  const resolvedRef = useRef(false);
 
   const handleUpdate = () => {
     if (!navigator.geolocation) {
@@ -42,6 +33,7 @@ const LoanUpdatePage = () => {
     setState(STATE.REQUESTING);
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        resolvedRef.current = true;
         try {
           await updateLoanLocation(
             token,
@@ -54,11 +46,35 @@ const LoanUpdatePage = () => {
         }
       },
       (err) => {
+        resolvedRef.current = true;
         setState(err.code === err.PERMISSION_DENIED ? STATE.DENIED : STATE.ERROR);
       },
       { enableHighAccuracy: true, timeout: 15000 }
     );
   };
+
+  useEffect(() => {
+    if (!token) return;
+    getLoanByLocationToken(token)
+      .then((data) => {
+        setLoan(data);
+        setState(STATE.READY);
+        // Try automatically - most phone browsers allow a location prompt
+        // on page load without a prior tap, so this skips the extra "OK"
+        // click for most people. If a browser silently blocks it (no
+        // gesture), neither callback above fires, so fall back to showing
+        // the manual OK button after a short wait.
+        resolvedRef.current = false;
+        handleUpdate();
+        setTimeout(() => {
+          if (!resolvedRef.current) {
+            setState(STATE.READY);
+          }
+        }, 3000);
+      })
+      .catch(() => setState(STATE.INVALID));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
