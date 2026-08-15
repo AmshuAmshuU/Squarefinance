@@ -929,9 +929,26 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
   if (req.body.nextFollowUpDate !== undefined) {
     loan.nextFollowUpDate = req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null;
   }
-  const oldPrincipalPaymentsCount = (loan.principalPayments || []).length;
+  // Preserve every existing principalPayments entry exactly as stored
+  // (including its original addedBy) - only whitelist-copy genuinely NEW
+  // entries the "Add Payment" modal appended, stamping the current user
+  // as addedBy on those. The form round-trips the whole array on every
+  // submit and never carries addedBy client-side, so blindly taking
+  // req.body.principalPayments wiped attribution on every edit, showing
+  // as "System" in Collections (found 2026-08-14).
+  const existingPrincipalPayments = loan.principalPayments || [];
+  const oldPrincipalPaymentsCount = existingPrincipalPayments.length;
   if (req.body.disbursement !== undefined) loan.disbursement = req.body.disbursement;
-  if (req.body.principalPayments !== undefined) loan.principalPayments = req.body.principalPayments;
+  if (req.body.principalPayments !== undefined) {
+    const newEntries = req.body.principalPayments.slice(oldPrincipalPaymentsCount).map((p) => ({
+      amount: p.amount,
+      paymentMode: p.paymentMode || "Online",
+      paymentDate: p.paymentDate || new Date(),
+      remarks: p.remarks,
+      addedBy: req.user._id,
+    }));
+    loan.principalPayments = [...existingPrincipalPayments, ...newEntries];
+  }
 
   if (req.body.disbursement !== undefined || req.body.principalPayments !== undefined) {
     // Only recompute initialPrincipalAmount from disbursement when the

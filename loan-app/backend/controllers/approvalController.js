@@ -594,9 +594,24 @@ const processApproval = asyncHandler(async (req, res, next) => {
             if (newValues.nextFollowUpDate !== undefined) {
               loan.nextFollowUpDate = newValues.nextFollowUpDate ? new Date(newValues.nextFollowUpDate) : null;
             }
-            const oldPrincipalPaymentsCount = (loan.principalPayments || []).length;
+            // Same attribution fix as interestLoanController.updateInterestLoan's
+            // direct-edit path: preserve existing entries (and their original
+            // addedBy) untouched, only stamp NEW entries - here with
+            // approval.requestedBy (the employee who submitted the edit),
+            // matching the PRINCIPAL_PAYMENT branch below.
+            const existingPrincipalPayments = loan.principalPayments || [];
+            const oldPrincipalPaymentsCount = existingPrincipalPayments.length;
             if (newValues.disbursement !== undefined) loan.disbursement = newValues.disbursement;
-            if (newValues.principalPayments !== undefined) loan.principalPayments = newValues.principalPayments;
+            if (newValues.principalPayments !== undefined) {
+              const newEntries = newValues.principalPayments.slice(oldPrincipalPaymentsCount).map((p) => ({
+                amount: p.amount,
+                paymentMode: p.paymentMode || "Online",
+                paymentDate: p.paymentDate || new Date(),
+                remarks: p.remarks,
+                addedBy: approval.requestedBy,
+              }));
+              loan.principalPayments = [...existingPrincipalPayments, ...newEntries];
+            }
 
             if (newValues.disbursement !== undefined || newValues.principalPayments !== undefined) {
               const disbursementArr = Array.isArray(loan.disbursement) ? loan.disbursement : [];
