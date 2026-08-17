@@ -156,6 +156,7 @@ const CollectionsPage = () => {
     if (model === "loan" || model === "monthly") return `/admin/loans/edit/${id}`;
     if (model === "weeklyloan" || model === "weekly") return `/admin/weekly-loans/edit/${id}`;
     if (model === "dailyloan" || model === "daily") return `/admin/daily-loans/edit/${id}`;
+    if (model === "interestloan" || model === "interest") return `/admin/interest-loan/edit/${id}`;
     return "#";
   };
 
