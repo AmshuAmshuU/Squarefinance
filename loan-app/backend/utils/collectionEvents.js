@@ -52,20 +52,25 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
     interestLoans, interestEmis,
     users,
   ] = await Promise.all([
-    Loan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode soldDetails").lean(),
+    // updatedAt is required for ordering (see sortAt below) even though
+    // it's not shown anywhere - foreclosure/soldDetails have no per-event
+    // timestamp of their own, so the loan document's own last-saved time
+    // is the best available stand-in for "when this was actually entered".
+    Loan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode soldDetails updatedAt").lean(),
     // updatedBy is required here even though paymentHistory entries carry
     // their own addedBy - overdue entries have no per-entry attribution
     // field, so addEmiEvents() below falls back to the EMI's own updatedBy
     // for Overdue-type events. Omitting it here silently made every
     // Overdue row's collector show "System" regardless of who actually
-    // collected it (found 2026-08-08, loan 16 EMI 11).
-    EMI.find({ loanModel: "Loan" }).select("loanId emiNumber paymentHistory overdue updatedBy").lean(),
+    // collected it (found 2026-08-08, loan 16 EMI 11). updatedAt is the
+    // same story as above, for Overdue-type events' ordering.
+    EMI.find({ loanModel: "Loan" }).select("loanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
     WeeklyLoan.find({}).select("loanNumber customerName").lean(),
-    EMI.find({ loanModel: "WeeklyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy").lean(),
+    EMI.find({ loanModel: "WeeklyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
     DailyLoan.find({}).select("loanNumber customerName").lean(),
-    EMI.find({ loanModel: "DailyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy").lean(),
+    EMI.find({ loanModel: "DailyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
     InterestLoan.find({}).select("loanNumber customerName principalPayments").lean(),
-    InterestEMI.find({}).select("interestLoanId emiNumber paymentHistory overdue updatedBy").lean(),
+    InterestEMI.find({}).select("interestLoanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
     User.find({}).select("name").lean(),
   ]);
 
@@ -104,6 +109,11 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
           paymentType,
           paymentMode: ph.mode || "",
           date: ph.date,
+          // addedAt is the moment this entry was actually saved (set once,
+          // never touched again), so it orders correctly to the second -
+          // ph.date is just the date staff picked for the payment, and
+          // says nothing about when it was entered.
+          sortAt: ph.addedAt || ph.date,
           updatedBy: nameOf(ph.addedBy),
         });
       });
@@ -124,6 +134,11 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
           // overdue entries aren't individually attributed (no addedBy on
           // this sub-schema) - fall back to whoever last touched the EMI.
           updatedBy: nameOf(emi.updatedBy),
+          // Same reasoning as addedAt above, but overdue entries have no
+          // per-entry timestamp field at all - the EMI document's own
+          // updatedAt (set on every save) is the closest available signal
+          // for when this specific entry was actually recorded.
+          sortAt: emi.updatedAt || ov.date,
         });
       });
     }
@@ -137,7 +152,8 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
         loanId: loan._id, loanModel: "Loan", loanNumber: loan.loanNumber, customerName: loan.customerName,
         emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: loan.foreclosureAmount,
         paymentType: "Foreclosure", paymentMode: loan.paymentMode || "",
-        date: loan.foreclosureDate, updatedBy: nameOf(loan.foreclosedBy),
+        date: loan.foreclosureDate, sortAt: loan.updatedAt || loan.foreclosureDate,
+        updatedBy: nameOf(loan.foreclosedBy),
       });
     }
     if (loan.soldDetails?.totalAmount && loan.soldDetails?.soldDate) {
@@ -145,7 +161,8 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
         loanId: loan._id, loanModel: "Loan", loanNumber: loan.loanNumber, customerName: loan.customerName,
         emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: loan.soldDetails.totalAmount,
         paymentType: "Vehicle Sale", paymentMode: loan.soldDetails.paymentMode || "",
-        date: loan.soldDetails.soldDate, updatedBy: nameOf(loan.soldDetails.soldBy),
+        date: loan.soldDetails.soldDate, sortAt: loan.updatedAt || loan.soldDetails.soldDate,
+        updatedBy: nameOf(loan.soldDetails.soldBy),
       });
     }
   }
@@ -171,7 +188,8 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
         loanId: loan._id, loanModel: "InterestLoan", loanNumber: loan.loanNumber, customerName: loan.customerName,
         emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: p.amount,
         paymentType: "Interest Loan Principal", paymentMode: p.paymentMode || "",
-        date: p.paymentDate, updatedBy: nameOf(p.addedBy),
+        date: p.paymentDate, sortAt: p.addedAt || p.paymentDate,
+        updatedBy: nameOf(p.addedBy),
       });
     });
   }
@@ -189,7 +207,12 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
     });
   }
 
-  filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+  // Latest actual entry time first, down to the second - not payment date,
+  // not approval time. Ties (same second, or both missing a precise
+  // timestamp) keep whatever order they came out of the database in:
+  // Array.prototype.sort is stable in Node, so this is deterministic
+  // per-request without needing an explicit tiebreaker.
+  filtered.sort((a, b) => new Date(b.sortAt || b.date) - new Date(a.sortAt || a.date));
   return filtered;
 }
 
