@@ -4,6 +4,7 @@ import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import FollowupAccountabilityCard from "../../../components/analytics/FollowupAccountabilityCard";
 import RtoWorkAccountabilityCard from "../../../components/analytics/RtoWorkAccountabilityCard";
+import TodayCollectionCard from "../../../components/analytics/TodayCollectionCard";
 import { useUI } from "../../../context/UIContext";
 
 const DashboardPage = () => {
@@ -83,6 +84,11 @@ const DashboardPage = () => {
                   Monitoring internal operations. Your session is secured with
                   enterprise-grade encryption.
                 </p>
+              </div>
+
+              {/* Today's Collections */}
+              <div className="mb-10">
+                <TodayCollectionCard />
               </div>
 
               {/* Followup Accountability */}

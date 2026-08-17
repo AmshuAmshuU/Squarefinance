@@ -101,6 +101,12 @@ export const getRtoWorkDashboardSummary = async () => {
   });
 };
 
+export const getTodayCollectionSummary = async () => {
+  return await apiHandler("/api/loans/today-collection-summary", {
+    method: "GET",
+  });
+};
+
 export const getPendingEmiDetails = async (id) => {
   return await apiHandler(`/api/loans/pending-details/${id}`, {
     method: "GET",

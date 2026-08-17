@@ -15,6 +15,7 @@ const sendResponse = require("../utils/response");
 const { formatLoanResponse } = require("../utils/loanFormatter");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { notifyAdmins } = require("./notificationController");
+const { normalizeToMidnight } = require("../utils/dateUtils");
 
 const extractId = (val) => {
   if (!val) return null;
@@ -2069,6 +2070,53 @@ const getRtoWorkDashboardSummary = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Dashboard card: for each loan type, what's due today (dueDate = today)
+// vs how much of THOSE SPECIFIC EMIs has actually been paid. Deliberately
+// not "collected today" in calendar terms - that's a different number,
+// already covered by the Collections tab. Always reflects right now, same
+// as the Followup/RTO cards it sits beside - no caching, no snapshot.
+const getTodayCollectionSummary = asyncHandler(async (req, res, next) => {
+  const InterestEMI = require("../models/InterestEMI");
+
+  const startOfToday = normalizeToMidnight(new Date());
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+  const todayRange = { $gte: startOfToday, $lt: startOfTomorrow };
+
+  const sumDueToday = async (Model, match, amountField) => {
+    const result = await Model.aggregate([
+      { $match: { dueDate: todayRange, ...match } },
+      {
+        $group: {
+          _id: null,
+          expected: { $sum: `$${amountField}` },
+          collected: { $sum: { $ifNull: ["$amountPaid", 0] } },
+        },
+      },
+    ]);
+    const expected = result[0]?.expected || 0;
+    const collected = result[0]?.collected || 0;
+    return { expected, collected, short: Math.max(0, expected - collected) };
+  };
+
+  const [vehicle, weekly, daily, interest] = await Promise.all([
+    sumDueToday(EMI, { loanModel: "Loan" }, "emiAmount"),
+    sumDueToday(EMI, { loanModel: "WeeklyLoan" }, "emiAmount"),
+    sumDueToday(EMI, { loanModel: "DailyLoan" }, "emiAmount"),
+    sumDueToday(InterestEMI, {}, "interestAmount"),
+  ]);
+
+  const total = {
+    expected: vehicle.expected + weekly.expected + daily.expected + interest.expected,
+    collected: vehicle.collected + weekly.collected + daily.collected + interest.collected,
+    short: vehicle.short + weekly.short + daily.short + interest.short,
+  };
+
+  sendResponse(res, 200, "success", "Today's collection summary fetched successfully", null, {
+    vehicle, weekly, daily, interest, total,
+  });
+});
+
 const updateFollowup = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { loanModel, clientResponse, nextFollowUpDate } = req.body;
@@ -2808,6 +2856,7 @@ module.exports = {
   getFollowupLoans,
   getFollowupDashboardSummary,
   getRtoWorkDashboardSummary,
+  getTodayCollectionSummary,
   getPendingEmiDetails,
   updatePaymentStatus,
   getForeclosureLoans,
