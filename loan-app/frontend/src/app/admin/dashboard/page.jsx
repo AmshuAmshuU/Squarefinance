@@ -86,19 +86,19 @@ const DashboardPage = () => {
                 </p>
               </div>
 
-              {/* Today's Collections */}
-              <div className="mb-10">
-                <TodayCollectionCard />
-              </div>
-
               {/* Followup Accountability */}
               <div className="mb-10">
                 <FollowupAccountabilityCard />
               </div>
 
               {/* RTO Work Accountability */}
-              <div>
+              <div className="mb-10">
                 <RtoWorkAccountabilityCard />
+              </div>
+
+              {/* Today's Collections */}
+              <div>
+                <TodayCollectionCard />
               </div>
             </div>
           </main>
