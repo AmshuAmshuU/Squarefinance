@@ -2088,9 +2088,32 @@ const getTodayCollectionSummary = asyncHandler(async (req, res, next) => {
   const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
   const todayRange = { $gte: startOfToday, $lt: startOfTomorrow };
 
-  const sumDueToday = async (Model, match, amountField) => {
+  // A closed loan (foreclosed, sold, or fully paid off) has nothing left to
+  // "expect" today, even if one of its EMIs still carries a dueDate that
+  // falls today (e.g. foreclosure bulk-closes the remaining schedule without
+  // moving dueDate - see loanController.js forecloseLoan). Exclude every
+  // closed loan's EMIs from both expected and collected, for every type.
+  const getClosedLoanIds = async (Model) => {
+    const closed = await Model.find({ status: "Closed" }, "_id").lean();
+    return closed.map((l) => l._id);
+  };
+
+  const [closedLoanIds, closedWeeklyIds, closedDailyIds, closedInterestIds] = await Promise.all([
+    getClosedLoanIds(Loan),
+    getClosedLoanIds(WeeklyLoan),
+    getClosedLoanIds(DailyLoan),
+    getClosedLoanIds(InterestLoan),
+  ]);
+
+  const sumDueToday = async (Model, match, amountField, excludeLoanIds, loanIdField = "loanId") => {
     const result = await Model.aggregate([
-      { $match: { dueDate: todayRange, ...match } },
+      {
+        $match: {
+          dueDate: todayRange,
+          ...match,
+          [loanIdField]: { $nin: excludeLoanIds },
+        },
+      },
       {
         $group: {
           _id: null,
@@ -2105,10 +2128,10 @@ const getTodayCollectionSummary = asyncHandler(async (req, res, next) => {
   };
 
   const [vehicle, weekly, daily, interest] = await Promise.all([
-    sumDueToday(EMI, { loanModel: "Loan" }, "emiAmount"),
-    sumDueToday(EMI, { loanModel: "WeeklyLoan" }, "emiAmount"),
-    sumDueToday(EMI, { loanModel: "DailyLoan" }, "emiAmount"),
-    sumDueToday(InterestEMI, {}, "interestAmount"),
+    sumDueToday(EMI, { loanModel: "Loan" }, "emiAmount", closedLoanIds),
+    sumDueToday(EMI, { loanModel: "WeeklyLoan" }, "emiAmount", closedWeeklyIds),
+    sumDueToday(EMI, { loanModel: "DailyLoan" }, "emiAmount", closedDailyIds),
+    sumDueToday(InterestEMI, {}, "interestAmount", closedInterestIds, "interestLoanId"),
   ]);
 
   const total = {
