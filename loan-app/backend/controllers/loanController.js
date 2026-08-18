@@ -15,7 +15,6 @@ const sendResponse = require("../utils/response");
 const { formatLoanResponse } = require("../utils/loanFormatter");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { notifyAdmins } = require("./notificationController");
-const { normalizeToMidnight } = require("../utils/dateUtils");
 
 const extractId = (val) => {
   if (!val) return null;
@@ -2078,9 +2077,15 @@ const getRtoWorkDashboardSummary = asyncHandler(async (req, res, next) => {
 const getTodayCollectionSummary = asyncHandler(async (req, res, next) => {
   const InterestEMI = require("../models/InterestEMI");
 
-  const startOfToday = normalizeToMidnight(new Date());
-  const startOfTomorrow = new Date(startOfToday);
-  startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+  // Anchored explicitly to IST regardless of what timezone the server
+  // process itself runs in - Render defaults to UTC, ~5.5 hours behind
+  // IST, so a plain setHours(0,0,0,0) "midnight" silently used the wrong
+  // day boundary in production even though it looked correct testing
+  // locally on an IST machine (found 2026-08-18). Same +05:30 anchoring
+  // already used for date-range filtering in utils/collectionEvents.js.
+  const istDateStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const startOfToday = new Date(`${istDateStr}T00:00:00+05:30`);
+  const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
   const todayRange = { $gte: startOfToday, $lt: startOfTomorrow };
 
   const sumDueToday = async (Model, match, amountField) => {
