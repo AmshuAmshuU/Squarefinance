@@ -8,6 +8,7 @@ import DailyLoanForm from "../../../../components/DailyLoanForm";
 import { createDailyLoan } from "../../../../services/dailyLoan.service";
 import { useToast } from "../../../../context/ToastContext";
 import { useUI } from "../../../../context/UIContext";
+import { getTodayIST } from "../../../../utils/dateUtils";
 
 const AddDailyLoanPage = () => {
   const router = useRouter();
@@ -21,7 +22,7 @@ const AddDailyLoanPage = () => {
     mobileNumbers: [""],
     guarantorMobileNumbers: [""],
     disbursementAmount: "",
-    startDate: new Date().toISOString().split("T")[0],
+    startDate: getTodayIST(),
     totalEmis: 100,
     paidEmis: 0,
     processingFeeRate: 10,

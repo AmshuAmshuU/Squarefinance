@@ -2,17 +2,17 @@
 import React, { useState } from "react";
 import { TrendingUp, Calendar, Loader2, RefreshCw } from "lucide-react";
 import { getBusinessROI } from "../../services/analytics.service";
+import { getTodayIST } from "../../utils/dateUtils";
 
 const lastDayOfLastMonth = () => {
-  const d = new Date();
-  d.setDate(0); // last day of previous month
-  return d.toISOString().split("T")[0];
+  const [y, m] = getTodayIST().split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 0)).toISOString().split("T")[0]; // day 0 of this IST month = last day of previous month
 };
 const lastDayOfLastYear = () => {
-  const d = new Date();
-  return `${d.getFullYear() - 1}-12-31`;
+  const [y] = getTodayIST().split("-").map(Number);
+  return `${y - 1}-12-31`;
 };
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => getTodayIST();
 
 const intervalOptions = [
   { label: "All Time", value: "all" },

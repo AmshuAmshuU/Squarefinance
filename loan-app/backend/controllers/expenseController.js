@@ -5,6 +5,7 @@ const WeeklyLoan = require("../models/WeeklyLoan");
 const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
+const { normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
 
 const createExpense = asyncHandler(async (req, res, next) => {
   const {
@@ -77,14 +78,10 @@ const getAllExpenses = asyncHandler(async (req, res, next) => {
   if (startDate || endDate) {
     match.date = {};
     if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      match.date.$gte = start;
+      match.date.$gte = normalizeToMidnight(new Date(startDate));
     }
     if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      match.date.$lte = end;
+      match.date.$lte = normalizeToEndOfDay(new Date(endDate));
     }
   }
 

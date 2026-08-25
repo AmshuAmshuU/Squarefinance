@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { IndianRupee, TrendingUp, Filter, Calendar, Loader2 } from "lucide-react";
 import { getProfitStats } from "../../services/analytics.service";
+import { getTodayIST, getISTDateNDaysAgo } from "../../utils/dateUtils";
 
 const TYPE_ROWS = [
   { label: "Vehicle", key: "monthly", color: "bg-purple-400" },
@@ -76,10 +77,8 @@ const CumulativeTooltip = ({ active, payload, label }) => {
 const ProfitOverview = () => {
   const [interval, setIntervalValue] = useState("all");
   const [customDates, setCustomDates] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 30))
-      .toISOString()
-      .split("T")[0],
-    end: new Date().toISOString().split("T")[0],
+    start: getISTDateNDaysAgo(30),
+    end: getTodayIST(),
   });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);

@@ -11,6 +11,7 @@ import {
 } from "../../../services/loan.service";
 import { useToast } from "../../../context/ToastContext";
 import { useUI } from "../../../context/UIContext";
+import { getTodayIST } from "../../../utils/dateUtils";
 
 const ForeclosurePage = () => {
   const router = useRouter();
@@ -36,7 +37,7 @@ const ForeclosurePage = () => {
 
   const [paymentData, setPaymentData] = useState({
     paymentBreakdown: [{ mode: "CASH", amount: 0, chequeNumber: "" }],
-    paymentDate: new Date().toISOString().split("T")[0],
+    paymentDate: getTodayIST(),
   });
 
   useEffect(() => {
@@ -198,7 +199,7 @@ const ForeclosurePage = () => {
       });
       setPaymentData({
         paymentBreakdown: [{ mode: "CASH", amount: 0 }],
-        paymentDate: new Date().toISOString().split("T")[0],
+        paymentDate: getTodayIST(),
       });
     } catch (err) {
       showToast(err.message || "Failed to foreclose loan", "error");

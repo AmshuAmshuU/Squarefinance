@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { searchLoanInfo, createExpense, updateExpense } from "../services/expenseService";
 import { useToast } from "../context/ToastContext";
+import { getTodayIST } from "../utils/dateUtils";
 
 const AddExpenseModal = ({ isOpen, onClose, onSuccess, editExpense = null }) => {
   const { showToast } = useToast();
@@ -13,7 +14,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, editExpense = null }) => 
     vehicleNumber: "",
     customerName: "",
     particulars: "",
-    date: new Date().toISOString().split("T")[0],
+    date: getTodayIST(),
     amount: "",
     isOfficeExpense: false,
   });
@@ -26,7 +27,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, editExpense = null }) => 
         vehicleNumber: editExpense.vehicleNumber === "-" ? "" : editExpense.vehicleNumber || "",
         customerName: editExpense.customerName || "",
         particulars: editExpense.particulars || "",
-        date: editExpense.date ? editExpense.date.split("T")[0] : new Date().toISOString().split("T")[0],
+        date: editExpense.date ? editExpense.date.split("T")[0] : getTodayIST(),
         amount: editExpense.amount || "",
         isOfficeExpense: editExpense.isOfficeExpense || false,
       });
@@ -36,7 +37,7 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, editExpense = null }) => 
         vehicleNumber: "",
         customerName: "",
         particulars: "",
-        date: new Date().toISOString().split("T")[0],
+        date: getTodayIST(),
         amount: "",
         isOfficeExpense: false,
       });

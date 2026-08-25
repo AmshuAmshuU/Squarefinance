@@ -12,6 +12,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
 const { addDays } = require("date-fns");
 const { generateLocationToken } = require("../utils/customerLocation");
+const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
 
 // Create Weekly Loan
 exports.createWeeklyLoan = asyncHandler(async (req, res, next) => {
@@ -798,11 +799,9 @@ exports.getWeeklyPendingPayments = asyncHandler(async (req, res, next) => {
   if (mobileNumber)
     query.mobileNumbers = { $regex: mobileNumber, $options: "i" };
 
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
+  const now = normalizeToEndOfDay(new Date());
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const todayStart = normalizeToMidnight(new Date());
 
   const result = await WeeklyLoan.aggregate([
     {
@@ -964,18 +963,13 @@ exports.getWeeklyFollowupLoans = asyncHandler(async (req, res, next) => {
     query.mobileNumbers = { $regex: mobileNumber, $options: "i" };
 
   if (startDate && endDate) {
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const start = normalizeToMidnight(new Date(startDate));
+    const end = normalizeToEndOfDay(new Date(endDate));
     query.nextFollowUpDate = { $gte: start, $lte: end };
   } else {
-    const dateToFilter =
-      nextFollowUpDate || new Date().toISOString().split("T")[0];
-    const start = new Date(dateToFilter);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(dateToFilter);
-    end.setHours(23, 59, 59, 999);
+    const dateToFilter = nextFollowUpDate || getTodayIST();
+    const start = normalizeToMidnight(new Date(dateToFilter));
+    const end = normalizeToEndOfDay(new Date(dateToFilter));
     query.nextFollowUpDate = { $gte: start, $lte: end };
   }
 
@@ -1183,8 +1177,7 @@ exports.getWeeklyPendingEmiDetails = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler(`EMI details not found for ID: ${id}`, 404));
   }
 
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
+  const now = normalizeToEndOfDay(new Date());
 
   const emiDetails = await EMI.aggregate([
     {

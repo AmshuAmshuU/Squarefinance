@@ -2,6 +2,7 @@ const Todo = require("../models/Todo");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
 const ErrorHandler = require("../utils/ErrorHandler");
+const { normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
 
 // Get all todos (Admin gets all, Employee gets only assigned to them)
 const getTodos = asyncHandler(async (req, res, next) => {
@@ -26,10 +27,8 @@ const getTodos = asyncHandler(async (req, res, next) => {
   }
   if (priority) query.priority = priority;
   if (dueDate) {
-    const startOfDay = new Date(dueDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(dueDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = normalizeToMidnight(new Date(dueDate));
+    const endOfDay = normalizeToEndOfDay(new Date(dueDate));
     query.dueDate = { $gte: startOfDay, $lte: endOfDay };
   }
 

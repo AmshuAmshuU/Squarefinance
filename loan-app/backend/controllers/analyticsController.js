@@ -11,6 +11,7 @@ const sendResponse = require("../utils/response");
 const InterestLoan = require("../models/InterestLoan");
 const InterestEMI = require("../models/InterestEMI");
 const Payment = require("../models/Payment");
+const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
 
 // Invokes an existing asyncHandler-wrapped route handler internally (no real
 // HTTP request/response) so its exact calculation logic can be reused without
@@ -741,35 +742,40 @@ const getTrendStats = asyncHandler(async (req, res, next) => {
   try {
     const { range = "max", interval = "all", startDate: customStart, endDate: customEnd } = req.query;
 
-    const now = new Date();
-    now.setHours(23, 59, 59, 999);
-    let startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
+    const now = normalizeToEndOfDay(new Date());
+    let startDate = normalizeToMidnight(new Date());
     let endDate = new Date(now);
+
+    // IST calendar Y/M/D of "today" - used below for month/year-relative
+    // offsets. Native setMonth()/setFullYear() read+write date components in
+    // the server process's OWN local timezone (UTC on Render), which can be
+    // a different calendar day than IST for the same instant near month
+    // boundaries, silently producing an off-by-one-month/year result. Doing
+    // the arithmetic on IST's own Y/M/D numbers avoids that.
+    const [istY, istM, istD] = getTodayIST().split("-").map(Number);
 
     let groupFormat = "%Y-%m"; // Default Monthly
 
     // Handle User's specific Filter Logic
     if (interval === "daily") {
-      // "show today only"
-      startDate.setHours(0, 0, 0, 0);
+      // "show today only" - startDate is already IST midnight of today
       groupFormat = "%Y-%m-%d %H:00"; // Hourly view for today
     } else if (interval === "weekly") {
-      // "7 days trends"
-      startDate.setDate(now.getDate() - 7);
+      // "7 days trends" - pure day-count subtraction (no DST in India, so
+      // 7*24h always lands on the same IST wall-clock time 7 days earlier)
+      startDate = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
       groupFormat = "%Y-%m-%d";
     } else if (interval === "monthly") {
       // "past month trend only"
-      startDate.setMonth(now.getMonth() - 1);
+      startDate = normalizeToMidnight(new Date(Date.UTC(istY, istM - 1 - 1, istD)));
       groupFormat = "%Y-%m-%d";
     } else if (interval === "yearly") {
       // "same for year also"
-      startDate.setFullYear(now.getFullYear() - 1);
+      startDate = normalizeToMidnight(new Date(Date.UTC(istY - 1, istM - 1, istD)));
       groupFormat = "%Y-%m";
     } else if (interval === "custom" && customStart && customEnd) {
-      startDate = new Date(customStart);
-      endDate = new Date(customEnd);
-      endDate.setHours(23, 59, 59, 999);
+      startDate = normalizeToMidnight(new Date(customStart));
+      endDate = normalizeToEndOfDay(new Date(customEnd));
       // Decide group format based on duration
       const diffDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
       if (diffDays <= 2) groupFormat = "%Y-%m-%d %H:00";
@@ -868,33 +874,34 @@ const getTrendStats = asyncHandler(async (req, res, next) => {
 // interval semantics used by getTrendStats, extended with 3-month and
 // 6-month options for the profit dashboard's dropdown.
 const getProfitDateRange = (interval, customStart, customEnd) => {
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
-  let startDate = new Date();
-  startDate.setHours(0, 0, 0, 0);
+  const now = normalizeToEndOfDay(new Date());
+  let startDate = normalizeToMidnight(new Date());
   let endDate = new Date(now);
   let groupFormat = "%Y-%m";
 
+  // See the matching comment in getTrendStats above - native
+  // setMonth()/setFullYear() are server-local-timezone-dependent, so
+  // month/year offsets are computed from IST's own Y/M/D instead.
+  const [istY, istM, istD] = getTodayIST().split("-").map(Number);
+
   if (interval === "weekly") {
-    startDate.setDate(now.getDate() - 7);
+    startDate = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
     groupFormat = "%Y-%m-%d";
   } else if (interval === "monthly") {
-    startDate.setDate(now.getDate() - 30);
+    startDate = new Date(startDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     groupFormat = "%Y-%m-%d";
   } else if (interval === "3months") {
-    startDate.setMonth(now.getMonth() - 3);
+    startDate = normalizeToMidnight(new Date(Date.UTC(istY, istM - 1 - 3, istD)));
     groupFormat = "%Y-%m-%d";
   } else if (interval === "6months") {
-    startDate.setMonth(now.getMonth() - 6);
+    startDate = normalizeToMidnight(new Date(Date.UTC(istY, istM - 1 - 6, istD)));
     groupFormat = "%Y-%m";
   } else if (interval === "yearly") {
-    startDate.setFullYear(now.getFullYear() - 1);
+    startDate = normalizeToMidnight(new Date(Date.UTC(istY - 1, istM - 1, istD)));
     groupFormat = "%Y-%m";
   } else if (interval === "custom" && customStart && customEnd) {
-    startDate = new Date(customStart);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(customEnd);
-    endDate.setHours(23, 59, 59, 999);
+    startDate = normalizeToMidnight(new Date(customStart));
+    endDate = normalizeToEndOfDay(new Date(customEnd));
     const diffDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
     groupFormat = diffDays <= 60 ? "%Y-%m-%d" : "%Y-%m";
   } else {

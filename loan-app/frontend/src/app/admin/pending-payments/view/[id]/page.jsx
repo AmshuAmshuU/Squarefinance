@@ -17,6 +17,7 @@ import { updateEMI } from "../../../../../services/customer";
 import { format } from "date-fns";
 import { useToast } from "../../../../../context/ToastContext";
 import { hasPermission } from "../../../../../utils/auth";
+import { getTodayIST } from "../../../../../utils/dateUtils";
 import { useUI } from "../../../../../context/UIContext";
 
 const LoanPendingViewPage = () => {
@@ -96,7 +97,7 @@ const LoanPendingViewPage = () => {
       ...dateGroups,
       {
         id: Date.now(),
-        date: new Date().toISOString().split("T")[0],
+        date: getTodayIST(),
         payments: [{ id: Date.now() + 1, mode: "ONLINE", amount: "", chequeNumber: "" }],
       },
     ]);

@@ -10,6 +10,8 @@ const { addMonths, differenceInCalendarMonths } = require("date-fns");
 const {
   parseDateInLocalFormat,
   normalizeToMidnight,
+  normalizeToEndOfDay,
+  getTodayIST,
 } = require("../utils/dateUtils");
 const { syncEmiPayments } = require("../utils/syncEmiPayments");
 const { generateLocationToken } = require("../utils/customerLocation");
@@ -704,8 +706,7 @@ exports.getInterestPendingPayments = asyncHandler(async (req, res, next) => {
   const { searchQuery, page = 1, limit = 25 } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
+  const now = normalizeToEndOfDay(new Date());
 
   const query = {};
   if (searchQuery && searchQuery !== "undefined" && searchQuery !== "null") {
@@ -1009,13 +1010,13 @@ exports.getInterestFollowupLoans = asyncHandler(async (req, res, next) => {
   if (mobileNumber) query.mobileNumbers = { $regex: mobileNumber, $options: "i" };
 
   if (startDate && endDate) {
-    const start = new Date(startDate); start.setHours(0, 0, 0, 0);
-    const end = new Date(endDate); end.setHours(23, 59, 59, 999);
+    const start = normalizeToMidnight(new Date(startDate));
+    const end = normalizeToEndOfDay(new Date(endDate));
     query.nextFollowUpDate = { $gte: start, $lte: end };
   } else {
-    const dateToFilter = nextFollowUpDate || new Date().toISOString().split("T")[0];
-    const start = new Date(dateToFilter); start.setHours(0, 0, 0, 0);
-    const end = new Date(dateToFilter); end.setHours(23, 59, 59, 999);
+    const dateToFilter = nextFollowUpDate || getTodayIST();
+    const start = normalizeToMidnight(new Date(dateToFilter));
+    const end = normalizeToEndOfDay(new Date(dateToFilter));
     query.nextFollowUpDate = { $gte: start, $lte: end };
   }
 

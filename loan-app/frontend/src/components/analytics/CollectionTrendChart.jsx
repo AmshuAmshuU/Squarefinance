@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { getTrendStats } from "../../services/analytics.service";
 import { Calendar, Filter, Loader2 } from "lucide-react";
+import { getTodayIST, getISTDateNDaysAgo } from "../../utils/dateUtils";
 
 const CollectionTrendChart = ({ initialInterval = "all", isCumulative = false }) => {
   const [data, setData] = useState([]);
@@ -21,8 +22,8 @@ const CollectionTrendChart = ({ initialInterval = "all", isCumulative = false })
   const [error, setError] = useState(null);
   const [interval, setInterval] = useState(initialInterval);
   const [customDates, setCustomDates] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+    start: getISTDateNDaysAgo(30),
+    end: getTodayIST()
   });
 
   const fetchTrendData = async () => {

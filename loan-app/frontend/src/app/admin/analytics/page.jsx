@@ -17,6 +17,7 @@ import {
   Download,
 } from "lucide-react";
 import { getAnalyticsStats, getExportData } from "../../../services/analytics.service";
+import { getTodayIST } from "../../../utils/dateUtils";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useToast } from "../../../context/ToastContext";
@@ -454,7 +455,7 @@ const AnalyticsPage = () => {
       }
 
       const buffer = await workbook.xlsx.writeBuffer();
-      saveAs(new Blob([buffer]), `Consolidated_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      saveAs(new Blob([buffer]), `Consolidated_Report_${getTodayIST()}.xlsx`);
       showToast("Consolidated report exported successfully", "success");
     } catch (err) {
       console.error(err);

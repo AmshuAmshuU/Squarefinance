@@ -4,6 +4,7 @@ import interestLoanService from "../services/interestLoanService";
 import { useToast } from "../context/ToastContext";
 import { useUI } from "../context/UIContext";
 import PaymentModeSelector from "./PaymentModeSelector";
+import { getTodayIST } from "../utils/dateUtils";
 
 const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "standard" }) => {
   const [editingEmi, setEditingEmi] = useState(null);
@@ -80,7 +81,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
           id: Date.now(),
           date: emi.paymentDate
             ? new Date(emi.paymentDate).toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0],
+            : getTodayIST(),
           payments: [
             {
               id: Date.now() + 1,
@@ -95,7 +96,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
       setDateGroups([
         {
           id: Date.now(),
-          date: new Date().toISOString().split("T")[0],
+          date: getTodayIST(),
           payments: [{ id: Date.now() + 1, mode: "Online", amount: "", chequeNumber: "" }],
         },
       ]);
@@ -108,7 +109,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
       ...dateGroups,
       {
         id: Date.now(),
-        date: new Date().toISOString().split("T")[0],
+        date: getTodayIST(),
         payments: [{ id: Date.now() + 1, mode: "Online", amount: "", chequeNumber: "" }],
       },
     ]);
@@ -274,7 +275,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
       ...prev,
       overdue: [
         ...prev.overdue,
-        { id: Date.now(), date: new Date().toISOString().split("T")[0], amount: "", mode: "Online", chequeNumber: "" },
+        { id: Date.now(), date: getTodayIST(), amount: "", mode: "Online", chequeNumber: "" },
       ],
     }));
   };

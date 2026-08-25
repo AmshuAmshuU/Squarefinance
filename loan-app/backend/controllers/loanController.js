@@ -15,6 +15,7 @@ const sendResponse = require("../utils/response");
 const { formatLoanResponse } = require("../utils/loanFormatter");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { notifyAdmins } = require("./notificationController");
+const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
 
 const extractId = (val) => {
   if (!val) return null;
@@ -1294,15 +1295,12 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
     query.vehicleNumber = { $regex: vehicleNumber, $options: "i" };
   }
   if (nextFollowUpDate) {
-    const start = new Date(nextFollowUpDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(nextFollowUpDate);
-    end.setHours(23, 59, 59, 999);
+    const start = normalizeToMidnight(new Date(nextFollowUpDate));
+    const end = normalizeToEndOfDay(new Date(nextFollowUpDate));
     query.nextFollowUpDate = { $gte: start, $lte: end };
   }
 
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
+  const now = normalizeToEndOfDay(new Date());
 
   const getPipeline = (modelName, loanType) => {
     let matchQuery = { ...query };
@@ -1525,8 +1523,7 @@ const getPendingEmiDetails = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler(`EMI details not found for ID: ${id}`, 404));
   }
 
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
+  const now = normalizeToEndOfDay(new Date());
 
   // Determine which collection to join with
   let fromCollection = "loans";
@@ -1685,18 +1682,13 @@ const getFollowupLoans = asyncHandler(async (req, res, next) => {
   // Filter for nextFollowUpDate
   let dateFilter = {};
   if (startDate && endDate) {
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const start = normalizeToMidnight(new Date(startDate));
+    const end = normalizeToEndOfDay(new Date(endDate));
     dateFilter = { nextFollowUpDate: { $gte: start, $lte: end } };
   } else {
-    const dateToFilter =
-      nextFollowUpDate || new Date().toISOString().split("T")[0];
-    const start = new Date(dateToFilter);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(dateToFilter);
-    end.setHours(23, 59, 59, 999);
+    const dateToFilter = nextFollowUpDate || getTodayIST();
+    const start = normalizeToMidnight(new Date(dateToFilter));
+    const end = normalizeToEndOfDay(new Date(dateToFilter));
     dateFilter = { nextFollowUpDate: { $gte: start, $lte: end } };
   }
 
@@ -1930,10 +1922,8 @@ const getFollowupLoans = asyncHandler(async (req, res, next) => {
 const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
   const InterestEMI = require("../models/InterestEMI");
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
+  const todayStart = normalizeToMidnight(new Date());
+  const todayEnd = normalizeToEndOfDay(new Date());
   const now = new Date();
 
   const modelConfigs = [
@@ -2784,8 +2774,7 @@ const updateSeizedStatus = asyncHandler(async (req, res, next) => {
 // @route   GET /api/loans/todo-list
 // @access  Private
 const getTodoList = asyncHandler(async (req, res, next) => {
-  const today = new Date();
-  today.setHours(23, 59, 59, 999); // Include everything until end of today
+  const today = normalizeToEndOfDay(new Date()); // Include everything until end of today
 
   const [followups, hpEntries, rtoWorks] = await Promise.all([
     // 1. Follow-ups (Loans with nextFollowUpDate <= today and status Active)

@@ -14,6 +14,7 @@ import { updateEMI } from "../../../../../../services/customer";
 import { format } from "date-fns";
 import { useToast } from "../../../../../../context/ToastContext";
 import { useUI } from "../../../../../../context/UIContext";
+import { getTodayIST } from "../../../../../../utils/dateUtils";
 
 const DailyLoanPendingViewPage = ({ params: paramsPromise }) => {
   const { isDarkMode } = useUI();
@@ -95,7 +96,7 @@ const DailyLoanPendingViewPage = ({ params: paramsPromise }) => {
       ...dateGroups,
       {
         id: Date.now(),
-        date: new Date().toISOString().split("T")[0],
+        date: getTodayIST(),
         payments: [{ id: Date.now() + 1, mode: "ONLINE", amount: "", chequeNumber: "" }],
       },
     ]);

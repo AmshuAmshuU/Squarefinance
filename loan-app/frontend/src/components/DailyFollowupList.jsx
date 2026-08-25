@@ -9,6 +9,7 @@ import { useToast } from "../context/ToastContext";
 import TableActionMenu from "./TableActionMenu";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "../utils/auth";
+import { getTodayIST } from "../utils/dateUtils";
 import { useUI } from "../context/UIContext";
 
 const DailyFollowupList = () => {
@@ -20,7 +21,7 @@ const DailyFollowupList = () => {
   const [activeContactMenu, setActiveContactMenu] = useState(null);
 
   // Get today's date in YYYY-MM-DD format for default filter
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayIST();
 
   const [filters, setFilters] = useState({
     loanNumber: "",

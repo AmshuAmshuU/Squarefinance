@@ -10,6 +10,7 @@ import interestLoanService from "../../../../../../services/interestLoanService"
 import { format } from "date-fns";
 import { useToast } from "../../../../../../context/ToastContext";
 import { useUI } from "../../../../../../context/UIContext";
+import { getTodayIST } from "../../../../../../utils/dateUtils";
 
 const InterestLoanPendingViewPage = ({ params: paramsPromise }) => {
   const { isDarkMode } = useUI();
@@ -91,7 +92,7 @@ const InterestLoanPendingViewPage = ({ params: paramsPromise }) => {
       ...dateGroups,
       {
         id: Date.now(),
-        date: new Date().toISOString().split("T")[0],
+        date: getTodayIST(),
         payments: [{ id: Date.now() + 1, mode: "Online", amount: "", chequeNumber: "" }],
       },
     ]);

@@ -5,6 +5,7 @@ const { getConsolidatedReportData } = require("./analyticsController");
 const { buildConsolidatedReportWorkbook } = require("../utils/excelReportBuilder");
 const { sendReportEmail } = require("../utils/emailService");
 const { runDataHealthCheck } = require("../utils/dataHealthCheck");
+const { getTodayIST } = require("../utils/dateUtils");
 
 // Triggered by an external scheduler (not a logged-in user), so it's
 // protected by a shared secret instead of the normal JWT auth middleware.
@@ -30,7 +31,7 @@ const sendDailyConsolidatedReport = asyncHandler(async (req, res, next) => {
   const today = new Date().toLocaleDateString("en-IN", {
     day: "2-digit", month: "long", year: "numeric", timeZone: "Asia/Kolkata",
   });
-  const fileName = `Consolidated_Report_${new Date().toISOString().split("T")[0]}.xlsx`;
+  const fileName = `Consolidated_Report_${getTodayIST()}.xlsx`;
 
   const summaryCounts = {
     monthly: data.monthlyLoans.length,

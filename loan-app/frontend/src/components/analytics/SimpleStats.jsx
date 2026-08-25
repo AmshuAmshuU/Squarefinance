@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Wallet, Calendar, Loader2 } from "lucide-react";
 import { getSimpleStats } from "../../services/analytics.service";
+import { getTodayIST, getISTDateNDaysAgo } from "../../utils/dateUtils";
 
 const intervalOptions = [
   { label: "All Time", value: "all" },
@@ -26,10 +27,8 @@ const STAT_ROWS = [
 const SimpleStats = () => {
   const [interval, setIntervalValue] = useState("all");
   const [customDates, setCustomDates] = useState({
-    start: new Date(new Date().setDate(new Date().getDate() - 30))
-      .toISOString()
-      .split("T")[0],
-    end: new Date().toISOString().split("T")[0],
+    start: getISTDateNDaysAgo(30),
+    end: getTodayIST(),
   });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);

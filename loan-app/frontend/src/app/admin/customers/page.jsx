@@ -8,6 +8,7 @@ import { useToast } from "../../../context/ToastContext";
 import { getCustomers, createCustomer } from "../../../services/customer";
 import { calculateEMI as fetchEMI } from "../../../services/loan.service";
 import { useUI } from "../../../context/UIContext";
+import { getTodayIST } from "../../../utils/dateUtils";
 
 const CustomersPage = () => {
   const { isDarkMode } = useUI();
@@ -31,7 +32,7 @@ const CustomersPage = () => {
     tenureMonths: "",
     processingFeeRate: "",
     processingFee: "",
-    loanStartDate: new Date().toISOString().split("T")[0],
+    loanStartDate: getTodayIST(),
     emiStartDate: "",
     emiEndDate: "",
     remarks: "",
@@ -185,7 +186,7 @@ const CustomersPage = () => {
         principalAmount: "",
         annualInterestRate: "",
         tenureMonths: "",
-        loanStartDate: new Date().toISOString().split("T")[0],
+        loanStartDate: getTodayIST(),
         emiStartDate: "",
         emiEndDate: "",
         remarks: "",

@@ -2,6 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const Loan = require("../models/Loan");
 const sendResponse = require("../utils/response");
 const { formatLoanResponse } = require("../utils/loanFormatter");
+const { normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
 
 const getExpiredDocLoans = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -35,13 +36,12 @@ const getExpiredDocLoans = asyncHandler(async (req, res) => {
 
     if (date.includes("/")) {
       const [d, m, y] = date.split("/");
-      searchDateStart = new Date(y, m - 1, d);
-      searchDateEnd = new Date(y, m - 1, d, 23, 59, 59, 999);
+      const isoDate = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      searchDateStart = normalizeToMidnight(new Date(isoDate));
+      searchDateEnd = normalizeToEndOfDay(new Date(isoDate));
     } else {
-      searchDateStart = new Date(date);
-      searchDateStart.setHours(0, 0, 0, 0);
-      searchDateEnd = new Date(date);
-      searchDateEnd.setHours(23, 59, 59, 999);
+      searchDateStart = normalizeToMidnight(new Date(date));
+      searchDateEnd = normalizeToEndOfDay(new Date(date));
     }
 
     if (filterType === "fc") {

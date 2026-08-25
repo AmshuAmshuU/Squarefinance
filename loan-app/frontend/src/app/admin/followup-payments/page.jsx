@@ -17,6 +17,7 @@ import Link from "next/link";
 import TableActionMenu from "../../../components/TableActionMenu";
 import ConfirmationModal from "../../../components/ConfirmationModal";
 import { useUI } from "../../../context/UIContext";
+import { getTodayIST } from "../../../utils/dateUtils";
 
 const FollowupPaymentsPage = () => {
   const router = useRouter();
@@ -29,7 +30,7 @@ const FollowupPaymentsPage = () => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Get today's date in YYYY-MM-DD format for default filter
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayIST();
 
   const [filters, setFilters] = useState({
     loanNumber: "",
