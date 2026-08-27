@@ -185,6 +185,17 @@ const LoansPage = () => {
         .loans-dark-mode .bg-green-100 {
           background-color: rgba(34, 197, 94, 0.15) !important;
         }
+        /* Closed-loan row shading - visible without scrolling to the Status column */
+        .loans-dark-mode .bg-slate-200\/70,
+        .loans-dark-mode .hover\:bg-slate-200:hover,
+        .loans-dark-mode .active\:bg-slate-200:active,
+        .loans-dark-mode .group:hover .group-hover\:bg-slate-200,
+        .loans-dark-mode .group:active .group-active\:bg-slate-200 {
+          background-color: rgba(0, 0, 0, 0.35) !important;
+        }
+        .loans-dark-mode .border-slate-500 {
+          border-color: #cbd5e1 !important;
+        }
         .loans-dark-mode .text-slate-900,
         .loans-dark-mode .text-slate-800 {
           color: #f1f5f9 !important;
@@ -354,14 +365,18 @@ const LoansPage = () => {
                               className={`cursor-pointer transition-colors group ${
                                 selectedRowId === loan._id
                                   ? "bg-blue-50/80"
-                                  : "active:bg-slate-50"
+                                  : loan.status?.status?.toLowerCase() === "closed"
+                                    ? "bg-slate-200/70 active:bg-slate-200"
+                                    : "active:bg-slate-50"
                               }`}
                             >
                               <td
                                 className={`px-3 py-3 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                                   selectedRowId === loan._id
                                     ? "bg-blue-50/80"
-                                    : "bg-white group-active:bg-slate-50"
+                                    : loan.status?.status?.toLowerCase() === "closed"
+                                      ? "bg-slate-200/70 group-active:bg-slate-200 border-l-4 border-slate-500"
+                                      : "bg-white group-active:bg-slate-50"
                                 }`}
                               >
                                 <Link
@@ -458,7 +473,9 @@ const LoansPage = () => {
                                 className={`px-3 py-3 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                                   selectedRowId === loan._id
                                     ? "bg-blue-50/80"
-                                    : "bg-white group-active:bg-slate-50"
+                                    : loan.status?.status?.toLowerCase() === "closed"
+                                      ? "bg-slate-200/70 group-active:bg-slate-200"
+                                      : "bg-white group-active:bg-slate-50"
                                 }`}
                               >
                                 <div className="flex justify-center items-center gap-4">
@@ -629,7 +646,9 @@ const LoansPage = () => {
                                   ? "bg-blue-50/80"
                                   : loan.status?.isSeized && loan.status?.status?.toLowerCase() !== "closed"
                                     ? "bg-red-50/50"
-                                    : "hover:bg-slate-50"
+                                    : loan.status?.status?.toLowerCase() === "closed"
+                                      ? "bg-slate-200/70 hover:bg-slate-200"
+                                      : "hover:bg-slate-50"
                               }`}
                             >
                               <td
@@ -638,7 +657,9 @@ const LoansPage = () => {
                                     ? "bg-blue-50/80"
                                     : loan.status?.isSeized && loan.status?.status?.toLowerCase() !== "closed"
                                       ? "bg-red-50/50"
-                                      : "bg-white hover:bg-slate-50"
+                                      : loan.status?.status?.toLowerCase() === "closed"
+                                        ? "bg-slate-200/70 hover:bg-slate-200 border-l-4 border-slate-500"
+                                        : "bg-white hover:bg-slate-50"
                                 }`}
                               >
                                 <Link

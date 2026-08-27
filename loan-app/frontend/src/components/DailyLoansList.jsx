@@ -134,6 +134,16 @@ const DailyLoansList = ({ type, title }) => {
         .daily-loans-dark-mode .bg-orange-100 {
           background-color: rgba(249, 115, 22, 0.15) !important;
         }
+        /* Closed-loan row shading - visible without scrolling to the Status column */
+        .daily-loans-dark-mode .bg-slate-200\/70,
+        .daily-loans-dark-mode .hover\:bg-slate-200:hover,
+        .daily-loans-dark-mode .active\:bg-slate-200:active,
+        .daily-loans-dark-mode .group:hover .group-hover\:bg-slate-200 {
+          background-color: rgba(0, 0, 0, 0.35) !important;
+        }
+        .daily-loans-dark-mode .border-slate-500 {
+          border-color: #cbd5e1 !important;
+        }
         .daily-loans-dark-mode .text-slate-900,
         .daily-loans-dark-mode .text-slate-800 {
           color: #f1f5f9 !important;
@@ -284,14 +294,18 @@ const DailyLoansList = ({ type, title }) => {
                       className={`cursor-pointer transition-colors group ${
                         selectedRowId === loan._id
                           ? "bg-blue-50/80"
-                          : "active:bg-slate-50"
+                          : loan.status === "Closed"
+                            ? "bg-slate-200/70 active:bg-slate-200"
+                            : "active:bg-slate-50"
                       }`}
                     >
                       <td
                         className={`px-4 py-5 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                           selectedRowId === loan._id
                             ? "bg-blue-50/80"
-                            : "bg-white group-hover:bg-slate-50"
+                            : loan.status === "Closed"
+                              ? "bg-slate-200/70 group-hover:bg-slate-200 border-l-4 border-slate-500"
+                              : "bg-white group-hover:bg-slate-50"
                         }`}
                       >
                         <Link
@@ -373,7 +387,9 @@ const DailyLoansList = ({ type, title }) => {
                         className={`px-4 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                           selectedRowId === loan._id
                             ? "bg-blue-50/80"
-                            : "bg-white group-hover:bg-slate-50"
+                            : loan.status === "Closed"
+                              ? "bg-slate-200/70 group-hover:bg-slate-200"
+                              : "bg-white group-hover:bg-slate-50"
                         }`}
                       >
                         <div className="flex justify-center items-center gap-2">
@@ -511,14 +527,18 @@ const DailyLoansList = ({ type, title }) => {
                     className={`cursor-pointer transition-colors group ${
                       selectedRowId === loan._id
                         ? "bg-blue-50/80"
-                        : "hover:bg-slate-50"
+                        : loan.status === "Closed"
+                          ? "bg-slate-200/70 hover:bg-slate-200"
+                          : "hover:bg-slate-50"
                     }`}
                   >
                     <td
                       className={`px-6 py-5 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                         selectedRowId === loan._id
                           ? "bg-blue-50/80"
-                          : "bg-white group-hover:bg-slate-50"
+                          : loan.status === "Closed"
+                            ? "bg-slate-200/70 group-hover:bg-slate-200 border-l-4 border-slate-500"
+                            : "bg-white group-hover:bg-slate-50"
                       }`}
                     >
                       <Link
@@ -602,7 +622,9 @@ const DailyLoansList = ({ type, title }) => {
                       className={`px-6 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                         selectedRowId === loan._id
                           ? "bg-blue-50/80"
-                          : "bg-white group-hover:bg-slate-50"
+                          : loan.status === "Closed"
+                            ? "bg-slate-200/70 group-hover:bg-slate-200"
+                            : "bg-white group-hover:bg-slate-50"
                       }`}
                     >
                       <div className="flex justify-center items-center gap-3">

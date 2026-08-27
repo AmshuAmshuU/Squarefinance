@@ -149,6 +149,16 @@ const InterestLoansList = ({ type, title }) => {
         .interest-loans-dark-mode .bg-orange-100 {
           background-color: rgba(249, 115, 22, 0.15) !important;
         }
+        /* Closed-loan row shading - visible without scrolling to the Status column */
+        .interest-loans-dark-mode .bg-slate-200\/70,
+        .interest-loans-dark-mode .hover\:bg-slate-200:hover,
+        .interest-loans-dark-mode .active\:bg-slate-200:active,
+        .interest-loans-dark-mode .group:hover .group-hover\:bg-slate-200 {
+          background-color: rgba(0, 0, 0, 0.35) !important;
+        }
+        .interest-loans-dark-mode .border-slate-500 {
+          border-color: #cbd5e1 !important;
+        }
         .interest-loans-dark-mode .text-slate-900,
         .interest-loans-dark-mode .text-slate-800 {
           color: #f1f5f9 !important;
@@ -255,9 +265,9 @@ const InterestLoansList = ({ type, title }) => {
                     <tr
                       key={loan._id}
                       onClick={(e) => toggleHighlight(e, loan._id)}
-                      className={`cursor-pointer transition-colors group ${selectedRowId === loan._id ? "bg-blue-50/80" : "active:bg-slate-50"}`}
+                      className={`cursor-pointer transition-colors group ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 active:bg-slate-200" : "active:bg-slate-50"}`}
                     >
-                      <td className={`px-4 py-5 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : "bg-white group-hover:bg-slate-50"}`}>
+                      <td className={`px-4 py-5 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 group-hover:bg-slate-200 border-l-4 border-slate-500" : "bg-white group-hover:bg-slate-50"}`}>
                         <Link href={`/admin/interest-loan/edit/${loan._id}`} className="text-[10px] font-black text-primary uppercase tracking-tighter bg-blue-50 px-2 py-1 rounded-md">{loan.loanNumber}</Link>
                       </td>
                       <td className="px-4 py-5 whitespace-nowrap">
@@ -302,7 +312,7 @@ const InterestLoansList = ({ type, title }) => {
                           </span>
                         )}
                       </td>
-                      <td className={`px-4 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : "bg-white group-hover:bg-slate-50"}`}>
+                      <td className={`px-4 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 group-hover:bg-slate-200" : "bg-white group-hover:bg-slate-50"}`}>
                         <div className="flex justify-center items-center gap-2">
                            <button onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-100"><Eye size={14} /></button>
                            {canEdit && <button onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-100"><Edit size={14} /></button>}
@@ -342,9 +352,9 @@ const InterestLoansList = ({ type, title }) => {
                   <tr
                     key={loan._id}
                     onClick={(e) => toggleHighlight(e, loan._id)}
-                    className={`cursor-pointer transition-colors group ${selectedRowId === loan._id ? "bg-blue-50/80" : "hover:bg-slate-50"}`}
+                    className={`cursor-pointer transition-colors group ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 hover:bg-slate-200" : "hover:bg-slate-50"}`}
                   >
-                    <td className={`px-6 py-5 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : "bg-white group-hover:bg-slate-50"}`}>
+                    <td className={`px-6 py-5 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 group-hover:bg-slate-200 border-l-4 border-slate-500" : "bg-white group-hover:bg-slate-50"}`}>
                       <Link href={`/admin/interest-loan/edit/${loan._id}`} className="text-[11px] font-black text-primary uppercase tracking-wider hover:underline">{loan.loanNumber}</Link>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
@@ -389,7 +399,7 @@ const InterestLoansList = ({ type, title }) => {
                         </span>
                       )}
                     </td>
-                    <td className={`px-6 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : "bg-white group-hover:bg-slate-50"}`}>
+                    <td className={`px-6 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 group-hover:bg-slate-200" : "bg-white group-hover:bg-slate-50"}`}>
                       <div className="flex justify-center items-center gap-3">
                          <button onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-primary border border-slate-100 transition-all"><Eye size={16} /></button>
                          {canEdit && <button onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-primary border border-slate-100 transition-all"><Edit size={16} /></button>}
