@@ -8,14 +8,12 @@ import WeeklyLoanForm from "../../../../../components/WeeklyLoanForm";
 import EMITable from "../../../../../components/EMITable";
 import LoanROICard from "../../../../../components/LoanROICard";
 import CustomerLocationPanel from "../../../../../components/CustomerLocationPanel";
-import ForeclosureModal from "../../../../../components/ForeclosureModal";
 import ForeclosureDetailsCard from "../../../../../components/ForeclosureDetailsCard";
 import { getWeeklyLoanROI } from "../../../../../services/weeklyLoan.service";
 import {
   getWeeklyLoanById,
   updateWeeklyLoan,
   getWeeklyLoanEMIs,
-  forecloseWeeklyLoan,
 } from "../../../../../services/weeklyLoan.service";
 import { useToast } from "../../../../../context/ToastContext";
 import { format } from "date-fns";
@@ -33,7 +31,6 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
   const [emis, setEmis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [showForeclosureModal, setShowForeclosureModal] = useState(false);
 
   const fetchData = React.useCallback(async (silent = false) => {
     try {
@@ -170,17 +167,7 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {loanData?.status !== "Closed" && (
-                    <button
-                      onClick={() => setShowForeclosureModal(true)}
-                      className="px-4 py-2.5 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-100 hover:bg-amber-600 transition-all"
-                    >
-                      Foreclose
-                    </button>
-                  )}
-                  <LoanStatusBadge status={loanData?.status} />
-                </div>
+                <LoanStatusBadge status={loanData?.status} />
               </div>
 
               {loading ? (
@@ -238,20 +225,6 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
           </main>
         </div>
       </div>
-      {showForeclosureModal && (
-        <ForeclosureModal
-          loanNumber={loanData?.loanNumber}
-          customerName={loanData?.customerName}
-          remainingPrincipal={loanData?.remainingPrincipalAmount}
-          onForeclose={(payload) => forecloseWeeklyLoan(params.id, payload)}
-          onSuccess={async () => {
-            setShowForeclosureModal(false);
-            showToast("Weekly loan foreclosed successfully", "success");
-            await fetchData();
-          }}
-          onClose={() => setShowForeclosureModal(false)}
-        />
-      )}
     </AuthGuard>
   );
 };
