@@ -6,6 +6,7 @@ const {
   getDailyLoanROI,
   updateDailyLoan,
   deleteDailyLoan,
+  forecloseDailyLoan,
   getDailyLoanEMIs,
   getDailyPendingPayments,
   getDailyFollowupLoans,
@@ -48,6 +49,12 @@ router.get(
   "/:id/roi",
   authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
   getDailyLoanROI,
+);
+router.post(
+  "/:id/foreclose",
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  authorizePermissions("dailyLoans.edit"),
+  forecloseDailyLoan,
 );
 router.get(
   "/:id",

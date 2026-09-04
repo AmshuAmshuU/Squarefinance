@@ -8,11 +8,14 @@ import DailyLoanForm from "../../../../../components/DailyLoanForm";
 import EMITable from "../../../../../components/EMITable";
 import LoanROICard from "../../../../../components/LoanROICard";
 import CustomerLocationPanel from "../../../../../components/CustomerLocationPanel";
+import ForeclosureModal from "../../../../../components/ForeclosureModal";
+import ForeclosureDetailsCard from "../../../../../components/ForeclosureDetailsCard";
 import { getDailyLoanROI } from "../../../../../services/dailyLoan.service";
 import {
   getDailyLoanById,
   updateDailyLoan,
   getDailyLoanEMIs,
+  forecloseDailyLoan,
 } from "../../../../../services/dailyLoan.service";
 import { useToast } from "../../../../../context/ToastContext";
 import LoanStatusBadge from "../../../../../components/LoanStatusBadge";
@@ -29,6 +32,7 @@ const EditDailyLoanPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [loanData, setLoanData] = useState(null);
   const [emis, setEmis] = useState([]);
+  const [showForeclosureModal, setShowForeclosureModal] = useState(false);
 
   const fetchData = React.useCallback(async (silent = false) => {
     if (!id) return;
@@ -158,7 +162,17 @@ const EditDailyLoanPage = () => {
                     </p>
                   </div>
                 </div>
-                <LoanStatusBadge status={loanData?.status} />
+                <div className="flex items-center gap-3">
+                  {loanData?.status !== "Closed" && (
+                    <button
+                      onClick={() => setShowForeclosureModal(true)}
+                      className="px-4 py-2.5 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-100 hover:bg-amber-600 transition-all"
+                    >
+                      Foreclose
+                    </button>
+                  )}
+                  <LoanStatusBadge status={loanData?.status} />
+                </div>
               </div>
 
               {loading ? (
@@ -167,6 +181,17 @@ const EditDailyLoanPage = () => {
                 </div>
               ) : (
                 <>
+                  {loanData?.foreclosureAmount > 0 && (
+                    <ForeclosureDetailsCard
+                      foreclosureAmount={loanData.foreclosureAmount}
+                      foreclosureDate={loanData.foreclosureDate}
+                      foreclosureChargeAmount={loanData.foreclosureChargeAmount}
+                      odAmount={loanData.odAmount}
+                      miscellaneousFee={loanData.miscellaneousFee}
+                      foreclosedByName={loanData.foreclosedBy?.name}
+                    />
+                  )}
+
                   <DailyLoanForm
                     initialData={loanData}
                     onSubmit={handleSubmit}
@@ -205,6 +230,20 @@ const EditDailyLoanPage = () => {
           </main>
         </div>
       </div>
+      {showForeclosureModal && (
+        <ForeclosureModal
+          loanNumber={loanData?.loanNumber}
+          customerName={loanData?.customerName}
+          remainingPrincipal={loanData?.remainingPrincipalAmount}
+          onForeclose={(payload) => forecloseDailyLoan(id, payload)}
+          onSuccess={async () => {
+            setShowForeclosureModal(false);
+            showToast("Daily loan foreclosed successfully", "success");
+            await fetchData();
+          }}
+          onClose={() => setShowForeclosureModal(false)}
+        />
+      )}
     </AuthGuard>
   );
 };

@@ -934,6 +934,8 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
     vehicleOverdue,
     weeklyProcessingFee,
     dailyProcessingFee,
+    weeklyForeclosure,
+    dailyForeclosure,
     interestEmiProfit,
 
     // ---- Trend (date-bucketed, for the Profit Trend chart) ----
@@ -943,6 +945,8 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
     vehicleOverdueTrend,
     weeklyProcessingFeeTrend,
     dailyProcessingFeeTrend,
+    weeklyForeclosureTrend,
+    dailyForeclosureTrend,
     interestEmiProfitTrend,
 
     // ---- Expected profit next month (range-independent) ----
@@ -1000,6 +1004,18 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
       { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
       { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
     ]),
+    // Weekly foreclosure charge + misc fee, recognised on foreclosure date -
+    // OD deliberately excluded here too, same as Weekly/Daily's existing
+    // "processing fee only" rule already excludes OD/overdue from profit.
+    WeeklyLoan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $add: [{ $ifNull: ["$foreclosureChargeAmount", 0] }, { $ifNull: ["$miscellaneousFee", 0] }] } } } },
+    ]),
+    // Daily foreclosure charge + misc fee, same treatment as Weekly above
+    DailyLoan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $add: [{ $ifNull: ["$foreclosureChargeAmount", 0] }, { $ifNull: ["$miscellaneousFee", 0] }] } } } },
+    ]),
     // Interest loans - full amount of fully-paid interest EMIs
     InterestEMI.aggregate([
       { $match: { status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
@@ -1048,6 +1064,14 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
       { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
       { $group: { _id: { $dateToString: { format: groupFormat, date: "$dateLoanDisbursed" } }, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
     ]),
+    WeeklyLoan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: { $dateToString: { format: groupFormat, date: "$foreclosureDate" } }, total: { $sum: { $add: [{ $ifNull: ["$foreclosureChargeAmount", 0] }, { $ifNull: ["$miscellaneousFee", 0] }] } } } },
+    ]),
+    DailyLoan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: { $dateToString: { format: groupFormat, date: "$foreclosureDate" } }, total: { $sum: { $add: [{ $ifNull: ["$foreclosureChargeAmount", 0] }, { $ifNull: ["$miscellaneousFee", 0] }] } } } },
+    ]),
     InterestEMI.aggregate([
       { $match: { status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
       { $group: { _id: { $dateToString: { format: groupFormat, date: "$paymentDate" } }, total: { $sum: "$interestAmount" } } },
@@ -1069,8 +1093,8 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
 
   const breakdown = {
     monthly: Math.round(sumTotal(vehicleEmiInterest) + sumTotal(vehicleProcessingFee) + sumTotal(vehicleForeclosure) + sumTotal(vehicleOverdue)),
-    weekly: Math.round(sumTotal(weeklyProcessingFee)),
-    daily: Math.round(sumTotal(dailyProcessingFee)),
+    weekly: Math.round(sumTotal(weeklyProcessingFee) + sumTotal(weeklyForeclosure)),
+    daily: Math.round(sumTotal(dailyProcessingFee) + sumTotal(dailyForeclosure)),
     interest: Math.round(sumTotal(interestEmiProfit)),
   };
   const totalProfit = breakdown.monthly + breakdown.weekly + breakdown.daily + breakdown.interest;
@@ -1083,7 +1107,7 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
   };
   expectedNextMonth.total = expectedNextMonth.breakdown.monthly + expectedNextMonth.breakdown.interest;
 
-  // Merge all 7 trend components into a single per-date total
+  // Merge all 9 trend components into a single per-date total
   const trendMap = {};
   [
     vehicleEmiInterestTrend,
@@ -1092,6 +1116,8 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
     vehicleOverdueTrend,
     weeklyProcessingFeeTrend,
     dailyProcessingFeeTrend,
+    weeklyForeclosureTrend,
+    dailyForeclosureTrend,
     interestEmiProfitTrend,
   ].forEach((resultSet) => {
     resultSet.forEach((item) => {
@@ -1130,6 +1156,10 @@ const getSimpleStats = asyncHandler(async (req, res, next) => {
     interestEmiOverdue,
     vehicleForeclosureCharge,
     vehicleMiscFee,
+    weeklyForeclosureCharge,
+    weeklyMiscFee,
+    dailyForeclosureCharge,
+    dailyMiscFee,
   ] = await Promise.all([
     Loan.aggregate([
       { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
@@ -1179,6 +1209,22 @@ const getSimpleStats = asyncHandler(async (req, res, next) => {
       { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
       { $group: { _id: null, total: { $sum: { $ifNull: ["$miscellaneousFee", 0] } } } },
     ]),
+    WeeklyLoan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureChargeAmount", 0] } } } },
+    ]),
+    WeeklyLoan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$miscellaneousFee", 0] } } } },
+    ]),
+    DailyLoan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureChargeAmount", 0] } } } },
+    ]),
+    DailyLoan.aggregate([
+      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$miscellaneousFee", 0] } } } },
+    ]),
   ]);
 
   const totalProcessingFees = Math.round(
@@ -1191,8 +1237,12 @@ const getSimpleStats = asyncHandler(async (req, res, next) => {
       sumTotal(dailyEmiOverdue) +
       sumTotal(interestEmiOverdue),
   );
-  const totalForeclosureCharges = Math.round(sumTotal(vehicleForeclosureCharge));
-  const totalMiscAmount = Math.round(sumTotal(vehicleMiscFee));
+  const totalForeclosureCharges = Math.round(
+    sumTotal(vehicleForeclosureCharge) + sumTotal(weeklyForeclosureCharge) + sumTotal(dailyForeclosureCharge),
+  );
+  const totalMiscAmount = Math.round(
+    sumTotal(vehicleMiscFee) + sumTotal(weeklyMiscFee) + sumTotal(dailyMiscFee),
+  );
 
   sendResponse(res, 200, "success", "Simple stats fetched successfully", null, {
     totalProcessingFees,

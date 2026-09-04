@@ -415,7 +415,8 @@ exports.getWeeklyLoanById = asyncHandler(async (req, res, next) => {
     .populate("closureDetails")
     .populate("followupHistory")
     .populate("createdBy", "name")
-    .populate("updatedBy", "name");
+    .populate("updatedBy", "name")
+    .populate("foreclosedBy", "name");
 
   if (!weeklyLoan) {
     return next(new ErrorHandler("Weekly loan not found", 404));
@@ -760,6 +761,137 @@ exports.updateWeeklyLoan = asyncHandler(async (req, res, next) => {
     null,
     weeklyLoan,
   );
+});
+
+// Foreclose Weekly Loan - mirrors loanController.js's forecloseLoan exactly
+// (same bulk-close-remaining-EMIs + lump-sum Payment record approach), just
+// adapted to WeeklyLoan's own field names (remainingPrincipalAmount instead
+// of remainingPrincipal, no separate paymentStatus field, etc).
+exports.forecloseWeeklyLoan = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const {
+    totalAmount,
+    paymentBreakdown,
+    paymentDate,
+    remarks,
+    foreclosureChargePercent,
+    foreclosureChargeAmount,
+    od,
+    miscellaneousFee,
+    paymentMode,
+    chequeNumber,
+  } = req.body;
+
+  const loan = await WeeklyLoan.findById(id);
+  if (!loan) {
+    return next(new ErrorHandler("Weekly loan not found", 404));
+  }
+
+  if (loan.status === "Closed") {
+    return next(new ErrorHandler("the loan has been closed already", 400));
+  }
+
+  const totalReceived = (paymentBreakdown || []).reduce(
+    (acc, curr) => acc + parseFloat(curr.amount || 0),
+    0,
+  );
+
+  if (totalReceived < parseFloat(totalAmount) - 0.1) {
+    return next(
+      new ErrorHandler(
+        `Received total (Rs.${totalReceived}) is less than total foreclosure amount (Rs.${totalAmount})`,
+        400,
+      ),
+    );
+  }
+
+  const pDate = paymentDate ? new Date(paymentDate) : new Date();
+
+  // 1. Close out any remaining (not-yet-paid) EMIs so the schedule displays
+  // cleanly - flagged closedWithoutPayment so profit calculation never
+  // counts these as genuinely collected. Same reasoning as Vehicle's
+  // forecloseLoan; {timestamps:false} since this isn't a real payment.
+  await EMI.updateMany(
+    { loanId: id, loanModel: "WeeklyLoan", status: { $ne: "Paid" } },
+    { $set: { status: "Paid", paymentDate: pDate, closedWithoutPayment: true } },
+    { timestamps: false },
+  );
+
+  // 2. Update the loan itself
+  const updatedLoan = await WeeklyLoan.findByIdAndUpdate(
+    id,
+    {
+      status: "Closed",
+      remarks: remarks || `Foreclosed on ${pDate.toLocaleDateString()}`,
+      foreclosedBy: req.user?._id,
+      foreclosureDate: pDate,
+      foreclosureAmount: totalAmount,
+      foreclosureChargePercent: foreclosureChargePercent || 0,
+      foreclosureChargeAmount: foreclosureChargeAmount || 0,
+      odAmount: od || 0,
+      miscellaneousFee: miscellaneousFee || 0,
+      remainingPrincipalAmount: 0,
+      remainingEmis: 0,
+      paidEmis: loan.totalEmis,
+      totalCollected: Math.ceil((loan.totalCollected || 0) + totalReceived),
+      paymentMode: paymentMode || "Online",
+      chequeNumber: paymentMode === "Cheque" ? chequeNumber : undefined,
+      updatedBy: req.user._id,
+    },
+    { new: true, runValidators: true },
+  )
+    .populate("createdBy", "name")
+    .populate("foreclosedBy", "name")
+    .populate("updatedBy", "name");
+
+  // 3. Handle ClosedLoan record (same pattern as the regular status-change sync)
+  await ClosedLoan.findOneAndUpdate(
+    { loanId: id, loanModel: "WeeklyLoan" },
+    {
+      loanId: id,
+      loanModel: "WeeklyLoan",
+      closureType: "Foreclosure",
+      closureDate: pDate,
+      amount: totalAmount,
+      processedBy: req.user._id,
+      remarks: remarks || `Foreclosed on ${pDate.toLocaleDateString()}`,
+    },
+    { upsert: true, new: true },
+  );
+
+  // 4. Create Payment records for each mode in the breakdown
+  let targetEmiId = null;
+  const firstJustPaidEmi = await EMI.findOne({
+    loanId: id,
+    loanModel: "WeeklyLoan",
+    status: "Paid",
+    paymentDate: pDate,
+  }).sort({ emiNumber: 1 });
+  if (firstJustPaidEmi) {
+    targetEmiId = firstJustPaidEmi._id;
+  } else {
+    const lastEmi = await EMI.findOne({ loanId: id, loanModel: "WeeklyLoan" }).sort({ emiNumber: -1 });
+    if (lastEmi) targetEmiId = lastEmi._id;
+  }
+
+  const paymentRecords = (paymentBreakdown || []).map((p) => ({
+    emiId: targetEmiId,
+    loanId: id,
+    loanModel: "WeeklyLoan",
+    amount: parseFloat(p.amount),
+    totalAmount: parseFloat(p.amount),
+    mode: p.mode,
+    paymentDate: pDate,
+    paymentType: "Foreclosure",
+    status: "Success",
+    remarks: `Foreclosure Split-Payment (${p.mode}) for Loan ${loan.loanNumber}`,
+    collectedBy: req.user._id,
+  }));
+  if (paymentRecords.length > 0) {
+    await Payment.insertMany(paymentRecords);
+  }
+
+  sendResponse(res, 200, "success", "Weekly loan foreclosed successfully", null, updatedLoan);
 });
 
 // Delete Weekly Loan

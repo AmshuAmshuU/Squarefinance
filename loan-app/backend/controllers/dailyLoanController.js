@@ -372,7 +372,8 @@ exports.getDailyLoanById = asyncHandler(async (req, res, next) => {
     .populate("closureDetails")
     .populate("followupHistory")
     .populate("createdBy", "name")
-    .populate("updatedBy", "name");
+    .populate("updatedBy", "name")
+    .populate("foreclosedBy", "name");
 
   if (!dailyLoan) {
     return next(new ErrorHandler("Daily loan not found", 404));
@@ -684,6 +685,129 @@ exports.updateDailyLoan = asyncHandler(async (req, res, next) => {
     null,
     dailyLoan,
   );
+});
+
+// Foreclose Daily Loan - mirrors weeklyLoanController.js's
+// forecloseWeeklyLoan / loanController.js's forecloseLoan exactly, just
+// adapted to DailyLoan's own field names.
+exports.forecloseDailyLoan = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const {
+    totalAmount,
+    paymentBreakdown,
+    paymentDate,
+    remarks,
+    foreclosureChargePercent,
+    foreclosureChargeAmount,
+    od,
+    miscellaneousFee,
+    paymentMode,
+    chequeNumber,
+  } = req.body;
+
+  const loan = await DailyLoan.findById(id);
+  if (!loan) {
+    return next(new ErrorHandler("Daily loan not found", 404));
+  }
+
+  if (loan.status === "Closed") {
+    return next(new ErrorHandler("the loan has been closed already", 400));
+  }
+
+  const totalReceived = (paymentBreakdown || []).reduce(
+    (acc, curr) => acc + parseFloat(curr.amount || 0),
+    0,
+  );
+
+  if (totalReceived < parseFloat(totalAmount) - 0.1) {
+    return next(
+      new ErrorHandler(
+        `Received total (Rs.${totalReceived}) is less than total foreclosure amount (Rs.${totalAmount})`,
+        400,
+      ),
+    );
+  }
+
+  const pDate = paymentDate ? new Date(paymentDate) : new Date();
+
+  await EMI.updateMany(
+    { loanId: id, loanModel: "DailyLoan", status: { $ne: "Paid" } },
+    { $set: { status: "Paid", paymentDate: pDate, closedWithoutPayment: true } },
+    { timestamps: false },
+  );
+
+  const updatedLoan = await DailyLoan.findByIdAndUpdate(
+    id,
+    {
+      status: "Closed",
+      remarks: remarks || `Foreclosed on ${pDate.toLocaleDateString()}`,
+      foreclosedBy: req.user?._id,
+      foreclosureDate: pDate,
+      foreclosureAmount: totalAmount,
+      foreclosureChargePercent: foreclosureChargePercent || 0,
+      foreclosureChargeAmount: foreclosureChargeAmount || 0,
+      odAmount: od || 0,
+      miscellaneousFee: miscellaneousFee || 0,
+      remainingPrincipalAmount: 0,
+      remainingEmis: 0,
+      paidEmis: loan.totalEmis,
+      totalCollected: Math.ceil((loan.totalCollected || 0) + totalReceived),
+      paymentMode: paymentMode || "Online",
+      chequeNumber: paymentMode === "Cheque" ? chequeNumber : undefined,
+      updatedBy: req.user._id,
+    },
+    { new: true, runValidators: true },
+  )
+    .populate("createdBy", "name")
+    .populate("foreclosedBy", "name")
+    .populate("updatedBy", "name");
+
+  await ClosedLoan.findOneAndUpdate(
+    { loanId: id, loanModel: "DailyLoan" },
+    {
+      loanId: id,
+      loanModel: "DailyLoan",
+      closureType: "Foreclosure",
+      closureDate: pDate,
+      amount: totalAmount,
+      processedBy: req.user._id,
+      remarks: remarks || `Foreclosed on ${pDate.toLocaleDateString()}`,
+    },
+    { upsert: true, new: true },
+  );
+
+  let targetEmiId = null;
+  const firstJustPaidEmi = await EMI.findOne({
+    loanId: id,
+    loanModel: "DailyLoan",
+    status: "Paid",
+    paymentDate: pDate,
+  }).sort({ emiNumber: 1 });
+  if (firstJustPaidEmi) {
+    targetEmiId = firstJustPaidEmi._id;
+  } else {
+    const lastEmi = await EMI.findOne({ loanId: id, loanModel: "DailyLoan" }).sort({ emiNumber: -1 });
+    if (lastEmi) targetEmiId = lastEmi._id;
+  }
+
+  const paymentRecords = (paymentBreakdown || []).map((p) => ({
+    emiId: targetEmiId,
+    loanId: id,
+    loanModel: "DailyLoan",
+    amount: parseFloat(p.amount),
+    totalAmount: parseFloat(p.amount),
+    mode: p.mode,
+    paymentDate: pDate,
+    paymentType: "Foreclosure",
+    status: "Success",
+    remarks: `Foreclosure Split-Payment (${p.mode}) for Loan ${loan.loanNumber}`,
+    collectedBy: req.user._id,
+  }));
+  if (paymentRecords.length > 0) {
+    await Payment.insertMany(paymentRecords);
+  }
+
+  sendResponse(res, 200, "success", "Daily loan foreclosed successfully", null, updatedLoan);
 });
 
 // Delete Daily Loan

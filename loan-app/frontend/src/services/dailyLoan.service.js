@@ -73,3 +73,10 @@ export const getDailyLoanROI = async (id) => {
     method: "GET",
   });
 };
+
+export const forecloseDailyLoan = async (id, data) => {
+  return await apiHandler(`/api/daily-loans/${id}/foreclose`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};

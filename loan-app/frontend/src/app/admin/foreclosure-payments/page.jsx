@@ -9,14 +9,176 @@ import {
   getLoanById,
   forecloseLoan,
 } from "../../../services/loan.service";
+import {
+  getWeeklyLoans,
+  getWeeklyLoanById,
+  forecloseWeeklyLoan,
+} from "../../../services/weeklyLoan.service";
+import {
+  getDailyLoans,
+  getDailyLoanById,
+  forecloseDailyLoan,
+} from "../../../services/dailyLoan.service";
+import ForeclosureModal from "../../../components/ForeclosureModal";
 import { useToast } from "../../../context/ToastContext";
 import { useUI } from "../../../context/UIContext";
 import { getTodayIST } from "../../../utils/dateUtils";
+
+// Weekly/Daily foreclosure reuses the shared ForeclosureModal (same one
+// embedded on their own loan pages) instead of the Vehicle-specific inline
+// table + custom modal below, which stays untouched to avoid any risk to
+// the existing working Vehicle flow.
+const WeeklyDailyForeclosureSection = ({ loanType }) => {
+  const { showToast } = useToast();
+  const [loans, setLoans] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLoan, setSelectedLoan] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [loadingSelect, setLoadingSelect] = useState(false);
+
+  const getList = loanType === "weekly" ? getWeeklyLoans : getDailyLoans;
+  const getById = loanType === "weekly" ? getWeeklyLoanById : getDailyLoanById;
+  const foreclose = loanType === "weekly" ? forecloseWeeklyLoan : forecloseDailyLoan;
+
+  useEffect(() => {
+    setSelectedLoan(null);
+    setSearchTerm("");
+    const fetchLoansList = async () => {
+      try {
+        const res = await getList({ limit: 1000 });
+        const list = loanType === "weekly" ? res.data?.weeklyLoans : res.data?.dailyLoans;
+        setLoans(list || []);
+      } catch (err) {
+        console.error("Failed to fetch loans", err);
+      }
+    };
+    fetchLoansList();
+  }, [loanType]);
+
+  const handleLoanSelect = async (loan) => {
+    setLoadingSelect(true);
+    try {
+      const res = await getById(loan._id);
+      if (res.data) {
+        if (res.data.status === "Closed") {
+          showToast("the loan has been closed already", "error");
+          setSelectedLoan(null);
+          setSearchTerm("");
+          return;
+        }
+        setSelectedLoan(res.data);
+        setSearchTerm(res.data.loanNumber || "");
+      }
+    } catch (err) {
+      showToast("Failed to fetch loan details", "error");
+    } finally {
+      setLoadingSelect(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+      <div className="p-6 sm:p-8 bg-slate-50/50 border-b border-slate-100">
+        <div className="max-w-md space-y-3 relative">
+          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+            Enter Loan Number
+          </label>
+          <div className="group relative">
+            <input
+              type="text"
+              placeholder={loanType === "weekly" ? "e.g. W-001" : "e.g. D-001"}
+              className="w-full pl-6 pr-12 py-5 bg-white border-2 border-slate-100 rounded-2xl text-base font-bold text-slate-700 focus:outline-none focus:border-primary/20 focus:ring-4 focus:ring-primary/5 transition-all placeholder:text-slate-200 uppercase"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && !selectedLoan && (
+              <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto overflow-hidden">
+                {loans
+                  .filter((l) => l.loanNumber && l.loanNumber.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map((loan) => (
+                    <button
+                      key={loan._id}
+                      onClick={() => handleLoanSelect(loan)}
+                      className="w-full px-6 py-4 text-left hover:bg-slate-50 flex justify-between items-center transition-colors border-b border-slate-50 last:border-0"
+                    >
+                      <span className="font-black text-slate-700 uppercase">{loan.loanNumber}</span>
+                      <span className="text-[10px] font-bold text-slate-400">{loan.customerName}</span>
+                    </button>
+                  ))}
+              </div>
+            )}
+            {selectedLoan && (
+              <button
+                onClick={() => {
+                  setSelectedLoan(null);
+                  setSearchTerm("");
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {selectedLoan && (
+        <div className="p-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 mb-8">
+            <div>
+              <label className="block text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Customer Name</label>
+              <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{selectedLoan.customerName || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Mobile Number</label>
+              <p className="text-sm font-bold text-slate-700 tracking-tight">{(selectedLoan.mobileNumbers || []).join(", ") || "—"}</p>
+            </div>
+            <div>
+              <label className="block text-[9px] font-black text-primary uppercase tracking-[0.2em] mb-2">Remaining Principal</label>
+              <p className="text-base font-black text-primary tracking-tight">
+                ₹{(selectedLoan.remainingPrincipalAmount || 0).toLocaleString("en-IN")}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-8 py-4 bg-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all"
+          >
+            Foreclose This Loan
+          </button>
+        </div>
+      )}
+
+      {!selectedLoan && (
+        <div className="p-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">
+          {loadingSelect ? "Loading..." : "Search for a loan number to begin"}
+        </div>
+      )}
+
+      {showModal && selectedLoan && (
+        <ForeclosureModal
+          loanNumber={selectedLoan.loanNumber}
+          customerName={selectedLoan.customerName}
+          remainingPrincipal={selectedLoan.remainingPrincipalAmount}
+          onForeclose={(payload) => foreclose(selectedLoan._id, payload)}
+          onSuccess={() => {
+            setShowModal(false);
+            showToast(`${loanType === "weekly" ? "Weekly" : "Daily"} loan foreclosed successfully`, "success");
+            setSelectedLoan(null);
+            setSearchTerm("");
+          }}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </div>
+  );
+};
 
 const ForeclosurePage = () => {
   const router = useRouter();
   const { isDarkMode } = useUI();
   const { showToast } = useToast();
+  const [loanType, setLoanType] = useState("vehicle");
 
   const [loading, setLoading] = useState(false);
   const [loans, setLoans] = useState([]);
@@ -285,6 +447,31 @@ const ForeclosurePage = () => {
               <div className="h-1.5 w-20 bg-primary rounded-full"></div>
             </div>
 
+            <div className="flex gap-2 mb-8">
+              {[
+                { key: "vehicle", label: "Vehicle" },
+                { key: "weekly", label: "Weekly" },
+                { key: "daily", label: "Daily" },
+              ].map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setLoanType(t.key)}
+                  className={`px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border-2 transition-all ${
+                    loanType === t.key
+                      ? "bg-primary text-white border-primary shadow-lg shadow-blue-100"
+                      : "bg-white text-slate-400 border-slate-100 hover:border-primary/30 hover:text-primary"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {loanType !== "vehicle" && (
+              <WeeklyDailyForeclosureSection loanType={loanType} />
+            )}
+
+            {loanType === "vehicle" && (
             <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
               {/* Search Section */}
               <div className="p-6 sm:p-8 bg-slate-50/50 border-b border-slate-100">
@@ -578,10 +765,11 @@ const ForeclosurePage = () => {
                 </div>
               </div>
             </div>
+            )}
           </main>
 
           {/* Preview Modal */}
-          {showPreview && (
+          {loanType === "vehicle" && showPreview && (
             <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
               <div className="bg-white w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">

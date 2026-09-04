@@ -73,3 +73,10 @@ export const getWeeklyLoanROI = async (id) => {
     method: "GET",
   });
 };
+
+export const forecloseWeeklyLoan = async (id, data) => {
+  return await apiHandler(`/api/weekly-loans/${id}/foreclose`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};

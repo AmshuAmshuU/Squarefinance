@@ -9,11 +9,14 @@ import EMITable from "../../../../components/EMITable";
 import {
   getWeeklyLoanById,
   getWeeklyLoanEMIs,
+  forecloseWeeklyLoan,
 } from "../../../../services/weeklyLoan.service";
 import { getFollowupHistory } from "../../../../services/loan.service";
 import FollowupHistory from "../../../../components/FollowupHistory";
 import LoanROICard from "../../../../components/LoanROICard";
 import CustomerLocationPanel from "../../../../components/CustomerLocationPanel";
+import ForeclosureModal from "../../../../components/ForeclosureModal";
+import ForeclosureDetailsCard from "../../../../components/ForeclosureDetailsCard";
 import { getWeeklyLoanROI } from "../../../../services/weeklyLoan.service";
 import { useToast } from "../../../../context/ToastContext";
 import { format } from "date-fns";
@@ -30,42 +33,44 @@ const ViewWeeklyLoanPage = ({ params: paramsPromise }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [showForeclosureModal, setShowForeclosureModal] = useState(false);
+
+  const fetchData = React.useCallback(async () => {
+    try {
+      const [loanRes, emiRes, historyRes] = await Promise.all([
+        getWeeklyLoanById(params.id),
+        getWeeklyLoanEMIs(params.id),
+        getFollowupHistory(params.id),
+      ]);
+      const data = loanRes.data;
+      const emiData = emiRes.data || [];
+
+      // Format dates for the form
+      if (data.startDate)
+        data.startDate = format(new Date(data.startDate), "yyyy-MM-dd");
+      if (data.emiStartDate)
+        data.emiStartDate = format(new Date(data.emiStartDate), "yyyy-MM-dd");
+      if (data.emiEndDate)
+        data.emiEndDate = format(new Date(data.emiEndDate), "yyyy-MM-dd");
+      if (data.nextFollowUpDate)
+        data.nextFollowUpDate = format(
+          new Date(data.nextFollowUpDate),
+          "yyyy-MM-dd",
+        );
+
+      setLoanData(data);
+      setEmis(emiData);
+    } catch (err) {
+      showToast(err.message || "Failed to fetch details", "error");
+      router.push("/admin/weekly-loans");
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id, router, showToast]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [loanRes, emiRes, historyRes] = await Promise.all([
-          getWeeklyLoanById(params.id),
-          getWeeklyLoanEMIs(params.id),
-          getFollowupHistory(params.id),
-        ]);
-        const data = loanRes.data;
-        const emiData = emiRes.data || [];
-
-        // Format dates for the form
-        if (data.startDate)
-          data.startDate = format(new Date(data.startDate), "yyyy-MM-dd");
-        if (data.emiStartDate)
-          data.emiStartDate = format(new Date(data.emiStartDate), "yyyy-MM-dd");
-        if (data.emiEndDate)
-          data.emiEndDate = format(new Date(data.emiEndDate), "yyyy-MM-dd");
-        if (data.nextFollowUpDate)
-          data.nextFollowUpDate = format(
-            new Date(data.nextFollowUpDate),
-            "yyyy-MM-dd",
-          );
-
-        setLoanData(data);
-        setEmis(emiData);
-      } catch (err) {
-        showToast(err.message || "Failed to fetch details", "error");
-        router.push("/admin/weekly-loans");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-  }, [params.id]);
+  }, [fetchData]);
 
   return (
     <AuthGuard>
@@ -110,7 +115,17 @@ const ViewWeeklyLoanPage = ({ params: paramsPromise }) => {
                     </p>
                   </div>
                 </div>
-                <LoanStatusBadge status={loanData?.status} />
+                <div className="flex items-center gap-3">
+                  {loanData?.status !== "Closed" && (
+                    <button
+                      onClick={() => setShowForeclosureModal(true)}
+                      className="px-4 py-2.5 bg-amber-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-100 hover:bg-amber-600 transition-all"
+                    >
+                      Foreclose
+                    </button>
+                  )}
+                  <LoanStatusBadge status={loanData?.status} />
+                </div>
               </div>
 
               {loading ? (
@@ -119,6 +134,17 @@ const ViewWeeklyLoanPage = ({ params: paramsPromise }) => {
                 </div>
               ) : (
                 <>
+                  {loanData?.foreclosureAmount > 0 && (
+                    <ForeclosureDetailsCard
+                      foreclosureAmount={loanData.foreclosureAmount}
+                      foreclosureDate={loanData.foreclosureDate}
+                      foreclosureChargeAmount={loanData.foreclosureChargeAmount}
+                      odAmount={loanData.odAmount}
+                      miscellaneousFee={loanData.miscellaneousFee}
+                      foreclosedByName={loanData.foreclosedBy?.name}
+                    />
+                  )}
+
                   <WeeklyLoanForm
                     initialData={loanData}
                     isViewOnly={true}
@@ -154,6 +180,20 @@ const ViewWeeklyLoanPage = ({ params: paramsPromise }) => {
           </main>
         </div>
       </div>
+      {showForeclosureModal && (
+        <ForeclosureModal
+          loanNumber={loanData?.loanNumber}
+          customerName={loanData?.customerName}
+          remainingPrincipal={loanData?.remainingPrincipalAmount}
+          onForeclose={(payload) => forecloseWeeklyLoan(params.id, payload)}
+          onSuccess={async () => {
+            setShowForeclosureModal(false);
+            showToast("Weekly loan foreclosed successfully", "success");
+            await fetchData();
+          }}
+          onClose={() => setShowForeclosureModal(false)}
+        />
+      )}
     </AuthGuard>
   );
 };
