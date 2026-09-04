@@ -602,10 +602,18 @@ exports.updateWeeklyLoan = asyncHandler(async (req, res, next) => {
   const totalAmount = Math.ceil(
     emiAmount * currentPaidEmis + (weeklyLoan.odAmount || 0),
   );
-  // totalCollected: use value from request body (set by frontend from DB) or keep existing
-  const totalCollected = req.body.totalCollected !== undefined
-    ? req.body.totalCollected
-    : weeklyLoan.totalCollected;
+  // totalCollected must be re-derived from actual EMI payment records + the
+  // freshly-recalculated processing fee - NOT trusted from req.body, since
+  // it isn't a field the edit form lets the user change directly, so it was
+  // silently echoing back the stale pre-edit value (e.g. a processing fee
+  // computed off the old disbursement amount) on every edit.
+  const editEmis = await EMI.find({ loanId: weeklyLoan._id, loanModel: "WeeklyLoan" }).lean();
+  const totalEmiCollected = editEmis.reduce((acc, e) => {
+    const emiPaid = (e.paymentHistory || []).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+    const emiOd = (e.overdue || []).reduce((s, ov) => s + (parseFloat(ov.amount) || 0), 0);
+    return acc + emiPaid + emiOd;
+  }, 0);
+  const totalCollected = Math.ceil(totalEmiCollected + processingFee);
   const remainingEmis = totalWeeks - currentPaidEmis;
   const remainingPrincipalAmount = Math.ceil(
     amount - emiAmount * currentPaidEmis,
