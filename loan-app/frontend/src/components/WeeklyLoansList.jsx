@@ -260,9 +260,6 @@ const WeeklyLoansList = ({ type, title }) => {
                     DISBURSEMENT
                   </th>
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
-                    TENURE
-                  </th>
-                  <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                     STATUS
                   </th>
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
@@ -359,11 +356,6 @@ const WeeklyLoansList = ({ type, title }) => {
                       <td className="px-4 py-5 text-center whitespace-nowrap">
                         <span className="font-bold text-slate-900 text-[10px]">
                           ₹{loan.principalAmount?.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-5 text-center whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-black">
-                          {loan.totalEmis}W
                         </span>
                       </td>
                       <td className="px-4 py-5 text-center whitespace-nowrap">
@@ -493,9 +485,6 @@ const WeeklyLoansList = ({ type, title }) => {
                   Disbursement
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
-                  Tenure
-                </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                   Status
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
@@ -587,11 +576,6 @@ const WeeklyLoansList = ({ type, title }) => {
                     </td>
                     <td className="px-6 py-5 text-center whitespace-nowrap font-bold text-slate-900 text-xs">
                       ₹{loan.principalAmount?.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-5 text-center whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-black">
-                        {loan.totalEmis}W
-                      </span>
                     </td>
                     <td className="px-6 py-5 text-center whitespace-nowrap">
                       <span
