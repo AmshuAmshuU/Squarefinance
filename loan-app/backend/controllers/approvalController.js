@@ -12,6 +12,20 @@ const { addMonths } = require("date-fns");
 const { sendNotification } = require("./notificationController");
 const { syncEmiPayments } = require("../utils/syncEmiPayments");
 
+// Invokes an existing asyncHandler-wrapped route handler internally (no real
+// HTTP request/response) so its exact logic can be reused without
+// duplicating it. Same pattern as analyticsController.js's invokeInternal.
+// Captures the `data` field the handler would normally send via
+// sendResponse(). `req.user` here must be the currently-approving Super
+// Admin (never the original requester) - passing it through is what makes
+// the reused handler take its own direct-apply path instead of re-raising
+// another approval request.
+const invokeInternal = (handler, req) =>
+  new Promise((resolve, reject) => {
+    const res = { status: () => res, json: (payload) => resolve(payload.data) };
+    handler(req, res, (err) => reject(err));
+  });
+
 // Mirrors loanController.js's calculateEMI (flat interest) so approved
 // LOAN_EDIT changes can recompute monthlyEMI/totalInterestAmount the same way.
 const calculateEMI = (principal, roi, tenureMonths) => {
@@ -665,18 +679,28 @@ const processApproval = asyncHandler(async (req, res, next) => {
               await emi.save();
             }
           }
-        } else {
-          // WeeklyLoan / DailyLoan submit an already-flat payload, so the
-          // direct $set continues to work correctly here.
-          let LoanModel;
-          if (targetModel === "WeeklyLoan") LoanModel = require("../models/WeeklyLoan");
-          else if (targetModel === "DailyLoan") LoanModel = require("../models/DailyLoan");
-
-          if (LoanModel) {
-            // Remove fields that shouldn't be directly set
-            const { _id, __v, createdAt, updatedAt, paidEmis, totalCollected, remainingPrincipalAmount, ...safeValues } = newValues;
-            await LoanModel.findByIdAndUpdate(targetId, { $set: safeValues });
-          }
+        } else if (targetModel === "WeeklyLoan" || targetModel === "DailyLoan") {
+          // WeeklyLoan / DailyLoan submit an already-flat payload, so this
+          // used to be a direct $set of the raw values. That skipped every
+          // derived recalculation the direct-edit endpoint does on the same
+          // fields (processing fee, EMI amount, totalCollected, and the
+          // full EMI schedule sync when amount/tenure/dates change) - so an
+          // approved employee edit could silently leave the EMI schedule
+          // and totalCollected stale even though the loan's own summary
+          // fields looked updated. Reusing the direct-edit handler itself
+          // (instead of re-deriving all of that a second time here) keeps
+          // this permanently in sync with it. req.user must be the
+          // currently-approving Super Admin (guaranteed by this route's
+          // authorizeRoles("SUPER_ADMIN") gate) so the handler takes its
+          // direct-apply branch instead of raising another approval.
+          const { updateWeeklyLoan } = require("./weeklyLoanController");
+          const { updateDailyLoan } = require("./dailyLoanController");
+          const handler = targetModel === "WeeklyLoan" ? updateWeeklyLoan : updateDailyLoan;
+          await invokeInternal(handler, {
+            params: { id: targetId },
+            body: newValues,
+            user: req.user,
+          });
         }
       }
     } else if (requestType === "PRINCIPAL_PAYMENT") {
