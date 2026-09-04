@@ -198,8 +198,13 @@ function weeklyDailyLoanFlows(loan, emis, asOfDate = new Date()) {
     });
   }
 
+  const forecloseDate = loan.foreclosureDate ? new Date(loan.foreclosureDate) : null;
+  if (forecloseDate && forecloseDate <= asOfDate && loan.foreclosureAmount) {
+    hist.push({ date: forecloseDate, amount: loan.foreclosureAmount });
+  }
+
   const isClosed = (loan.status || "").toLowerCase() === "closed";
-  const effectiveClosureDate = isClosed ? latestPaidEmiDate(emis) : null;
+  const effectiveClosureDate = isClosed ? (forecloseDate || latestPaidEmiDate(emis)) : null;
   const wasStillOpen = !isClosed || !effectiveClosureDate || asOfDate < effectiveClosureDate;
 
   if (wasStillOpen) {

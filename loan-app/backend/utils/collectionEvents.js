@@ -39,7 +39,7 @@ const extractId = (val) => {
 //     matched back afterward)
 //   - Vehicle/Weekly/Daily/Interest overdue payments (one event per
 //     overdue entry)
-//   - Vehicle foreclosure settlements
+//   - Vehicle/Weekly/Daily foreclosure settlements
 //   - Vehicle sold-vehicle settlements
 //   - Interest loan principal repayments
 // Processing fees are intentionally excluded - Collections has never shown
@@ -65,9 +65,9 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
     // collected it (found 2026-08-08, loan 16 EMI 11). updatedAt is the
     // same story as above, for Overdue-type events' ordering.
     EMI.find({ loanModel: "Loan" }).select("loanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
-    WeeklyLoan.find({}).select("loanNumber customerName").lean(),
+    WeeklyLoan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode updatedAt").lean(),
     EMI.find({ loanModel: "WeeklyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
-    DailyLoan.find({}).select("loanNumber customerName").lean(),
+    DailyLoan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode updatedAt").lean(),
     EMI.find({ loanModel: "DailyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
     InterestLoan.find({}).select("loanNumber customerName principalPayments").lean(),
     InterestEMI.find({}).select("interestLoanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
@@ -170,11 +170,29 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
   // Weekly
   for (const loan of weeklyLoans) {
     addEmiEvents(loan, "WeeklyLoan", "Weekly", weeklyEmisByLoan[String(loan._id)] || []);
+    if (loan.foreclosureDate && loan.foreclosureAmount) {
+      events.push({
+        loanId: loan._id, loanModel: "WeeklyLoan", loanNumber: loan.loanNumber, customerName: loan.customerName,
+        emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: loan.foreclosureAmount,
+        paymentType: "Foreclosure", paymentMode: loan.paymentMode || "",
+        date: loan.foreclosureDate, sortAt: loan.updatedAt || loan.foreclosureDate,
+        updatedBy: nameOf(loan.foreclosedBy),
+      });
+    }
   }
 
   // Daily
   for (const loan of dailyLoans) {
     addEmiEvents(loan, "DailyLoan", "Daily", dailyEmisByLoan[String(loan._id)] || []);
+    if (loan.foreclosureDate && loan.foreclosureAmount) {
+      events.push({
+        loanId: loan._id, loanModel: "DailyLoan", loanNumber: loan.loanNumber, customerName: loan.customerName,
+        emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: loan.foreclosureAmount,
+        paymentType: "Foreclosure", paymentMode: loan.paymentMode || "",
+        date: loan.foreclosureDate, sortAt: loan.updatedAt || loan.foreclosureDate,
+        updatedBy: nameOf(loan.foreclosedBy),
+      });
+    }
   }
 
   // Interest - EMI (interest) payments use paymentType "Interest" to match
