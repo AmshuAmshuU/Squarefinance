@@ -710,6 +710,61 @@ exports.forecloseDailyLoan = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Daily loan not found", 404));
   }
 
+  // Same approval gate as Vehicle's forecloseLoan - anyone without Super
+  // Admin or explicit payment-approval authority gets a pending approval
+  // request instead of an immediate foreclosure. This was missing entirely
+  // when Weekly/Daily foreclosure was first built, letting any employee
+  // with ordinary edit permission close a loan out with no review.
+  const isSuperAdmin = req.user.role === "SUPER_ADMIN";
+  const hasApprovalAuthority = req.user.permissions?.paymentApproval;
+
+  if (!isSuperAdmin && !hasApprovalAuthority) {
+    const Approval = require("../models/Approval");
+    const existingApproval = await Approval.findOne({
+      targetId: loan._id,
+      status: "Pending",
+    });
+
+    if (existingApproval) {
+      return next(new ErrorHandler("This foreclosure is already waiting for approval", 400));
+    }
+
+    await Approval.create({
+      requestType: "FORECLOSURE",
+      targetId: loan._id,
+      targetModel: "DailyLoan",
+      loanNumber: loan.loanNumber,
+      customerName: loan.customerName || "Customer",
+      requestedData: { ...req.body, loanId: loan._id },
+      requestedBy: req.user._id,
+      status: "Pending",
+    });
+
+    const { notifyApprovalCountChange, notifyAdmins } = require("./notificationController");
+    await notifyAdmins({
+      senderId: req.user._id,
+      type: "PAYMENT_REQUEST",
+      title: "New Foreclosure Approval Request",
+      message: `Employee ${req.user.name} requested approval for Foreclosure of ₹${req.body.totalAmount || 0} for loan ${loan.loanNumber} (${loan.customerName}).`,
+      data: {
+        loanNumber: loan.loanNumber,
+        customerName: loan.customerName,
+        amount: req.body.totalAmount || 0,
+        employeeName: req.user.name,
+        loanId: loan._id,
+        loanType: "DailyLoan",
+        targetId: loan._id,
+      },
+    });
+    await notifyApprovalCountChange();
+
+    loan.status = "Waiting for Approval";
+    loan.updatedBy = req.user._id;
+    await loan.save();
+
+    return sendResponse(res, 200, "success", "Foreclosure submitted for approval", null, loan);
+  }
+
   if (loan.status === "Closed") {
     return next(new ErrorHandler("the loan has been closed already", 400));
   }

@@ -282,6 +282,22 @@ const processApproval = asyncHandler(async (req, res, next) => {
         const { ensureInterestScheduleCurrent } = require("./interestLoanController");
         await ensureInterestScheduleCurrent(emi.interestLoanId);
       }
+    } else if (requestType === "FORECLOSURE" && (targetModel === "WeeklyLoan" || targetModel === "DailyLoan")) {
+      // Reuse forecloseWeeklyLoan/forecloseDailyLoan directly (invoked
+      // internally, no real HTTP round-trip) instead of re-deriving the
+      // same close-out logic a second time here - same reasoning as the
+      // LOAN_EDIT branch below. req.user must be the currently-approving
+      // Super Admin (guaranteed by this route's authorizeRoles gate) so
+      // the handler takes its direct-apply branch instead of raising
+      // another approval request.
+      const { forecloseWeeklyLoan } = require("./weeklyLoanController");
+      const { forecloseDailyLoan } = require("./dailyLoanController");
+      const handler = targetModel === "WeeklyLoan" ? forecloseWeeklyLoan : forecloseDailyLoan;
+      await invokeInternal(handler, {
+        params: { id: targetId },
+        body: requestedData,
+        user: req.user,
+      });
     } else if (requestType === "FORECLOSURE") {
       const loan = await Loan.findById(targetId);
       if (loan) {
