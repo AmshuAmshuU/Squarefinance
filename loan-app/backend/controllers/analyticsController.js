@@ -271,8 +271,8 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
   // every approval — NOT from the Payment collection, which can drift out of sync
   // whenever a payment is edited (mode-only corrections in particular don't always
   // produce a matching Payment record, so summing Payment records can over/under-count).
-  const [emiDailyPayArr, emiDailyOdArr, dailyProcFeeArr,
-         emiWeeklyPayArr, emiWeeklyOdArr, weeklyProcFeeArr,
+  const [emiDailyPayArr, emiDailyOdArr, dailyProcFeeArr, dailyForeclosureArr,
+         emiWeeklyPayArr, emiWeeklyOdArr, weeklyProcFeeArr, weeklyForeclosureArr,
          emiMonthlyPayArr, emiInterestPayArr] = await Promise.all([
     EMI.aggregate([
       { $match: { loanModel: "DailyLoan" } },
@@ -287,6 +287,13 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
     DailyLoan.aggregate([
       { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } }
     ]),
+    // Foreclosure amounts from DailyLoan documents - same gap as the
+    // Collections/ROI fix, this "Total Collected" card had its own separate
+    // computation that never accounted for foreclosure either.
+    DailyLoan.aggregate([
+      { $match: { status: "Closed", foreclosureAmount: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureAmount", 0] } } } }
+    ]),
     EMI.aggregate([
       { $match: { loanModel: "WeeklyLoan" } },
       { $unwind: { path: "$paymentHistory", preserveNullAndEmptyArrays: false } },
@@ -299,6 +306,11 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
     ]),
     WeeklyLoan.aggregate([
       { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } }
+    ]),
+    // Foreclosure amounts from WeeklyLoan documents
+    WeeklyLoan.aggregate([
+      { $match: { status: "Closed", foreclosureAmount: { $gt: 0 } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureAmount", 0] } } } }
     ]),
     // Vehicle loans: sum EMI paymentHistory + OD + processing fees directly
     Promise.all([
@@ -335,11 +347,11 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
   ]);
 
   const weeklyCollected = Math.round(
-    getAggSum(emiWeeklyPayArr) + getAggSum(emiWeeklyOdArr) + getAggSum(weeklyProcFeeArr)
+    getAggSum(emiWeeklyPayArr) + getAggSum(emiWeeklyOdArr) + getAggSum(weeklyProcFeeArr) + getAggSum(weeklyForeclosureArr)
   );
 
   const dailyCollected = Math.round(
-    getAggSum(emiDailyPayArr) + getAggSum(emiDailyOdArr) + getAggSum(dailyProcFeeArr)
+    getAggSum(emiDailyPayArr) + getAggSum(emiDailyOdArr) + getAggSum(dailyProcFeeArr) + getAggSum(dailyForeclosureArr)
   );
 
   // Monthly collected: EMI payments + OD + processing fees + foreclosure + sold amounts
