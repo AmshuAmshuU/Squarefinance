@@ -62,7 +62,17 @@ const formatLoanResponse = (loanDoc) => {
             status: loan.status,
             paymentStatus: loan.paymentStatus,
             remarks: loan.remarks,
-            ...(loan.foreclosureAmount !== undefined && loan.foreclosureAmount !== null
+            // foreclosureAmount is 0 (not undefined) for almost every closed
+            // loan that was never foreclosed - the edit form saves 0 into it
+            // the first time the loan is ever edited for any unrelated
+            // reason. Checking > 0 is what actually distinguishes "this loan
+            // was genuinely foreclosed" from "this field just defaults to
+            // 0" - matches the same > 0 check already used for the
+            // Weekly/Daily foreclosure details card. Without this, the card
+            // rendered for any edited-at-least-once loan and showed
+            // loan.odAmount (a running lifetime OD total, unrelated to
+            // foreclosure) as if it were the OD collected AT foreclosure.
+            ...(loan.foreclosureAmount !== undefined && loan.foreclosureAmount !== null && loan.foreclosureAmount > 0
               ? {
                   foreclosureDetails: {
                     foreclosedBy: loan.foreclosedBy || null,
