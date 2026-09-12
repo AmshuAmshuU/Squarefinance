@@ -581,8 +581,12 @@ const LoanForm = ({
 
   const getFieldClass = (name) => {
     const meta = formik.getFieldMeta(name);
+    // placeholder:italic/font-normal so an empty field's example hint
+    // ("KA-01-AB-1234" etc.) reads as a hint, not as bold real data -
+    // color alone (placeholder:text-slate-300) wasn't a clear enough
+    // difference from the bold, dark text of a genuinely entered value.
     const baseClass =
-      "w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 transition-all ";
+      "w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 transition-all placeholder:italic placeholder:font-normal ";
     const stateClass =
       meta.touched && meta.error
         ? "border-red-300 text-red-900 focus:ring-red-100 placeholder:text-red-200"

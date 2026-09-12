@@ -223,8 +223,10 @@ const InterestLoanForm = ({
   const getFieldClass = (name, section = null) => {
     const isTouched = section ? touched[section]?.[name] : touched[name];
     const error = section ? errors[section]?.[name] : errors[name];
+    // placeholder:italic/font-normal so an empty field's example hint
+    // reads as a hint, not as bold real data.
     const baseClass =
-      "w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 transition-all ";
+      "w-full bg-slate-50 border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 transition-all placeholder:italic placeholder:font-normal ";
     return (
       baseClass +
       (isTouched && error

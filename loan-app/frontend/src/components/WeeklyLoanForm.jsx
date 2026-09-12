@@ -219,8 +219,10 @@ const WeeklyLoanForm = ({
       error = section ? errors[section]?.[field] : errors[field];
     }
 
+    // placeholder:italic/font-normal so an empty field's example hint
+    // reads as a hint, not as bold real data.
     const baseClass =
-      "w-full bg-slate-50 border rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-slate-300 disabled:opacity-70 focus:outline-none focus:ring-2 ";
+      "w-full bg-slate-50 border rounded-2xl px-5 py-4 text-sm font-bold transition-all placeholder:text-slate-300 placeholder:italic placeholder:font-normal disabled:opacity-70 focus:outline-none focus:ring-2 ";
     const stateClass =
       isTouched && error
         ? "border-red-300 text-red-900 focus:ring-red-100 placeholder:text-red-200"
