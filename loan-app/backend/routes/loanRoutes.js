@@ -25,6 +25,7 @@ const {
   getTodoList,
   deleteLoan,
   checkLoanNumberUniqueness,
+  checkVehicleActiveLoan,
 } = require("../controllers/loanController");
 const {
   getRtoWorks,
@@ -49,6 +50,7 @@ router.use(isAuthenticated);
 
 router.get("/rto-works", getRtoWorks);
 router.post("/rto-works", createRtoWork);
+router.get("/check-vehicle-active/:vehicleNumber", checkVehicleActiveLoan);
 
 router
   .route("/")

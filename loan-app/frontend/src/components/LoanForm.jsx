@@ -15,10 +15,12 @@ import {
   getRtoWorks,
   createRtoWork,
   checkLoanNumberUniqueness,
+  checkVehicleActiveLoan,
 } from "../services/loan.service";
 import { getLoanExpensesTotal } from "../services/expenseService";
 
 const _monthlyLoanUniquenessCache = new Map();
+const _vehicleActiveLoanCache = new Map();
 
 const ErrorMsg = ({ name, formik }) => {
   const meta = formik.getFieldMeta(name);
@@ -103,7 +105,31 @@ const LoanForm = ({
     vehicleInformation: Yup.object({
       vehicleNumber: Yup.string()
         .matches(/^(?:[A-Z]{2}-\d{2}-[A-Z]{1,2}-\d{4})?$/, "Format: KA-01-AB-1234")
-        .nullable(),
+        .nullable()
+        .test(
+          "vehicle-active-loan",
+          "This vehicle already has an active loan",
+          async function (value) {
+            if (!value || isViewOnly) return true;
+            // If editing and unchanged from what this loan already has, skip
+            if (initialData?.vehicleInformation?.vehicleNumber === value) return true;
+
+            if (_vehicleActiveLoanCache.has(value)) {
+              const cached = _vehicleActiveLoanCache.get(value);
+              return cached.ok || this.createError({ message: cached.message });
+            }
+
+            try {
+              await checkVehicleActiveLoan(value);
+              _vehicleActiveLoanCache.set(value, { ok: true });
+              return true;
+            } catch (err) {
+              const message = err.message || "This vehicle already has an active loan";
+              _vehicleActiveLoanCache.set(value, { ok: false, message });
+              return this.createError({ message });
+            }
+          },
+        ),
       chassisNumber: Yup.string().nullable(),
       engineNumber: Yup.string().nullable(),
       modelYear: Yup.string().matches(/^\d*$/, "Must be numeric").nullable(),

@@ -198,6 +198,12 @@ export const checkLoanNumberUniqueness = async (loanNumber) => {
   });
 };
 
+export const checkVehicleActiveLoan = async (vehicleNumber) => {
+  return await apiHandler(`/api/loans/check-vehicle-active/${vehicleNumber}`, {
+    method: "GET",
+  });
+};
+
 export const getLoanROI = async (id) => {
   return await apiHandler(`/api/loans/${id}/roi`, {
     method: "GET",

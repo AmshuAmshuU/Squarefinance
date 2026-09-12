@@ -77,6 +77,21 @@ const createLoan = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Loan number already exists", 400));
   }
 
+  if (vehicleInformation?.vehicleNumber) {
+    const activeVehicleLoan = await Loan.findOne({
+      vehicleNumber: vehicleInformation.vehicleNumber.toUpperCase(),
+      status: { $ne: "Closed" },
+    });
+    if (activeVehicleLoan) {
+      return next(
+        new ErrorHandler(
+          `This vehicle already has an active loan: ${activeVehicleLoan.loanNumber} (${activeVehicleLoan.status})`,
+          400,
+        ),
+      );
+    }
+  }
+
   const p = parseFloat(loanTerms?.principalAmount) || 0;
   const r = parseFloat(loanTerms?.annualInterestRate) || 0;
   const t = parseInt(loanTerms?.tenureMonths) || 0;
@@ -897,6 +912,28 @@ const updateLoan = asyncHandler(async (req, res, next) => {
 
     if (existingLoanWithNumber.some((l) => l !== null)) {
       return next(new ErrorHandler("Loan number already exists", 400));
+    }
+  }
+
+  // Vehicle Active-Loan Uniqueness Check - only when the vehicle number is
+  // actually being changed to a different one; re-saving the loan's own
+  // unchanged vehicle number must never trip this against itself.
+  if (
+    vehicleInformation?.vehicleNumber &&
+    vehicleInformation.vehicleNumber !== loan.vehicleNumber
+  ) {
+    const activeVehicleLoan = await Loan.findOne({
+      vehicleNumber: vehicleInformation.vehicleNumber.toUpperCase(),
+      status: { $ne: "Closed" },
+      _id: { $ne: loan._id },
+    });
+    if (activeVehicleLoan) {
+      return next(
+        new ErrorHandler(
+          `This vehicle already has an active loan: ${activeVehicleLoan.loanNumber} (${activeVehicleLoan.status})`,
+          400,
+        ),
+      );
     }
   }
 
@@ -2921,6 +2958,37 @@ const checkLoanNumberUniqueness = asyncHandler(async (req, res, next) => {
   });
 });
 
+// A vehicle can only carry one open (non-Closed) loan at a time - Seized
+// and Pending both count as "still open" here, same as Active, since the
+// vehicle isn't actually free until its loan is Closed (sold/foreclosed/
+// paid off). Re-loans on a vehicle whose previous loan is already Closed
+// are a normal, allowed business practice.
+const checkVehicleActiveLoan = asyncHandler(async (req, res, next) => {
+  const { vehicleNumber } = req.params;
+
+  if (!vehicleNumber) {
+    return next(new ErrorHandler("Please provide a vehicle number", 400));
+  }
+
+  const activeLoan = await Loan.findOne({
+    vehicleNumber: vehicleNumber.toUpperCase(),
+    status: { $ne: "Closed" },
+  });
+
+  if (activeLoan) {
+    return next(
+      new ErrorHandler(
+        `This vehicle already has an active loan: ${activeLoan.loanNumber} (${activeLoan.status})`,
+        400,
+      ),
+    );
+  }
+
+  sendResponse(res, 200, "success", "Vehicle number is available", null, {
+    available: true,
+  });
+});
+
 module.exports = {
   createLoan,
   getAllLoans,
@@ -2946,4 +3014,5 @@ module.exports = {
   getTodoList,
   deleteLoan,
   checkLoanNumberUniqueness,
+  checkVehicleActiveLoan,
 };
