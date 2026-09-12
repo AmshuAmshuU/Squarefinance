@@ -1,15 +1,19 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { getFollowupDashboardSummary } from "../../services/loan.service";
-import { PhoneCall, AlertTriangle, Loader2, ChevronDown } from "lucide-react";
+import { PhoneCall, AlertTriangle, Loader2, ChevronDown, Pencil } from "lucide-react";
 import ContactActionMenu from "../ContactActionMenu";
+import FollowupEditModal from "../FollowupEditModal";
 
+// Loan number links open the loan directly in modify mode - staff coming
+// from a follow-up call almost always need to edit something (log the
+// response, update a number), not just look at the profile.
 const LOAN_TYPE_ROUTES = {
-  Vehicle: "/admin/loans",
-  Weekly: "/admin/weekly-loans",
-  Daily: "/admin/daily-loans",
-  Interest: "/admin/interest-loan",
+  Vehicle: "/admin/loans/edit",
+  Weekly: "/admin/weekly-loans/edit",
+  Daily: "/admin/daily-loans/edit",
+  Interest: "/admin/interest-loan/edit",
 };
 
 const formatDate = (d) =>
@@ -21,23 +25,25 @@ const FollowupAccountabilityCard = () => {
   const [data, setData] = useState({ today: { count: 0, items: [] }, stale: { count: 0, items: [] } });
   const [activeTab, setActiveTab] = useState(null); // null | "today" | "stale"
   const [activeContactMenu, setActiveContactMenu] = useState(null); // { number, name, type, x, y }
+  const [editingLoan, setEditingLoan] = useState(null);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await getFollowupDashboardSummary();
+      if (res.data) {
+        setData(res.data);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to load follow-up summary");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        setLoading(true);
-        const res = await getFollowupDashboardSummary();
-        if (res.data) {
-          setData(res.data);
-        }
-      } catch (err) {
-        setError(err.message || "Failed to load follow-up summary");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchSummary();
-  }, []);
+  }, [fetchSummary]);
 
   const toggleTab = (tab) => {
     setActiveTab((prev) => (prev === tab ? null : tab));
@@ -110,28 +116,26 @@ const FollowupAccountabilityCard = () => {
                   <table className="w-full text-left">
                     <thead className="sticky top-0 bg-white">
                       <tr className="border-b border-slate-100">
-                        <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Loan</th>
-                        <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
-                        <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile</th>
-                        <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Type</th>
-                        {activeTab === "stale" && (
-                          <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">Followup Date</th>
-                        )}
+                        <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Loan</th>
+                        <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
+                        <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile</th>
+                        <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Pending</th>
+                        <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Response &amp; followup</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {activeItems.map((item) => (
                         <tr key={item._id} className="hover:bg-slate-50 transition-colors group">
-                          <td className="px-6 py-3">
+                          <td className="px-3 py-2.5">
                             <Link
-                              href={`${LOAN_TYPE_ROUTES[item.loanType] || "/admin/loans"}/${item._id}`}
+                              href={`${LOAN_TYPE_ROUTES[item.loanType] || "/admin/loans/edit"}/${item._id}`}
                               className="text-xs font-black text-primary group-hover:underline"
                             >
                               {item.loanNumber}
                             </Link>
                           </td>
-                          <td className="px-6 py-3 text-xs font-bold text-slate-600">{item.customerName || "-"}</td>
-                          <td className="px-6 py-3">
+                          <td className="px-3 py-2.5 text-xs font-bold text-slate-600">{item.customerName || "-"}</td>
+                          <td className="px-3 py-2.5">
                             <div className="flex flex-col gap-0.5">
                               {(item.mobileNumbers || []).length > 0 ? (
                                 item.mobileNumbers.map((num, idx) => (
@@ -157,14 +161,39 @@ const FollowupAccountabilityCard = () => {
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-tight">
-                            {item.loanType}
+                          <td className="px-3 py-2.5 whitespace-nowrap">
+                            {item.pendingAmount > 0 ? (
+                              <>
+                                <p className="text-xs font-black text-red-500">
+                                  ₹{item.pendingAmount.toLocaleString("en-IN")}
+                                </p>
+                                <p className="text-[9px] font-bold text-slate-400 mt-0.5">
+                                  Due {formatDate(item.pendingDueDate)}
+                                </p>
+                              </>
+                            ) : (
+                              <span className="text-xs font-bold text-slate-300">-</span>
+                            )}
                           </td>
-                          {activeTab === "stale" && (
-                            <td className="px-6 py-3 text-xs font-bold text-red-500">
-                              {formatDate(item.nextFollowUpDate)}
-                            </td>
-                          )}
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-start gap-1.5 max-w-[180px]">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-slate-600 truncate">
+                                  {item.clientResponse || "-"}
+                                </p>
+                                <p className="text-[9px] font-bold text-slate-400 mt-0.5">
+                                  Followup {formatDate(item.nextFollowUpDate)}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => setEditingLoan(item)}
+                                className="flex-none w-5 h-5 flex items-center justify-center rounded-md bg-blue-50 text-primary hover:bg-blue-100 transition-colors"
+                                aria-label="Edit response and followup date"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -180,6 +209,17 @@ const FollowupAccountabilityCard = () => {
         contact={activeContactMenu}
         onClose={() => setActiveContactMenu(null)}
       />
+
+      {editingLoan && (
+        <FollowupEditModal
+          loan={editingLoan}
+          onClose={() => setEditingLoan(null)}
+          onSaved={() => {
+            setEditingLoan(null);
+            fetchSummary();
+          }}
+        />
+      )}
     </div>
   );
 };

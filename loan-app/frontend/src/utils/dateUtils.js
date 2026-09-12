@@ -15,3 +15,10 @@ export const getISTDateNDaysAgo = (n) => {
     timeZone: "Asia/Kolkata",
   });
 };
+
+// Formats an existing stored date (not "now") as a YYYY-MM-DD string for a
+// date input, anchored to its own IST calendar day rather than whatever
+// timezone the browser happens to be in - same reasoning as getTodayIST,
+// just for a date that isn't necessarily today.
+export const toISTDateString = (date) =>
+  date ? new Date(date).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) : "";

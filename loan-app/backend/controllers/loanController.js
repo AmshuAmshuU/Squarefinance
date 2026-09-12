@@ -1927,14 +1927,41 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
   const now = new Date();
 
   const modelConfigs = [
-    { Model: Loan, loanType: "Vehicle", emiCollection: "emis", emiForeignField: "loanId" },
-    { Model: WeeklyLoan, loanType: "Weekly", emiCollection: "emis", emiForeignField: "loanId" },
-    { Model: DailyLoan, loanType: "Daily", emiCollection: "emis", emiForeignField: "loanId" },
-    { Model: InterestLoan, loanType: "Interest", emiCollection: "interestemis", emiForeignField: "interestLoanId" },
+    { Model: Loan, loanType: "Vehicle", emiCollection: "emis", emiForeignField: "loanId", amountField: "emiAmount" },
+    { Model: WeeklyLoan, loanType: "Weekly", emiCollection: "emis", emiForeignField: "loanId", amountField: "emiAmount" },
+    { Model: DailyLoan, loanType: "Daily", emiCollection: "emis", emiForeignField: "loanId", amountField: "emiAmount" },
+    { Model: InterestLoan, loanType: "Interest", emiCollection: "interestemis", emiForeignField: "interestLoanId", amountField: "interestAmount" },
   ];
 
+  // Same "pending" definition already used for hasPendingEmi below - not yet
+  // Paid, and either genuinely overdue (past due date) or already
+  // Partially Paid. A future-scheduled EMI that simply hasn't come due yet
+  // doesn't count.
+  const pendingEmiCond = {
+    $and: [
+      { $ne: ["$$emi.status", "Paid"] },
+      {
+        $or: [
+          { $eq: ["$$emi.status", "Partially Paid"] },
+          { $lte: ["$$emi.dueDate", now] },
+        ],
+      },
+    ],
+  };
+
   const results = await Promise.all(
-    modelConfigs.map(async ({ Model, loanType, emiCollection, emiForeignField }) => {
+    modelConfigs.map(async ({ Model, loanType, emiCollection, emiForeignField, amountField }) => {
+      const pendingEmisExpr = {
+        $map: {
+          input: { $filter: { input: "$emis", as: "emi", cond: pendingEmiCond } },
+          as: "emi",
+          in: {
+            amount: { $subtract: [{ $ifNull: [`$$emi.${amountField}`, 0] }, { $ifNull: ["$$emi.amountPaid", 0] }] },
+            dueDate: "$$emi.dueDate",
+          },
+        },
+      };
+
       const pipeline = [
         { $match: { status: "Active" } },
         {
@@ -1954,17 +1981,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                     $filter: {
                       input: "$emis",
                       as: "emi",
-                      cond: {
-                        $and: [
-                          { $ne: ["$$emi.status", "Paid"] },
-                          {
-                            $or: [
-                              { $eq: ["$$emi.status", "Partially Paid"] },
-                              { $lte: ["$$emi.dueDate", now] },
-                            ],
-                          },
-                        ],
-                      },
+                      cond: pendingEmiCond,
                     },
                   },
                 },
@@ -1984,6 +2001,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                 { $lt: ["$nextFollowUpDate", todayStart] },
               ],
             },
+            pendingEmis: pendingEmisExpr,
           },
         },
         {
@@ -1997,6 +2015,8 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   customerName: 1,
                   mobileNumbers: 1,
                   nextFollowUpDate: 1,
+                  clientResponse: 1,
+                  pendingEmis: 1,
                 },
               },
             ],
@@ -2009,6 +2029,8 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   customerName: 1,
                   mobileNumbers: 1,
                   nextFollowUpDate: 1,
+                  clientResponse: 1,
+                  pendingEmis: 1,
                 },
               },
             ],
@@ -2017,7 +2039,20 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
       ];
 
       const [result] = await Model.aggregate(pipeline);
-      const attachType = (list) => (list || []).map((l) => ({ ...l, loanType }));
+
+      // Longest-pending = earliest due date among the loan's own pending
+      // EMIs - the single most-overdue item, not a sum across all of them.
+      const attachPendingSummary = (item) => {
+        const { pendingEmis, ...rest } = item;
+        const sorted = [...(pendingEmis || [])].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        const longest = sorted[0];
+        return {
+          ...rest,
+          pendingAmount: longest ? Math.max(0, longest.amount) : 0,
+          pendingDueDate: longest ? longest.dueDate : null,
+        };
+      };
+      const attachType = (list) => (list || []).map((l) => ({ ...attachPendingSummary(l), loanType }));
       return {
         today: attachType(result?.today),
         stale: attachType(result?.stale),
