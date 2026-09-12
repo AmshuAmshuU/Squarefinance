@@ -506,7 +506,23 @@ const processApproval = asyncHandler(async (req, res, next) => {
                     ? "Seized"
                     : loan.status),
               paymentStatus: statusObj?.paymentStatus || loan.paymentStatus,
-              isSeized: statusObj?.isSeized !== undefined ? statusObj.isSeized : loan.isSeized,
+              // Mirrors loanController.js updateLoan's isSeized/seizedStatus
+              // derivation - see comment there for why this can't just echo
+              // statusObj.isSeized back.
+              isSeized:
+                loan.seizedStatus === "Sold"
+                  ? loan.isSeized
+                  : statusObj?.status !== undefined
+                    ? statusObj.status === "Seized"
+                    : statusObj?.isSeized !== undefined
+                      ? statusObj.isSeized
+                      : loan.isSeized,
+              seizedStatus:
+                loan.seizedStatus === "Sold"
+                  ? loan.seizedStatus
+                  : statusObj?.status === "Seized"
+                    ? "Seized"
+                    : loan.seizedStatus,
               docChecklist: statusObj?.docChecklist || loan.docChecklist,
               remarks: statusObj?.remarks || loan.remarks,
               clientResponse: statusObj?.clientResponse !== undefined ? statusObj.clientResponse : loan.clientResponse,

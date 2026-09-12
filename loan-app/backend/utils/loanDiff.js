@@ -32,6 +32,7 @@ const LOAN_FIELDS = {
   rtoCompletedDate: "RTO Completed Date",
   rtoNotes: "RTO Notes",
   remarks: "Remarks",
+  status: "Vehicle Status",
   // NOTE: clientResponse and nextFollowUpDate are intentionally excluded
   // They are handled freely by employees via the updateFollowup endpoint
 };

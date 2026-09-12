@@ -844,7 +844,12 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     // (not vehicleDetails - that key doesn't exist in the payload at all,
     // which silently made every RTO-only change look like "no changes",
     // since none of the RTO fields ever made it into flatBody below).
-    const flatBody = { ...req.body, ...req.body.customerDetails, ...req.body.loanTerms, ...req.body.vehicleInformation };
+    // ...req.body.status last so its own "status" key (the plain
+    // Active/Closed/Seized/Pending string) wins over the earlier
+    // ...req.body spread, which would otherwise leave flatBody.status
+    // holding the whole nested status object instead of the string
+    // computeLoanDiff expects to compare against loan.status.
+    const flatBody = { ...req.body, ...req.body.customerDetails, ...req.body.loanTerms, ...req.body.vehicleInformation, ...req.body.status };
     const changes = computeLoanDiff(loan, flatBody);
 
     if (changes.length === 0) {
@@ -1016,8 +1021,29 @@ const updateLoan = asyncHandler(async (req, res, next) => {
           : "Active"),
 
     paymentStatus: statusObj?.paymentStatus || loan.paymentStatus,
+    // isSeized/seizedStatus derived from the Status dropdown itself, not
+    // trusted as a raw echoed field - the dropdown only ever sends
+    // status.status ("Active"/"Closed"/"Seized"/"Pending"), never a
+    // deliberately-updated isSeized flag, so echoing statusObj.isSeized
+    // back just replayed whatever stale value the form loaded with. This
+    // is what let a direct "Seized" edit here never show up in the
+    // isSeized-filtered Seized Vehicles sidebar list. A vehicle already
+    // Sold is a terminal state (see updateSeizedStatus) and must never be
+    // re-derived from this general edit path.
     isSeized:
-      statusObj?.isSeized !== undefined ? statusObj.isSeized : loan.isSeized,
+      loan.seizedStatus === "Sold"
+        ? loan.isSeized
+        : statusObj?.status !== undefined
+          ? statusObj.status === "Seized"
+          : statusObj?.isSeized !== undefined
+            ? statusObj.isSeized
+            : loan.isSeized,
+    seizedStatus:
+      loan.seizedStatus === "Sold"
+        ? loan.seizedStatus
+        : statusObj?.status === "Seized"
+          ? "Seized"
+          : loan.seizedStatus,
     docChecklist: statusObj?.docChecklist || loan.docChecklist,
     remarks: statusObj?.remarks || loan.remarks,
     clientResponse:

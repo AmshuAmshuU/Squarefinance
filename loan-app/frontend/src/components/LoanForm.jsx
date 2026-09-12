@@ -645,8 +645,8 @@ const LoanForm = ({
                   value={formik.values.status?.status || "Active"}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  disabled={isViewOnly || !isSuperAdmin}
-                  className={`text-[11px] font-bold uppercase tracking-widest py-1 px-3 border rounded-lg focus:outline-none ${isViewOnly || !isSuperAdmin ? "opacity-70 bg-slate-100 cursor-not-allowed text-slate-500" : "bg-white border-primary/30 text-primary shadow-sm focus:ring-2 focus:ring-primary/20"}`}
+                  disabled={isViewOnly}
+                  className={`text-[11px] font-bold uppercase tracking-widest py-1 px-3 border rounded-lg focus:outline-none ${isViewOnly ? "opacity-70 bg-slate-100 cursor-not-allowed text-slate-500" : "bg-white border-primary/30 text-primary shadow-sm focus:ring-2 focus:ring-primary/20"}`}
                 >
                   <option value="Active">Active</option>
                   <option value="Closed">Closed</option>
