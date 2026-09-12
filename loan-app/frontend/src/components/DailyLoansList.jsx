@@ -19,6 +19,14 @@ const DailyLoansList = ({ type, title }) => {
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [activeContactMenu, setActiveContactMenu] = useState(null); // { number, name, type, x, y }
 
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    loanNumber: "",
+    customerName: "",
+    mobileNumber: "",
+    status: "",
+  });
+
   const toggleHighlight = (e, id) => {
     // Don't toggle if clicking a link or button directly
     if (e.target.closest("button") || e.target.closest("a")) return;
@@ -50,6 +58,7 @@ const DailyLoansList = ({ type, title }) => {
       const params = {
         page: currentPage,
         limit,
+        ...filters,
       };
 
       if (type === "pending") {
@@ -82,7 +91,7 @@ const DailyLoansList = ({ type, title }) => {
       fetchLoans();
     }, 500);
     return () => clearTimeout(timer);
-  }, [type, searchQuery, currentPage]);
+  }, [type, searchQuery, currentPage, filters]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -98,6 +107,23 @@ const DailyLoansList = ({ type, title }) => {
         showToast(err.message || "Failed to delete", "error");
       }
     }
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
+    setCurrentPage(1);
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      loanNumber: "",
+      customerName: "",
+      mobileNumber: "",
+      status: "",
+    });
+    setSearchQuery("");
+    setCurrentPage(1);
   };
 
   return (
@@ -205,6 +231,7 @@ const DailyLoansList = ({ type, title }) => {
           </div>
         </div>
         <button
+          onClick={() => setIsFilterOpen(true)}
           className="flex-none w-[46px] h-[46px] bg-white border border-slate-200 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
           title="Advanced Filter"
         >
@@ -223,7 +250,7 @@ const DailyLoansList = ({ type, title }) => {
           </svg>
         </button>
         <button
-          onClick={() => setSearchQuery("")}
+          onClick={resetFilters}
           className="flex-none px-6 h-[46px] bg-red-50 border border-red-100 text-red-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all flex items-center justify-center gap-2 shadow-sm"
         >
           Clear
@@ -687,6 +714,50 @@ const DailyLoansList = ({ type, title }) => {
           totalRecords={totalRecords}
           limit={limit}
         />
+      )}
+
+      {/* Filter Drawer */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-[150] overflow-hidden">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsFilterOpen(false)}></div>
+          <div className="absolute inset-y-0 right-0 max-w-sm w-full bg-white shadow-2xl animate-slide-in-right transform transition-transform">
+            <div className="h-full flex flex-col">
+              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Advanced Filter</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Refine your daily loan search</p>
+                </div>
+                <button onClick={() => setIsFilterOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-600 transition-all shadow-sm">✕</button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Loan Number</label>
+                  <input type="text" name="loanNumber" value={filters.loanNumber} onChange={handleFilterChange} placeholder="E.G. DL-001" className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:border-primary uppercase" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Customer Name</label>
+                  <input type="text" name="customerName" value={filters.customerName} onChange={handleFilterChange} placeholder="E.G. JOHN DOE" className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:border-primary uppercase" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Mobile Number</label>
+                  <input type="text" name="mobileNumber" value={filters.mobileNumber} onChange={handleFilterChange} placeholder="E.G. 9876543210" className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:border-primary" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Loan Status</label>
+                  <select name="status" value={filters.status} onChange={handleFilterChange} className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 focus:outline-none focus:border-primary uppercase appearance-none">
+                    <option value="">ALL STATUSES</option>
+                    <option value="Active">ACTIVE</option>
+                    <option value="Closed">CLOSED</option>
+                  </select>
+                </div>
+              </div>
+              <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-3">
+                <button onClick={() => setIsFilterOpen(false)} className="w-full bg-primary text-white py-4 rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2">🔍 APPLY FILTERS</button>
+                <button onClick={resetFilters} className="w-full bg-white border border-slate-200 text-slate-400 py-4 rounded-2xl font-black text-[12px] uppercase tracking-widest hover:text-slate-600 hover:bg-slate-50 transition-all">RESET FILTERS</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <ContactActionMenu

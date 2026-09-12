@@ -243,7 +243,7 @@ exports.getWeeklyLoanEMIs = asyncHandler(async (req, res, next) => {
 
 // Get All Weekly Loans
 exports.getAllWeeklyLoans = asyncHandler(async (req, res, next) => {
-  const { status, followup, searchQuery, page = 1, limit = 25 } = req.query;
+  const { status, followup, searchQuery, customerName, loanNumber, mobileNumber, page = 1, limit = 25 } = req.query;
   const query = {};
 
   if (status) {
@@ -252,6 +252,18 @@ exports.getAllWeeklyLoans = asyncHandler(async (req, res, next) => {
 
   if (followup === "true") {
     query.nextFollowUpDate = { $exists: true, $ne: null };
+  }
+
+  if (customerName) {
+    query.customerName = { $regex: customerName, $options: "i" };
+  }
+
+  if (loanNumber) {
+    query.loanNumber = { $regex: loanNumber, $options: "i" };
+  }
+
+  if (mobileNumber) {
+    query.mobileNumbers = { $regex: mobileNumber, $options: "i" };
   }
 
   if (searchQuery) {
