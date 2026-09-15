@@ -699,6 +699,7 @@ const LoanForm = ({
                 >
                   <option value="Active">Active</option>
                   <option value="Closed">Closed</option>
+                  <option value="For Seizing">For Seizing</option>
                   <option value="Seized">Seized</option>
                   <option value="Pending">Pending</option>
                 </select>

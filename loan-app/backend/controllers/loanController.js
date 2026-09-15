@@ -244,8 +244,12 @@ const getAllLoans = asyncHandler(async (req, res, next) => {
   if (tenureMonths) query.tenureMonths = tenureMonths;
   if (status) {
     const statusLower = status.toLowerCase();
-    if (statusLower === "seized") {
-      query.isSeized = true;
+    if (statusLower === "seized" || statusLower === "for seizing") {
+      // Now that status is kept in sync with the two seizing sub-stages
+      // (see toggleSeizedStatus/updateSeizedStatus), filter on the literal
+      // status value so "Seized" and "For Seizing" return distinct results
+      // instead of both matching every isSeized loan.
+      query.status = { $regex: new RegExp(`^${status}$`, "i") };
     } else if (statusLower === "active") {
       query.status = { $regex: /^active$/i };
       query.isSeized = { $ne: true };
@@ -1071,15 +1075,15 @@ const updateLoan = asyncHandler(async (req, res, next) => {
       loan.seizedStatus === "Sold"
         ? loan.isSeized
         : statusObj?.status !== undefined
-          ? statusObj.status === "Seized"
+          ? statusObj.status === "Seized" || statusObj.status === "For Seizing"
           : statusObj?.isSeized !== undefined
             ? statusObj.isSeized
             : loan.isSeized,
     seizedStatus:
       loan.seizedStatus === "Sold"
         ? loan.seizedStatus
-        : statusObj?.status === "Seized"
-          ? "Seized"
+        : statusObj?.status === "Seized" || statusObj?.status === "For Seizing"
+          ? statusObj.status
           : loan.seizedStatus,
     docChecklist: statusObj?.docChecklist || loan.docChecklist,
     remarks: statusObj?.remarks || loan.remarks,
@@ -1287,9 +1291,13 @@ const toggleSeizedStatus = asyncHandler(async (req, res, next) => {
 
   loan.isSeized = !loan.isSeized;
 
-  // Simultaneously update the status field to match isSeized
+  // Simultaneously update the status field to match isSeized. Status
+  // starts at "For Seizing" (not "Seized") - the vehicle hasn't actually
+  // been physically seized yet at this point, only flagged for it.
+  // updateSeizedStatus bumps status to "Seized" once seizedStatus is
+  // actually advanced to "Seized" on the Seized Vehicles page.
   if (loan.isSeized) {
-    loan.status = "Seized";
+    loan.status = "For Seizing";
     // loan.seizedDate = new Date(); // Removed to defer countdown
     loan.seizedStatus = "For Seizing";
   } else {
@@ -2788,9 +2796,16 @@ const updateSeizedStatus = asyncHandler(async (req, res, next) => {
 
   const updateData = { seizedStatus };
 
-  // If status is changed to 'Seized', set the seizedDate to start countdown
+  // Keep the loan's main status field in sync with seizedStatus for the
+  // two seizing sub-stages - otherwise the loan's own status badge stays
+  // stuck wherever toggleSeizedStatus first left it ("For Seizing") even
+  // after the vehicle is actually physically seized.
   if (seizedStatus === "Seized") {
+    // If status is changed to 'Seized', set the seizedDate to start countdown
     updateData.seizedDate = new Date();
+    updateData.status = "Seized";
+  } else if (seizedStatus === "For Seizing") {
+    updateData.status = "For Seizing";
   }
 
   // If Sold: record sale details and close the loan

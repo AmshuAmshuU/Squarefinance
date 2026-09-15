@@ -442,18 +442,22 @@ const LoansPage = () => {
                                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter border ${
                                     loan.status.status?.toLowerCase() === "closed"
                                       ? "bg-slate-100 text-slate-500 border-slate-200"
-                                      : loan.status.isSeized ||
-                                          loan.status.status?.toLowerCase() === "seized"
-                                        ? "bg-red-50 text-red-500 border-red-100"
-                                        : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                                      : loan.status.status?.toLowerCase() === "for seizing"
+                                        ? "bg-amber-50 text-amber-600 border-amber-100"
+                                        : loan.status.isSeized ||
+                                            loan.status.status?.toLowerCase() === "seized"
+                                          ? "bg-red-50 text-red-500 border-red-100"
+                                          : "bg-emerald-50 text-emerald-600 border-emerald-100"
                                   }`}
                                 >
                                   {loan.status.status?.toLowerCase() === "closed"
                                     ? "Closed"
-                                    : loan.status.isSeized ||
-                                        loan.status.status?.toLowerCase() === "seized"
-                                      ? "Seized"
-                                      : "Active"}
+                                    : loan.status.status?.toLowerCase() === "for seizing"
+                                      ? "For Seizing"
+                                      : loan.status.isSeized ||
+                                          loan.status.status?.toLowerCase() === "seized"
+                                        ? "Seized"
+                                        : "Active"}
                                 </span>
                               </td>
                               <td className="px-3 py-3 text-center">
@@ -718,18 +722,22 @@ const LoansPage = () => {
                                   className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
                                     loan.status.status?.toLowerCase() === "closed"
                                       ? "bg-slate-100 text-slate-500 border-slate-200"
-                                      : loan.status.isSeized ||
-                                          loan.status.status?.toLowerCase() === "seized"
-                                        ? "bg-red-100 text-red-600 border-red-200"
-                                        : "bg-green-100 text-green-600 border-green-200"
+                                      : loan.status.status?.toLowerCase() === "for seizing"
+                                        ? "bg-amber-100 text-amber-600 border-amber-200"
+                                        : loan.status.isSeized ||
+                                            loan.status.status?.toLowerCase() === "seized"
+                                          ? "bg-red-100 text-red-600 border-red-200"
+                                          : "bg-green-100 text-green-600 border-green-200"
                                   }`}
                                 >
                                   {loan.status.status?.toLowerCase() === "closed"
                                     ? "Closed"
-                                    : loan.status.isSeized ||
-                                        loan.status.status?.toLowerCase() === "seized"
-                                      ? "Seized"
-                                      : "Active"}
+                                    : loan.status.status?.toLowerCase() === "for seizing"
+                                      ? "For Seizing"
+                                      : loan.status.isSeized ||
+                                          loan.status.status?.toLowerCase() === "seized"
+                                        ? "Seized"
+                                        : "Active"}
                                 </span>
                               </td>
                               <td className="px-3 py-3 text-center">
@@ -967,6 +975,7 @@ const LoansPage = () => {
                           <option value="">ALL</option>
                           <option value="Active">ACTIVE</option>
                           <option value="Closed">CLOSED</option>
+                          <option value="For Seizing">FOR SEIZING</option>
                           <option value="Seized">SEIZED</option>
                         </select>
                       </div>

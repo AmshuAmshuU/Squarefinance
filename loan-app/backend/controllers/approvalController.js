@@ -513,15 +513,15 @@ const processApproval = asyncHandler(async (req, res, next) => {
                 loan.seizedStatus === "Sold"
                   ? loan.isSeized
                   : statusObj?.status !== undefined
-                    ? statusObj.status === "Seized"
+                    ? statusObj.status === "Seized" || statusObj.status === "For Seizing"
                     : statusObj?.isSeized !== undefined
                       ? statusObj.isSeized
                       : loan.isSeized,
               seizedStatus:
                 loan.seizedStatus === "Sold"
                   ? loan.seizedStatus
-                  : statusObj?.status === "Seized"
-                    ? "Seized"
+                  : statusObj?.status === "Seized" || statusObj?.status === "For Seizing"
+                    ? statusObj.status
                     : loan.seizedStatus,
               docChecklist: statusObj?.docChecklist || loan.docChecklist,
               remarks: statusObj?.remarks || loan.remarks,
