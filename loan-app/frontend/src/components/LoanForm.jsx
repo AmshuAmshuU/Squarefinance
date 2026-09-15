@@ -1,6 +1,6 @@
 "use client";
 // Layout updated to move Additional Mobile Numbers (Customer) below the main Mobile Number field.
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useToast } from "../context/ToastContext";
@@ -157,6 +157,17 @@ const LoanForm = ({
   const [remainingPrincipalAmount, setRemainingPrincipalAmount] = useState(0);
   const [totalCollectedAmount, setTotalCollectedAmount] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
+
+  // Skip the auto-recalculation effects for EMI Start/End Date on the very
+  // first run when opening an EXISTING loan - otherwise they immediately
+  // overwrite whatever was actually saved (possibly a manually-customized
+  // date that doesn't match the formulaic "disbursement + 1 month" / "start
+  // + tenure - 1 months" calculation) the moment the form hydrates from
+  // initialData, silently reverting a saved edit back to its old value
+  // every time the loan is reopened. Genuine edits after the form has
+  // loaded still recalculate as intended.
+  const skipAutoStartDateRef = useRef(!!initialData?._id);
+  const skipAutoEndDateRef = useRef(!!initialData?._id);
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -448,6 +459,10 @@ const LoanForm = ({
 
   // Auto-calculate EMI Start Date from Disbursement Date
   useEffect(() => {
+    if (skipAutoStartDateRef.current) {
+      skipAutoStartDateRef.current = false;
+      return;
+    }
     const disbursementDate = formik.values.loanTerms.dateLoanDisbursed;
     if (disbursementDate) {
       const d = new Date(disbursementDate);
@@ -461,6 +476,10 @@ const LoanForm = ({
 
   // Auto-calculate EMI End Date from Start Date & Tenure
   useEffect(() => {
+    if (skipAutoEndDateRef.current) {
+      skipAutoEndDateRef.current = false;
+      return;
+    }
     const startDate = formik.values.loanTerms.emiStartDate;
     const tenure = parseInt(formik.values.loanTerms.tenureMonths);
     if (startDate && tenure) {
