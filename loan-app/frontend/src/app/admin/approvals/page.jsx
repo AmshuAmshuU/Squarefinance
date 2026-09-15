@@ -129,7 +129,7 @@ const ApprovalsPage = () => {
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                                 <div>
                                     <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Approval Queue</h1>
-                                    <p className="text-slate-500 font-medium text-sm">Review and authorize pending payment requests</p>
+                                    <p className="text-slate-500 font-medium text-sm">Review and approve pending payment requests</p>
                                 </div>
                                 <button 
                                     onClick={fetchApprovals}
@@ -338,7 +338,7 @@ const ApprovalsPage = () => {
                                                                         disabled={processingId === app._id}
                                                                         className="px-6 py-2 text-[10px] font-black uppercase text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl shadow-lg shadow-emerald-100 transform active:scale-95 transition-all disabled:opacity-50"
                                                                     >
-                                                                        Authorize
+                                                                        Approve
                                                                     </button>
                                                                 </div>
                                                             </td>
