@@ -31,3 +31,13 @@ export const getLoansGivenSummary = async (params = {}) => {
     }
   );
 };
+
+export const getCollectionsBreakdown = async (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return await apiHandler(
+    `/api/collections/breakdown${queryString ? `?${queryString}` : ""}`,
+    {
+      method: "GET",
+    }
+  );
+};

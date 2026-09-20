@@ -5,17 +5,20 @@ import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import AddExpenseModal from "../../../components/AddExpenseModal";
-import { getCollectionTransactions, getLoansGivenSummary } from "../../../services/collection.service";
+import { getCollectionTransactions, getLoansGivenSummary, getCollectionsBreakdown } from "../../../services/collection.service";
 import { getAllExpenses } from "../../../services/expenseService";
 import { useToast } from "../../../context/ToastContext";
 import { format } from "date-fns";
 import Pagination from "../../../components/Pagination";
 import { useUI } from "../../../context/UIContext";
+import { getUserFromToken } from "../../../utils/auth";
 
 const CollectionsPage = () => {
   const { showToast } = useToast();
   const { isDarkMode } = useUI();
-  
+  const user = getUserFromToken();
+  const canSeeBreakdown = user?.role === "SUPER_ADMIN" || user?.role === "ADMIN";
+
   // TABS State
   const [activeTab, setActiveTab] = useState("collections"); // "collections" | "loans" | "expenses"
 
@@ -39,6 +42,13 @@ const CollectionsPage = () => {
     loans: 0,
     expenses: 0
   });
+
+  // Collections breakdown (profit + category makeup) - Super Admin/Admin
+  // only, fetched on-demand only when the card is expanded, never
+  // prefetched alongside the main list.
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [breakdownData, setBreakdownData] = useState(null);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
 
   // Filters State - Default to last 7 days
   const [filters, setFilters] = useState({
@@ -140,8 +150,33 @@ const CollectionsPage = () => {
       loans: { ...prev.loans, page: 1 },
       expenses: { ...prev.expenses, page: 1 }
     }));
-    
+
+    // The date range just changed - collapse the breakdown so a stale
+    // figure from the old range is never shown; it re-fetches next time
+    // it's opened.
+    setBreakdownOpen(false);
+    setBreakdownData(null);
+
     fetchAllData();
+  };
+
+  const handleToggleBreakdown = async () => {
+    if (breakdownOpen) {
+      setBreakdownOpen(false);
+      return;
+    }
+    setBreakdownOpen(true);
+    if (breakdownData) return; // already have data for the current range
+    try {
+      setBreakdownLoading(true);
+      const res = await getCollectionsBreakdown(filters);
+      if (res.data) setBreakdownData(res.data);
+    } catch (err) {
+      showToast(err.message || "Failed to load collection breakdown", "error");
+      setBreakdownOpen(false);
+    } finally {
+      setBreakdownLoading(false);
+    }
   };
 
   const handlePageChange = (newPage) => {
@@ -414,9 +449,59 @@ const CollectionsPage = () => {
 
                 <div className="flex flex-wrap gap-4 mt-6 md:mt-0">
                   {activeTab === "collections" && (
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-[160px]">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Collection</span>
-                      <span className="text-2xl font-black text-emerald-600 tracking-tighter">₹{summaryTotals.collections.toLocaleString()}</span>
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm min-w-[160px] overflow-hidden">
+                      <div
+                        className={`p-4 flex flex-col ${canSeeBreakdown ? "cursor-pointer" : ""}`}
+                        onClick={canSeeBreakdown ? handleToggleBreakdown : undefined}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Collection</span>
+                          {canSeeBreakdown && (
+                            <svg
+                              className={`w-4 h-4 text-slate-400 transition-transform flex-none ${breakdownOpen ? "rotate-180" : ""}`}
+                              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 9l6 6 6-6" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-2xl font-black text-emerald-600 tracking-tighter mt-0.5">₹{summaryTotals.collections.toLocaleString()}</span>
+                      </div>
+                      {canSeeBreakdown && breakdownOpen && (
+                        <div className="border-t border-slate-100">
+                          {breakdownLoading ? (
+                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest text-center py-5">Loading...</p>
+                          ) : breakdownData ? (
+                            <>
+                              <div className="p-3.5">
+                                <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 flex items-center justify-between">
+                                  <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Profit this period</span>
+                                  <span className="text-sm font-black text-emerald-600">₹{Math.round(breakdownData.profit).toLocaleString("en-IN")}</span>
+                                </div>
+                              </div>
+                              <div className="px-4 pb-3.5 space-y-0.5">
+                                {[
+                                  ["Vehicle EMIs", breakdownData.categories.vehicleEmi],
+                                  ["Weekly EMIs", breakdownData.categories.weeklyEmi],
+                                  ["Daily EMIs", breakdownData.categories.dailyEmi],
+                                  ["Interest loan EMIs", breakdownData.categories.interestEmi],
+                                  ["Overdue collected", breakdownData.categories.overdue],
+                                  ["Foreclosure settlements", breakdownData.categories.foreclosure],
+                                  ["Vehicle sale settlements", breakdownData.categories.vehicleSale],
+                                  ["Interest loan principal", breakdownData.categories.interestPrincipal],
+                                ]
+                                  .filter(([, amt]) => amt > 0)
+                                  .map(([label, amt]) => (
+                                    <div key={label} className="flex items-center justify-between py-1">
+                                      <span className="text-[11px] font-bold text-slate-500">{label}</span>
+                                      <span className="text-[11px] font-black text-slate-800">₹{Math.round(amt).toLocaleString("en-IN")}</span>
+                                    </div>
+                                  ))}
+                              </div>
+                            </>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   )}
                   {activeTab === "loans" && (
