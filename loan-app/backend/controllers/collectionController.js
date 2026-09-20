@@ -319,10 +319,10 @@ const getLoansGivenSummary = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Super Admin / Admin only (enforced by the route, not just the frontend
-// hiding the expand button) - Karthik's explicit instruction 2026-09-20:
-// staff should never see the category makeup behind a collection total,
-// only the plain total they already see.
+// Open to all authenticated roles (was Super Admin/Admin only while this
+// also showed profit - widened 2026-09-20 once profit was removed below,
+// since a by-type split of the same total every role already sees isn't
+// sensitive on its own).
 //
 // A gross category breakdown (Vehicle/Weekly/Daily/Interest EMI, Overdue,
 // Foreclosure, Vehicle Sale, Interest Loan Principal), computed over the

@@ -6,7 +6,7 @@ const {
   getLoansGivenSummary,
   getCollectionsBreakdown,
 } = require("../controllers/collectionController");
-const { isAuthenticated, authorizeRoles } = require("../middlewares/auth");
+const { isAuthenticated } = require("../middlewares/auth");
 
 router.use(isAuthenticated);
 
@@ -14,9 +14,10 @@ router.get("/report", getCollectionReport);
 router.get("/transactions", getCollectionTransactions);
 router.get("/loans-given", getLoansGivenSummary);
 
-// Super Admin / Admin only - see collectionController.js getCollectionsBreakdown
-// for why (Karthik 2026-09-20: staff should never see profit or the
-// category makeup behind a collection total).
-router.get("/breakdown", authorizeRoles("SUPER_ADMIN", "ADMIN"), getCollectionsBreakdown);
+// Originally Super Admin/Admin only, restricted because the breakdown also
+// showed profit - opened to all authenticated roles 2026-09-20 once profit
+// was removed (see collectionController.js getCollectionsBreakdown). What's
+// left is just a by-type split of the same total every role already sees.
+router.get("/breakdown", getCollectionsBreakdown);
 
 module.exports = router;

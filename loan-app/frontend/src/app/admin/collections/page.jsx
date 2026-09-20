@@ -11,13 +11,10 @@ import { useToast } from "../../../context/ToastContext";
 import { format } from "date-fns";
 import Pagination from "../../../components/Pagination";
 import { useUI } from "../../../context/UIContext";
-import { getUserFromToken } from "../../../utils/auth";
 
 const CollectionsPage = () => {
   const { showToast } = useToast();
   const { isDarkMode } = useUI();
-  const user = getUserFromToken();
-  const canSeeBreakdown = user?.role === "SUPER_ADMIN" || user?.role === "ADMIN";
 
   // TABS State
   const [activeTab, setActiveTab] = useState("collections"); // "collections" | "loans" | "expenses"
@@ -475,23 +472,21 @@ const CollectionsPage = () => {
                   {activeTab === "collections" && (
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm min-w-[160px] overflow-hidden">
                       <div
-                        className={`p-4 flex flex-col ${canSeeBreakdown ? "cursor-pointer" : ""}`}
-                        onClick={canSeeBreakdown ? handleToggleBreakdown : undefined}
+                        className="p-4 flex flex-col cursor-pointer"
+                        onClick={handleToggleBreakdown}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Collection</span>
-                          {canSeeBreakdown && (
-                            <svg
-                              className={`w-4 h-4 text-slate-400 transition-transform flex-none ${breakdownOpen ? "rotate-180" : ""}`}
-                              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 9l6 6 6-6" />
-                            </svg>
-                          )}
+                          <svg
+                            className={`w-4 h-4 text-slate-400 transition-transform flex-none ${breakdownOpen ? "rotate-180" : ""}`}
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 9l6 6 6-6" />
+                          </svg>
                         </div>
                         <span className="text-2xl font-black text-emerald-600 tracking-tighter mt-0.5">₹{summaryTotals.collections.toLocaleString()}</span>
                       </div>
-                      {canSeeBreakdown && breakdownOpen && (
+                      {breakdownOpen && (
                         <div className="border-t border-slate-100">
                           {breakdownLoading ? (
                             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest text-center py-5">Loading...</p>
