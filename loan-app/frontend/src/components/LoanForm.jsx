@@ -910,7 +910,7 @@ const LoanForm = ({
                                 }
                                 readOnly={isViewOnly}
                               />
-                              {isViewOnly && num && (
+                              {num && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -1103,7 +1103,7 @@ const LoanForm = ({
                                 }
                                 readOnly={isViewOnly}
                               />
-                              {isViewOnly && num && (
+                              {num && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
