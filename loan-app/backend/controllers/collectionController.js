@@ -2,8 +2,6 @@ const mongoose = require("mongoose");
 const Loan = require("../models/Loan");
 const WeeklyLoan = require("../models/WeeklyLoan");
 const DailyLoan = require("../models/DailyLoan");
-const EMI = require("../models/EMI");
-const InterestEMI = require("../models/InterestEMI");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
 const { parseDateInLocalFormat, normalizeToMidnight } = require('../utils/dateUtils');
@@ -323,34 +321,25 @@ const getLoansGivenSummary = asyncHandler(async (req, res, next) => {
 
 // Super Admin / Admin only (enforced by the route, not just the frontend
 // hiding the expand button) - Karthik's explicit instruction 2026-09-20:
-// staff should never see profit or the category makeup of a collection
-// total, only the plain total they already see.
+// staff should never see the category makeup behind a collection total,
+// only the plain total they already see.
 //
-// Two pieces, computed over the exact same date window as the green
-// "Total Collection" figure on screen:
-//   1. A gross category breakdown (Vehicle/Weekly/Daily/Interest EMI,
-//      Overdue, Foreclosure, Vehicle Sale, Interest Loan Principal) - this
-//      is just the same collection events already shown, grouped by type,
-//      so it always sums to exactly the same total the green number shows.
-//   2. A "profit in this period" figure, which is NOT a sum of the
-//      categories above - it's the interest-only portion of Vehicle EMI
-//      collections, Vehicle OD, the foreclosure CHARGE (not the whole
-//      settlement), and Interest-loan EMI interest (which is 100% profit
-//      already). Weekly/Daily EMI collections contribute zero profit here
-//      on purpose - their real profit (the processing fee) is recognised
-//      at disbursement, not at collection, and Collections has never shown
-//      processing fees at all (see collectionEvents.js). Mirrors
-//      analyticsController.js getProfitStats's range-totals logic, minus
-//      the processing-fee components, for that same reason.
+// A gross category breakdown (Vehicle/Weekly/Daily/Interest EMI, Overdue,
+// Foreclosure, Vehicle Sale, Interest Loan Principal), computed over the
+// exact same date window as the green "Total Collection" figure on
+// screen - this is just the same collection events already shown, grouped
+// by type, so it always sums to exactly the same total the green number
+// shows.
+//
+// This endpoint originally also computed a "profit in this period"
+// figure, but it was removed 2026-09-20: it didn't match the Analytics
+// Profit page for the same range (it was missing processing fees, Weekly/
+// Daily foreclosure charges, and the OD-at-foreclosure piece that
+// Analytics correctly includes), which just created confusion about which
+// number was right. Analytics is the single source of truth for profit -
+// don't re-add a profit figure here without reusing that exact logic.
 const getCollectionsBreakdown = asyncHandler(async (req, res, next) => {
   const { startDate, endDate } = req.query;
-
-  const start = startDate ? new Date(`${startDate}T00:00:00+05:30`) : null;
-  const end = endDate ? new Date(`${endDate}T23:59:59.999+05:30`) : null;
-  const dateMatch = (field) =>
-    start || end
-      ? { [field]: { ...(start && { $gte: start }), ...(end && { $lte: end }) } }
-      : {};
 
   const events = await getAllCollectionEvents({ startDate, endDate });
   const categories = {
@@ -375,44 +364,7 @@ const getCollectionsBreakdown = asyncHandler(async (req, res, next) => {
   }
   const totalAmount = events.reduce((sum, e) => sum + (e.totalAmount || 0), 0);
 
-  const interestPortionExpr = {
-    $multiply: [
-      { $ifNull: ["$loan.principalAmount", 0] },
-      { $divide: [{ $ifNull: ["$loan.annualInterestRate", 0] }, 100] },
-    ],
-  };
-
-  const [vehicleEmiInterest, vehicleForeclosureCharge, vehicleOverdueProfit, interestEmiProfit] = await Promise.all([
-    EMI.aggregate([
-      { $match: { loanModel: "Loan", status: "Paid", closedWithoutPayment: { $ne: true }, ...dateMatch("paymentDate") } },
-      { $lookup: { from: "loans", localField: "loanId", foreignField: "_id", as: "loan" } },
-      { $unwind: "$loan" },
-      { $group: { _id: null, total: { $sum: interestPortionExpr } } },
-    ]),
-    Loan.aggregate([
-      { $match: dateMatch("foreclosureDate") },
-      { $group: { _id: null, total: { $sum: { $add: [{ $ifNull: ["$foreclosureChargeAmount", 0] }, { $ifNull: ["$miscellaneousFee", 0] }] } } } },
-    ]),
-    EMI.aggregate([
-      { $match: { loanModel: "Loan" } },
-      { $unwind: "$overdue" },
-      { $match: dateMatch("overdue.date") },
-      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
-    ]),
-    InterestEMI.aggregate([
-      { $match: { status: "Paid", ...dateMatch("paymentDate") } },
-      { $group: { _id: null, total: { $sum: "$interestAmount" } } },
-    ]),
-  ]);
-
-  const profit =
-    (vehicleEmiInterest[0]?.total || 0) +
-    (vehicleForeclosureCharge[0]?.total || 0) +
-    (vehicleOverdueProfit[0]?.total || 0) +
-    (interestEmiProfit[0]?.total || 0);
-
   sendResponse(res, 200, "success", "Collections breakdown calculated", null, {
-    profit,
     categories,
     totalAmount,
   });

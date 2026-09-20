@@ -151,14 +151,38 @@ const CollectionsPage = () => {
       expenses: { ...prev.expenses, page: 1 }
     }));
 
-    // The date range just changed - collapse the breakdown so a stale
-    // figure from the old range is never shown; it re-fetches next time
-    // it's opened.
-    setBreakdownOpen(false);
-    setBreakdownData(null);
-
     fetchAllData();
   };
+
+  // The date pickers apply live (handleFilterChange updates `filters`
+  // immediately, which is what actually drives the auto-refetch below via
+  // fetchAllData/fetchCollections both depending on `filters`) - clicking
+  // "Search" isn't required for the green total to update, only to reset
+  // pagination. The breakdown card used to only refresh when this Search
+  // button was clicked, so changing the date picker directly (the normal
+  // way to use this page) left it showing stale figures from the previous
+  // range while the green total had already moved on. Keying this off
+  // `filters` directly, same as the rest of the page's data, fixes that:
+  // if the panel is open, it refetches in place for the new range; if
+  // closed, the stale data is cleared so the next open fetches fresh.
+  useEffect(() => {
+    if (breakdownOpen) {
+      (async () => {
+        try {
+          setBreakdownLoading(true);
+          const res = await getCollectionsBreakdown(filters);
+          if (res.data) setBreakdownData(res.data);
+        } catch (err) {
+          showToast(err.message || "Failed to load collection breakdown", "error");
+        } finally {
+          setBreakdownLoading(false);
+        }
+      })();
+    } else {
+      setBreakdownData(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
   const handleToggleBreakdown = async () => {
     if (breakdownOpen) {
@@ -473,13 +497,7 @@ const CollectionsPage = () => {
                             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest text-center py-5">Loading...</p>
                           ) : breakdownData ? (
                             <>
-                              <div className="p-3.5">
-                                <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 flex items-center justify-between">
-                                  <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Profit this period</span>
-                                  <span className="text-sm font-black text-emerald-600">₹{Math.round(breakdownData.profit).toLocaleString("en-IN")}</span>
-                                </div>
-                              </div>
-                              <div className="px-4 pb-3.5 space-y-0.5">
+                              <div className="px-4 pt-3.5 pb-3.5 space-y-0.5">
                                 {[
                                   ["Vehicle EMIs", breakdownData.categories.vehicleEmi],
                                   ["Weekly EMIs", breakdownData.categories.weeklyEmi],
