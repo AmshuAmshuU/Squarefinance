@@ -2020,6 +2020,28 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
     ],
   };
 
+  // Whether the loan has an unpaid EMI whose own due date is today, IST
+  // calendar day - Karthik's 2026-09-21 report: a loan due today with no
+  // explicit nextFollowUpDate was landing in "stale" (isStaleFollowup only
+  // checked for null/past nextFollowUpDate, and isFollowupToday only ever
+  // looked at nextFollowUpDate, never the EMI's own due date at all) -
+  // today's own due-today loans belong in "today", same as a loan with an
+  // explicit hard-set followup date for today (that part already worked
+  // correctly and is unchanged below).
+  const emiDueTodayCond = {
+    $and: [
+      { $ne: ["$$emi.status", "Paid"] },
+      { $gte: ["$$emi.dueDate", todayStart] },
+      { $lte: ["$$emi.dueDate", todayEnd] },
+    ],
+  };
+  const hasEmiDueTodayExpr = {
+    $gt: [
+      { $size: { $filter: { input: "$emis", as: "emi", cond: emiDueTodayCond } } },
+      0,
+    ],
+  };
+
   const results = await Promise.all(
     modelConfigs.map(async ({ Model, loanType, emiCollection, emiForeignField, amountField }) => {
       const pendingEmisExpr = {
@@ -2060,16 +2082,41 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
               ],
             },
             isFollowupToday: {
-              $and: [
-                { $ne: ["$nextFollowUpDate", null] },
-                { $gte: ["$nextFollowUpDate", todayStart] },
-                { $lte: ["$nextFollowUpDate", todayEnd] },
+              $or: [
+                // Staff's own hard-set followup date for today - unchanged,
+                // already worked correctly.
+                {
+                  $and: [
+                    { $ne: ["$nextFollowUpDate", null] },
+                    { $gte: ["$nextFollowUpDate", todayStart] },
+                    { $lte: ["$nextFollowUpDate", todayEnd] },
+                  ],
+                },
+                // An EMI is due today and nobody deliberately deferred this
+                // loan to a future followup date - a due-today loan with no
+                // followup date set, or one that's already in the past,
+                // still belongs in "today" (today IS the actionable day).
+                // Only a followup date explicitly pushed into the future
+                // postpones it out of both lists.
+                {
+                  $and: [
+                    hasEmiDueTodayExpr,
+                    { $not: [{ $gt: ["$nextFollowUpDate", todayEnd] }] },
+                  ],
+                },
               ],
             },
             isStaleFollowup: {
-              $or: [
-                { $eq: ["$nextFollowUpDate", null] },
-                { $lt: ["$nextFollowUpDate", todayStart] },
+              $and: [
+                {
+                  $or: [
+                    { $eq: ["$nextFollowUpDate", null] },
+                    { $lt: ["$nextFollowUpDate", todayStart] },
+                  ],
+                },
+                // Excluded here so a due-today loan is only ever counted in
+                // "today" above, never double-counted into "stale" too.
+                { $not: [hasEmiDueTodayExpr] },
               ],
             },
             pendingEmis: pendingEmisExpr,
