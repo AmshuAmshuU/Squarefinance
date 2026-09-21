@@ -319,6 +319,57 @@ const getLoansGivenSummary = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Open to all roles (2026-09-21) - a by-type split of principal disbursed
+// isn't sensitive the way profit was, so this never had the Super Admin/
+// Admin restriction the Collections breakdown started with.
+//
+// Same date-matching rules as getLoansGivenSummary above (dateLoanDisbursed,
+// falling back to each type's own creation/start field when missing), just
+// summed by type at the database level instead of fetching every loan -
+// always sums to exactly the same total getLoansGivenSummary's green
+// number shows for the same range.
+const getLoansGivenBreakdown = asyncHandler(async (req, res, next) => {
+  const { startDate, endDate } = req.query;
+  const matchDate = {};
+  if (startDate) matchDate.$gte = new Date(`${startDate}T00:00:00+05:30`);
+  if (endDate) matchDate.$lte = new Date(`${endDate}T23:59:59+05:30`);
+  const hasDateFilter = Object.keys(matchDate).length > 0;
+
+  const InterestLoan = require("../models/InterestLoan");
+
+  const buildMatch = (fallbackField) =>
+    hasDateFilter
+      ? {
+          $or: [
+            { dateLoanDisbursed: matchDate },
+            { $and: [{ dateLoanDisbursed: { $exists: false } }, { [fallbackField]: matchDate }] },
+          ],
+        }
+      : {};
+
+  const sumStage = (amountField) => [{ $group: { _id: null, total: { $sum: `$${amountField}` } } }];
+
+  const [vehicleAgg, weeklyAgg, dailyAgg, interestAgg] = await Promise.all([
+    Loan.aggregate([{ $match: buildMatch("createdAt") }, ...sumStage("principalAmount")]),
+    WeeklyLoan.aggregate([{ $match: buildMatch("startDate") }, ...sumStage("disbursementAmount")]),
+    DailyLoan.aggregate([{ $match: buildMatch("startDate") }, ...sumStage("disbursementAmount")]),
+    InterestLoan.aggregate([{ $match: buildMatch("createdAt") }, ...sumStage("initialPrincipalAmount")]),
+  ]);
+
+  const categories = {
+    vehicle: vehicleAgg[0]?.total || 0,
+    weekly: weeklyAgg[0]?.total || 0,
+    daily: dailyAgg[0]?.total || 0,
+    interest: interestAgg[0]?.total || 0,
+  };
+  const totalAmount = categories.vehicle + categories.weekly + categories.daily + categories.interest;
+
+  sendResponse(res, 200, "success", "Loans given breakdown calculated", null, {
+    categories,
+    totalAmount,
+  });
+});
+
 // Open to all authenticated roles (was Super Admin/Admin only while this
 // also showed profit - widened 2026-09-20 once profit was removed below,
 // since a by-type split of the same total every role already sees isn't
@@ -375,4 +426,5 @@ module.exports = {
   getCollectionTransactions,
   getLoansGivenSummary,
   getCollectionsBreakdown,
+  getLoansGivenBreakdown,
 };

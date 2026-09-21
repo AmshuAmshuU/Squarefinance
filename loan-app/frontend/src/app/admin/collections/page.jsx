@@ -5,7 +5,7 @@ import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import AddExpenseModal from "../../../components/AddExpenseModal";
-import { getCollectionTransactions, getLoansGivenSummary, getCollectionsBreakdown } from "../../../services/collection.service";
+import { getCollectionTransactions, getLoansGivenSummary, getCollectionsBreakdown, getLoansGivenBreakdown } from "../../../services/collection.service";
 import { getAllExpenses } from "../../../services/expenseService";
 import { useToast } from "../../../context/ToastContext";
 import { format } from "date-fns";
@@ -40,12 +40,16 @@ const CollectionsPage = () => {
     expenses: 0
   });
 
-  // Collections breakdown (profit + category makeup) - Super Admin/Admin
-  // only, fetched on-demand only when the card is expanded, never
-  // prefetched alongside the main list.
+  // Collections category breakdown - open to all roles, fetched on-demand
+  // only when the card is expanded, never prefetched alongside the main list.
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [breakdownData, setBreakdownData] = useState(null);
   const [breakdownLoading, setBreakdownLoading] = useState(false);
+
+  // Loans Given category breakdown - same pattern as Collections above.
+  const [loansBreakdownOpen, setLoansBreakdownOpen] = useState(false);
+  const [loansBreakdownData, setLoansBreakdownData] = useState(null);
+  const [loansBreakdownLoading, setLoansBreakdownLoading] = useState(false);
 
   // Filters State - Default to last 7 days
   const [filters, setFilters] = useState({
@@ -197,6 +201,47 @@ const CollectionsPage = () => {
       setBreakdownOpen(false);
     } finally {
       setBreakdownLoading(false);
+    }
+  };
+
+  // Same reasoning as the Collections breakdown effect above: keyed
+  // directly off `filters`, not a Search click, so it never goes stale
+  // when the date range changes while it's open.
+  useEffect(() => {
+    if (loansBreakdownOpen) {
+      (async () => {
+        try {
+          setLoansBreakdownLoading(true);
+          const res = await getLoansGivenBreakdown(filters);
+          if (res.data) setLoansBreakdownData(res.data);
+        } catch (err) {
+          showToast(err.message || "Failed to load loans given breakdown", "error");
+        } finally {
+          setLoansBreakdownLoading(false);
+        }
+      })();
+    } else {
+      setLoansBreakdownData(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
+
+  const handleToggleLoansBreakdown = async () => {
+    if (loansBreakdownOpen) {
+      setLoansBreakdownOpen(false);
+      return;
+    }
+    setLoansBreakdownOpen(true);
+    if (loansBreakdownData) return; // already have data for the current range
+    try {
+      setLoansBreakdownLoading(true);
+      const res = await getLoansGivenBreakdown(filters);
+      if (res.data) setLoansBreakdownData(res.data);
+    } catch (err) {
+      showToast(err.message || "Failed to load loans given breakdown", "error");
+      setLoansBreakdownOpen(false);
+    } finally {
+      setLoansBreakdownLoading(false);
     }
   };
 
@@ -518,9 +563,45 @@ const CollectionsPage = () => {
                     </div>
                   )}
                   {activeTab === "loans" && (
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-[160px]">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Loans Given</span>
-                      <span className="text-2xl font-black text-emerald-600 tracking-tighter">₹{summaryTotals.loans.toLocaleString()}</span>
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm min-w-[160px] overflow-hidden">
+                      <div
+                        className="p-4 flex flex-col cursor-pointer"
+                        onClick={handleToggleLoansBreakdown}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Loans Given</span>
+                          <svg
+                            className={`w-4 h-4 text-slate-400 transition-transform flex-none ${loansBreakdownOpen ? "rotate-180" : ""}`}
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 9l6 6 6-6" />
+                          </svg>
+                        </div>
+                        <span className="text-2xl font-black text-emerald-600 tracking-tighter mt-0.5">₹{summaryTotals.loans.toLocaleString()}</span>
+                      </div>
+                      {loansBreakdownOpen && (
+                        <div className="border-t border-slate-100">
+                          {loansBreakdownLoading ? (
+                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest text-center py-5">Loading...</p>
+                          ) : loansBreakdownData ? (
+                            <div className="px-4 pt-3.5 pb-3.5 space-y-0.5">
+                              {[
+                                ["Vehicle loans", loansBreakdownData.categories.vehicle],
+                                ["Weekly loans", loansBreakdownData.categories.weekly],
+                                ["Daily loans", loansBreakdownData.categories.daily],
+                                ["Interest loans", loansBreakdownData.categories.interest],
+                              ]
+                                .filter(([, amt]) => amt > 0)
+                                .map(([label, amt]) => (
+                                  <div key={label} className="flex items-center justify-between py-1">
+                                    <span className="text-[11px] font-bold text-slate-500">{label}</span>
+                                    <span className="text-[11px] font-black text-slate-800">₹{Math.round(amt).toLocaleString("en-IN")}</span>
+                                  </div>
+                                ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   )}
                   {activeTab === "expenses" && (

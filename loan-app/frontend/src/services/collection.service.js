@@ -41,3 +41,13 @@ export const getCollectionsBreakdown = async (params = {}) => {
     }
   );
 };
+
+export const getLoansGivenBreakdown = async (params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  return await apiHandler(
+    `/api/collections/loans-given-breakdown${queryString ? `?${queryString}` : ""}`,
+    {
+      method: "GET",
+    }
+  );
+};
