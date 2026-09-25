@@ -43,12 +43,6 @@ const navItems = [
   },
   { name: "Analytics", href: "/admin/analytics", icon: "📈" },
   { name: "EMI Calculator", href: "/admin/emi-calculator", icon: "🧮" },
-  {
-    name: "Data Health",
-    href: "/admin/data-health",
-    icon: "🩺",
-    roles: ["SUPER_ADMIN"],
-  },
   { name: "Expenses", href: "/admin/expenses", icon: "🧾" },
 
   {
@@ -61,6 +55,12 @@ const navItems = [
         href: "/admin/generate-document/seizing-notice",
       },
     ],
+  },
+  {
+    name: "Data Health",
+    href: "/admin/data-health",
+    icon: "🩺",
+    roles: ["SUPER_ADMIN"],
   },
   { name: "Expired", href: "/admin/expired", icon: "⌛" },
 ];
