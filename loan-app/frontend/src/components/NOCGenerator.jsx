@@ -4,10 +4,11 @@ import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import "@fontsource/noto-sans-kannada/700.css";
 
-const NOCGenerator = ({ loan, showSeal }) => {
+const NOCGenerator = ({ loan, showSeal, disabled }) => {
   const [generating, setGenerating] = useState(false);
 
   const generatePDF = async () => {
+    if (disabled) return;
     setGenerating(true);
     try {
       const pdf = new jsPDF({
@@ -265,10 +266,15 @@ const NOCGenerator = ({ loan, showSeal }) => {
   return (
     <button
       onClick={generatePDF}
-      disabled={generating}
-      className="px-12 py-5 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50"
+      disabled={generating || disabled}
+      title={disabled ? "This loan is not yet eligible for NOC generation" : undefined}
+      className="px-12 py-5 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none disabled:hover:bg-slate-300"
     >
-      {generating ? "Generating Document..." : "Generate NOC PDF"}
+      {generating
+        ? "Generating Document..."
+        : disabled
+          ? "Not Eligible for NOC"
+          : "Generate NOC PDF"}
     </button>
   );
 };

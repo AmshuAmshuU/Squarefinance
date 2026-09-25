@@ -4,6 +4,7 @@ import AuthGuard from "../../../../components/AuthGuard";
 import Navbar from "../../../../components/Navbar";
 import Sidebar from "../../../../components/Sidebar";
 import { searchLoan, getLoanById } from "../../../../services/loan.service";
+import { getEMIsByLoanId } from "../../../../services/customer";
 import { useToast } from "../../../../context/ToastContext";
 import NOCGenerator from "../../../../components/NOCGenerator";
 import { getUserFromToken } from "../../../../utils/auth";
@@ -11,6 +12,7 @@ import { getUserFromToken } from "../../../../utils/auth";
 const NOCPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loan, setLoan] = useState(null);
+  const [emis, setEmis] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showSeal, setShowSeal] = useState(false);
   const { showToast } = useToast();
@@ -29,21 +31,47 @@ const NOCPage = () => {
         const loanData = Array.isArray(res.data) ? res.data[0] : res.data;
         if (loanData) {
           // Fetch full loan details if search only returns partial
-          const fullLoanRes = await getLoanById(loanData._id);
+          const [fullLoanRes, emisRes] = await Promise.all([
+            getLoanById(loanData._id),
+            getEMIsByLoanId(loanData._id),
+          ]);
           setLoan(fullLoanRes.data);
+          setEmis(emisRes.data || []);
           showToast("Loan details fetched successfully", "success");
         } else {
           showToast("No loan found with this number", "error");
           setLoan(null);
+          setEmis([]);
         }
       }
     } catch (err) {
       showToast(err.message || "Failed to find loan", "error");
       setLoan(null);
+      setEmis([]);
     } finally {
       setLoading(false);
     }
   };
+
+  // NOC eligibility: closed loan, zero remaining principal, every EMI fully
+  // paid. Checked as three separate signals (not just remainingPrincipal
+  // === 0) because an EMI can have money against it while still sitting
+  // "Partially Paid"/"Overdue"/"Waiting for Approval" - not a true zero.
+  const remainingPrincipal = loan?.loanTerms?.remainingPrincipalAmount ?? 0;
+  const isClosed = loan?.status?.status?.toLowerCase() === "closed";
+  const unpaidEmis = emis.filter((emi) => emi.status !== "Paid");
+  const isEligibleForNoc =
+    !!loan && isClosed && remainingPrincipal <= 0 && unpaidEmis.length === 0;
+
+  const ineligibilityReasons = loan
+    ? [
+        !isClosed && `loan is still ${loan.status?.status || "Active"}`,
+        remainingPrincipal > 0 &&
+          `₹${remainingPrincipal.toLocaleString("en-IN")} principal still outstanding`,
+        unpaidEmis.length > 0 &&
+          `${unpaidEmis.length} EMI${unpaidEmis.length > 1 ? "s" : ""} not fully paid`,
+      ].filter(Boolean)
+    : [];
 
   return (
     <AuthGuard>
@@ -140,11 +168,27 @@ const NOCPage = () => {
                       </div>
                     </div>
 
-                    {loan.status?.status?.toLowerCase() !== "closed" && (
-                      <div className="mt-8 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
-                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2">
-                          ⚠️ Warning: This loan is still active. Usually, NOCs
-                          are only generated for closed accounts.
+                    {!isEligibleForNoc ? (
+                      <div className="mt-8 p-4 bg-red-50 border border-red-100 rounded-2xl">
+                        <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2">
+                          🚫 Cannot generate NOC yet
+                        </p>
+                        <ul className="space-y-1">
+                          {ineligibilityReasons.map((reason) => (
+                            <li
+                              key={reason}
+                              className="text-[10px] font-bold text-red-500 uppercase tracking-widest"
+                            >
+                              — {reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <div className="mt-8 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
+                          ✅ Loan is closed, fully paid, and eligible for NOC
+                          generation
                         </p>
                       </div>
                     )}
@@ -180,7 +224,11 @@ const NOCPage = () => {
 
                   {/* Actions */}
                   <div className="flex justify-center">
-                    <NOCGenerator loan={loan} showSeal={showSeal} />
+                    <NOCGenerator
+                      loan={loan}
+                      showSeal={showSeal}
+                      disabled={!isEligibleForNoc}
+                    />
                   </div>
                 </div>
               ) : (
