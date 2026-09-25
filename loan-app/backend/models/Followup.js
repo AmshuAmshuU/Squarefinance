@@ -10,11 +10,11 @@ const followupSchema = new mongoose.Schema(
     loanModel: {
       type: String,
       required: true,
-      enum: ["Loan", "WeeklyLoan", "DailyLoan"],
+      enum: ["Loan", "WeeklyLoan", "DailyLoan", "InterestLoan"],
     },
     loanType: {
       type: String,
-      enum: ["Daily", "Weekly", "Monthly"],
+      enum: ["Daily", "Weekly", "Monthly", "Interest"],
       required: true,
     },
     followupDate: {
