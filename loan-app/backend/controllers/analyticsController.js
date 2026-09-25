@@ -1356,19 +1356,29 @@ const getBusinessROI = asyncHandler(async (req, res, next) => {
 // (collected - disbursed - expenses) isn't meaningful on its own; it comes
 // out deeply negative not because the business is in trouble, but because
 // that gap is exactly the capital the founders have put in over time (no
-// external debt, so there's no other source it could be). Rather than
-// track individual founder contributions (explicitly out of scope -
-// Karthik wants stake/dilution math handled privately, outside the app),
-// that same gap is surfaced as one simple, positive reference figure:
-//   Our Investment = Total Disbursed + Total Expenses - Total Collected
-// Since idle cash is ~0 by assumption, the whole company's worth reduces
-// to just the loan book itself:
+// external debt, so there's no other source it could be).
 //   Company Valuation = Outstanding Loan Book (principal + interest still
 //     owed on every active loan, at full face value - same "no risk, no
 //     discount" basis as the ROI card, deliberately consistent with it).
-// "Our Investment" is NOT subtracted from this - it's shown alongside as
-// context (how much capital it took to reach this valuation), with the
-// ratio between them as a simple growth multiple.
+//
+// "Our Investment" WAS a live residual (Disbursed + Expenses - Collected)
+// until 2026-09-25. Karthik explained the business was shifting from
+// actively injecting new capital to a fully self-funded model (only
+// relending what gets collected) - under that shift, the live residual
+// stops tracking "capital founders put in" and starts tracking "principal
+// currently tied up in the book", which rises right alongside Company
+// Valuation purely from recycled collections. Left unchanged, Growth
+// Multiple would have mathematically decayed toward ~1x over time
+// regardless of how well the business was actually compounding. Karthik
+// discussed with his partners and they agreed to freeze "Our Investment"
+// as a fixed constant, ₹1,55,00,000, as of 2026-09-25 - the point capital
+// contributions genuinely stopped. Growth Multiple now shows how many
+// times that fixed original stake has multiplied via real compounding.
+// See memory growth_multiple_reassessment_pending.md for the full
+// discussion this decision came out of.
+const OUR_INVESTMENT_FROZEN_AMOUNT = 15500000; // Rs 1,55,00,000
+const OUR_INVESTMENT_FROZEN_DATE = "2026-09-25";
+
 // Always "as of now" - no historical date picker (unlike ROI), since this
 // is meant as a regular here-and-now check-in, not a historical lookback.
 const getCompanyValuation = asyncHandler(async (req, res, next) => {
@@ -1384,7 +1394,7 @@ const getCompanyValuation = asyncHandler(async (req, res, next) => {
   const totalExpenses = expenseAgg[0]?.total || 0;
 
   const outstandingLoanBook = roi.outstanding;
-  const ourInvestment = roi.disbursed + totalExpenses - roi.collectedSoFar;
+  const ourInvestment = OUR_INVESTMENT_FROZEN_AMOUNT;
   const companyValuation = outstandingLoanBook;
   const growthMultiple = ourInvestment > 0 ? companyValuation / ourInvestment : null;
 
@@ -1392,6 +1402,7 @@ const getCompanyValuation = asyncHandler(async (req, res, next) => {
     companyValuation,
     outstandingLoanBook,
     ourInvestment,
+    ourInvestmentFrozenDate: OUR_INVESTMENT_FROZEN_DATE,
     growthMultiple,
     totalCollected: roi.collectedSoFar,
     totalDisbursed: roi.disbursed,

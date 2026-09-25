@@ -88,7 +88,7 @@ const CompanyValuation = () => {
                 <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Our Investment</p>
                 <p className="text-xl font-black text-slate-900">{fmtRs(data.ourInvestment)}</p>
                 <p className="text-[9px] text-slate-400 mt-1.5 leading-snug">
-                  Total disbursed + total expenses − total collected, all time
+                  Fixed as of {fmtDate(data.ourInvestmentFrozenDate)} — the agreed capital put into the business
                 </p>
               </div>
               <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
@@ -104,7 +104,7 @@ const CompanyValuation = () => {
             </div>
 
             <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mt-5 pt-4 border-t border-slate-100">
-              <span className="text-slate-600 font-bold">Our Investment</span> is the net capital that has gone into the business to reach today's numbers — the business is fully self-funded with zero external debt, so this gap can only be capital the founders have put in.{" "}
+              <span className="text-slate-600 font-bold">Our Investment</span> is fixed at {fmtRs(data.ourInvestment)} as of {fmtDate(data.ourInvestmentFrozenDate)} — capital contributions stopped from that date, and the business now runs fully self-funded, relending only what it collects.{" "}
               <span className="text-slate-600 font-bold">Company Valuation</span> is valued at full face value with no collectibility discount, same &quot;no risk&quot; basis as the Return on Investment card above. This is the whole-company number only — how founder stakes split on new capital is handled separately, outside this app.
             </p>
           </>
