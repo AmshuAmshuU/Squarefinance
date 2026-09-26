@@ -1524,8 +1524,9 @@ const getMonthlyCollectionSummary = asyncHandler(async (req, res, next) => {
 });
 
 // Analytics "Book growth" card (SUPER_ADMIN/ADMIN, on-demand): per period
-// bucket and per loan type - money lent out, total collected (same events
-// the Collections tab shows, so the numbers agree), and the principal-only
+// bucket and per loan type - money lent out, total collected (the
+// Collections-tab events plus Vehicle/Weekly/Daily processing fees, so All
+// Time equals the Analytics "Total Collected" card), and the principal-only
 // part of that collected money. Principal part: Weekly/Daily EMIs are pure
 // principal; a Vehicle EMI's principal share is (principal / tenure) /
 // EMI; Interest loans only return principal through principalPayments;
@@ -1547,9 +1548,9 @@ const getBookGrowth = asyncHandler(async (req, res, next) => {
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   const [vLoans, wLoans, dLoans, iLoans, events] = await Promise.all([
-    Loan.find({}).select("dateLoanDisbursed createdAt principalAmount tenureMonths monthlyEMI").lean(),
-    WeeklyLoan.find({}).select("dateLoanDisbursed startDate disbursementAmount").lean(),
-    DailyLoan.find({}).select("dateLoanDisbursed startDate disbursementAmount").lean(),
+    Loan.find({}).select("dateLoanDisbursed createdAt principalAmount tenureMonths monthlyEMI processingFee").lean(),
+    WeeklyLoan.find({}).select("dateLoanDisbursed startDate disbursementAmount processingFee").lean(),
+    DailyLoan.find({}).select("dateLoanDisbursed startDate disbursementAmount processingFee").lean(),
     InterestLoan.find({}).select("dateLoanDisbursed createdAt initialPrincipalAmount").lean(),
     getAllCollectionEvents(),
   ]);
@@ -1595,6 +1596,15 @@ const getBookGrowth = asyncHandler(async (req, res, next) => {
       collRows.push({ type, day: istDay(e.date), total: e.totalAmount || 0, principal });
     });
 
+  // Processing fees are real money received, counted as collected on the
+  // day each loan was disbursed - same as the Analytics "Total Collected"
+  // card, so the two agree for All Time. Interest loans' fee field is never
+  // used, so it is left out there too. Fees are never principal.
+  const pushFee = (type, date, fee) => { if (date && fee) collRows.push({ type, day: istDay(date), total: fee, principal: 0 }); };
+  vLoans.forEach((l) => pushFee("vehicle", l.dateLoanDisbursed || l.createdAt, l.processingFee));
+  wLoans.forEach((l) => pushFee("weekly", l.dateLoanDisbursed || l.startDate, l.processingFee));
+  dLoans.forEach((l) => pushFee("daily", l.dateLoanDisbursed || l.startDate, l.processingFee));
+
   const today = getTodayIST();
   const [ty, tm] = today.split("-").map(Number);
   let start, end = today, mode;
@@ -1616,6 +1626,9 @@ const getBookGrowth = asyncHandler(async (req, res, next) => {
   } else {
     const all = [...lentRows.map((r) => r.day), ...collRows.map((r) => r.day)].sort();
     start = all[0] || today;
+    // A payment entered with a future date still counts in the Analytics
+    // "Total Collected" card, so All Time runs to the latest dated entry.
+    if (all.length && all[all.length - 1] > end) end = all[all.length - 1];
   }
   if (interval === "all" || interval === "custom") {
     const span = diffDays(start, end) + 1;

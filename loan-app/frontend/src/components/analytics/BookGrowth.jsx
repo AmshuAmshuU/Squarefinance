@@ -223,8 +223,9 @@ const BookGrowth = () => {
               </div>
             </div>
             <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mt-4 pt-3 border-t border-slate-100">
-              {note} Total collected matches the Collections tab (processing fees excluded); principal only is the
-              part of that money that returns the original lent amount, without interest, fees or overdue charges.
+              {note} Total collected is all money received, including processing fees (counted on the day each loan
+              was disbursed), so All Time matches the Total Collected card at the top. Principal only is the part
+              that returns the original lent amount, without interest, fees or overdue charges.
             </p>
           </>
         )}
