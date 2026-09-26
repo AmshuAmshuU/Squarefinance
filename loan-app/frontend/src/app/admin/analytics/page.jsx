@@ -29,6 +29,8 @@ import ProfitOverview from "../../../components/analytics/ProfitOverview";
 import SimpleStats from "../../../components/analytics/SimpleStats";
 import BusinessROI from "../../../components/analytics/BusinessROI";
 import CompanyValuation from "../../../components/analytics/CompanyValuation";
+import CollectionEfficiencyCard from "../../../components/analytics/CollectionEfficiencyCard";
+import BookGrowth from "../../../components/analytics/BookGrowth";
 import { getUserFromToken } from "../../../utils/auth";
 
 const AnalyticsPage = () => {
@@ -871,6 +873,10 @@ const AnalyticsPage = () => {
                 </div>
               </div>
 
+              {/* Collection Efficiency - last card visible to every role that
+                  can see Analytics; the admin-only block starts below it. */}
+              <CollectionEfficiencyCard />
+
               {/* Everything from here down (Total Growth Trend onward) is
                   SUPER_ADMIN/ADMIN only, not EMPLOYEE - Karthik's explicit
                   2026-08-05 instruction. Matching backend route restrictions
@@ -896,6 +902,9 @@ const AnalyticsPage = () => {
 
                   {/* Company Valuation - very bottom, on-demand only */}
                   <CompanyValuation />
+
+                  {/* Book Growth - very end, on-demand only */}
+                  <BookGrowth />
                 </>
               )}
 

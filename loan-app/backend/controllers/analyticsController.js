@@ -1283,6 +1283,16 @@ const buildAllLoanFlows = async (asOfDate) => {
   const allFuture = [];
   let allPending = 0;
   let earliestDate = null;
+  const byType = {
+    vehicle: { hist: [], future: [], pending: 0 },
+    weekly: { hist: [], future: [], pending: 0 },
+    daily: { hist: [], future: [], pending: 0 },
+    interest: { hist: [], future: [], pending: 0 },
+  };
+  const addFlows = (type, { hist, future, pending }) => {
+    allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
+    byType[type].hist.push(...hist); byType[type].future.push(...future); byType[type].pending += pending;
+  };
   const trackEarliest = (flows) => {
     flows.forEach((f) => {
       if (!earliestDate || f.date < earliestDate) earliestDate = f.date;
@@ -1314,23 +1324,19 @@ const buildAllLoanFlows = async (asOfDate) => {
   const interestEmisByLoan = groupBy(interestEmis, "interestLoanId");
 
   for (const loan of vehicleLoans) {
-    const { hist, future, pending } = vehicleLoanFlows(loan, vehicleEmisByLoan[String(loan._id)] || [], asOfDate);
-    allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
+    addFlows("vehicle", vehicleLoanFlows(loan, vehicleEmisByLoan[String(loan._id)] || [], asOfDate));
   }
   for (const loan of weeklyLoans) {
-    const { hist, future, pending } = weeklyDailyLoanFlows(loan, weeklyEmisByLoan[String(loan._id)] || [], asOfDate);
-    allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
+    addFlows("weekly", weeklyDailyLoanFlows(loan, weeklyEmisByLoan[String(loan._id)] || [], asOfDate));
   }
   for (const loan of dailyLoans) {
-    const { hist, future, pending } = weeklyDailyLoanFlows(loan, dailyEmisByLoan[String(loan._id)] || [], asOfDate);
-    allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
+    addFlows("daily", weeklyDailyLoanFlows(loan, dailyEmisByLoan[String(loan._id)] || [], asOfDate));
   }
   for (const loan of interestLoans) {
-    const { hist, future, pending } = interestLoanFlows(loan, interestEmisByLoan[String(loan._id)] || [], asOfDate);
-    allHist.push(...hist); allFuture.push(...future); allPending += pending; trackEarliest(hist);
+    addFlows("interest", interestLoanFlows(loan, interestEmisByLoan[String(loan._id)] || [], asOfDate));
   }
 
-  return { allHist, allFuture, allPending, earliestDate };
+  return { allHist, allFuture, allPending, earliestDate, byType };
 };
 
 const getBusinessROI = asyncHandler(async (req, res, next) => {
@@ -1338,11 +1344,25 @@ const getBusinessROI = asyncHandler(async (req, res, next) => {
   const asOfDate = endDate ? new Date(`${endDate}T23:59:59.999+05:30`) : new Date();
 
   const { computeROI } = require("../utils/loanROI");
-  const { allHist, allFuture, allPending, earliestDate } = await buildAllLoanFlows(asOfDate);
+  const { allHist, allFuture, allPending, earliestDate, byType } = await buildAllLoanFlows(asOfDate);
   const roi = computeROI(allHist, allFuture, allPending, asOfDate);
+
+  // Same four percentages as the combined figures, per loan type - shown as
+  // small text beside each headline number on the ROI card.
+  const roiByType = {};
+  for (const [type, f] of Object.entries(byType)) {
+    const r = computeROI(f.hist, f.future, f.pending, asOfDate);
+    roiByType[type] = {
+      realisticXirr: r.realisticXirr,
+      liquidationXirr: r.liquidationXirr,
+      absoluteReturnSoFar: r.absoluteReturnSoFar,
+      absoluteReturnInclOutstanding: r.absoluteReturnInclOutstanding,
+    };
+  }
 
   sendResponse(res, 200, "success", "Business ROI calculated", null, {
     ...roi,
+    byType: roiByType,
     asOfDate: asOfDate.toISOString(),
     inceptionDate: earliestDate ? earliestDate.toISOString() : null,
   });
@@ -1424,7 +1444,231 @@ const getCompanyValuation = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Analytics "Collection efficiency" card (open to every role that can see
+// Analytics): for a chosen calendar month (IST), per loan type, what was due
+// vs how much of THOSE SPECIFIC EMIs has been paid - same idea as the
+// dashboard's Today's Collections card, extended to a month. The dashboard
+// drops every currently-Closed loan outright; for a past month that would
+// wrongly erase loans that were open then and paid off normally since, so
+// here a closed loan's EMI is only left out when it is a leftover from an
+// early settlement (bulk-closed without payment, due after the settlement
+// date, or never paid at all).
+const getMonthlyCollectionSummary = asyncHandler(async (req, res, next) => {
+  const ErrorHandler = require("../utils/ErrorHandler");
+  const [cy, cm] = getTodayIST().split("-").map(Number);
+  const year = parseInt(req.query.year, 10) || cy;
+  const month = parseInt(req.query.month, 10) || cm;
+  if (month < 1 || month > 12 || year < 2000 || year > 2100) {
+    return next(new ErrorHandler("Invalid year or month", 400));
+  }
+  const pad = (n) => String(n).padStart(2, "0");
+  const ny = month === 12 ? year + 1 : year;
+  const nm = month === 12 ? 1 : month + 1;
+  const range = {
+    $gte: new Date(`${year}-${pad(month)}-01T00:00:00+05:30`),
+    $lt: new Date(`${ny}-${pad(nm)}-01T00:00:00+05:30`),
+  };
+
+  const [emis, interestEmis, closedV, closedW, closedD, closedI] = await Promise.all([
+    EMI.find({ dueDate: range }).select("loanId loanModel emiAmount amountPaid status closedWithoutPayment dueDate").lean(),
+    InterestEMI.find({ dueDate: range }).select("interestLoanId interestAmount amountPaid status dueDate").lean(),
+    Loan.find({ status: "Closed" }).select("foreclosureDate soldDetails.soldDate").lean(),
+    WeeklyLoan.find({ status: "Closed" }).select("foreclosureDate").lean(),
+    DailyLoan.find({ status: "Closed" }).select("foreclosureDate").lean(),
+    InterestLoan.find({ status: "Closed" }).select("_id").lean(),
+  ]);
+
+  const settledOn = new Map();
+  closedV.forEach((l) => settledOn.set(String(l._id), l.foreclosureDate || l.soldDetails?.soldDate || null));
+  closedW.forEach((l) => settledOn.set(String(l._id), l.foreclosureDate || null));
+  closedD.forEach((l) => settledOn.set(String(l._id), l.foreclosureDate || null));
+  closedI.forEach((l) => settledOn.set(String(l._id), null));
+
+  const isCounted = (e, loanId) => {
+    if (!settledOn.has(loanId)) return true;
+    if (e.status !== "Paid" || e.closedWithoutPayment) return false;
+    const on = settledOn.get(loanId);
+    return !(on && new Date(e.dueDate) > new Date(on));
+  };
+
+  const acc = {
+    vehicle: { expected: 0, collected: 0 },
+    weekly: { expected: 0, collected: 0 },
+    daily: { expected: 0, collected: 0 },
+    interest: { expected: 0, collected: 0 },
+  };
+  const modelToType = { Loan: "vehicle", WeeklyLoan: "weekly", DailyLoan: "daily" };
+  for (const e of emis) {
+    const type = modelToType[e.loanModel || "Loan"];
+    if (!type || !isCounted(e, String(e.loanId))) continue;
+    acc[type].expected += e.emiAmount || 0;
+    acc[type].collected += e.amountPaid || 0;
+  }
+  for (const e of interestEmis) {
+    if (!isCounted(e, String(e.interestLoanId))) continue;
+    acc.interest.expected += e.interestAmount || 0;
+    acc.interest.collected += e.amountPaid || 0;
+  }
+
+  const finish = (a) => ({ expected: a.expected, collected: a.collected, short: Math.max(0, a.expected - a.collected) });
+  const vehicle = finish(acc.vehicle), weekly = finish(acc.weekly), daily = finish(acc.daily), interest = finish(acc.interest);
+  const total = {
+    expected: vehicle.expected + weekly.expected + daily.expected + interest.expected,
+    collected: vehicle.collected + weekly.collected + daily.collected + interest.collected,
+    short: vehicle.short + weekly.short + daily.short + interest.short,
+  };
+
+  sendResponse(res, 200, "success", "Monthly collection summary fetched", null, {
+    year, month, vehicle, weekly, daily, interest, total,
+  });
+});
+
+// Analytics "Book growth" card (SUPER_ADMIN/ADMIN, on-demand): per period
+// bucket and per loan type - money lent out, total collected (same events
+// the Collections tab shows, so the numbers agree), and the principal-only
+// part of that collected money. Principal part: Weekly/Daily EMIs are pure
+// principal; a Vehicle EMI's principal share is (principal / tenure) /
+// EMI; Interest loans only return principal through principalPayments;
+// overdue money is never principal; a foreclosure or vehicle sale returns
+// whatever principal was still outstanding on that loan (capped at what was
+// actually paid), computed from the loan's own earlier payments.
+const getBookGrowth = asyncHandler(async (req, res, next) => {
+  const ErrorHandler = require("../utils/ErrorHandler");
+  const { getAllCollectionEvents } = require("../utils/collectionEvents");
+  const { interval = "6months", startDate, endDate } = req.query;
+
+  const istDay = (d) => new Date(d).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const addDays = (s, n) => {
+    const d = new Date(`${s}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  const diffDays = (a, b) => Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400000);
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  const [vLoans, wLoans, dLoans, iLoans, events] = await Promise.all([
+    Loan.find({}).select("dateLoanDisbursed createdAt principalAmount tenureMonths monthlyEMI").lean(),
+    WeeklyLoan.find({}).select("dateLoanDisbursed startDate disbursementAmount").lean(),
+    DailyLoan.find({}).select("dateLoanDisbursed startDate disbursementAmount").lean(),
+    InterestLoan.find({}).select("dateLoanDisbursed createdAt initialPrincipalAmount").lean(),
+    getAllCollectionEvents(),
+  ]);
+
+  const lentRows = [];
+  const pushLent = (type, date, amount) => { if (date && amount) lentRows.push({ type, day: istDay(date), amount }); };
+  vLoans.forEach((l) => pushLent("vehicle", l.dateLoanDisbursed || l.createdAt, l.principalAmount));
+  wLoans.forEach((l) => pushLent("weekly", l.dateLoanDisbursed || l.startDate, l.disbursementAmount));
+  dLoans.forEach((l) => pushLent("daily", l.dateLoanDisbursed || l.startDate, l.disbursementAmount));
+  iLoans.forEach((l) => pushLent("interest", l.dateLoanDisbursed || l.createdAt, l.initialPrincipalAmount));
+
+  const loanInfo = new Map();
+  vLoans.forEach((l) => {
+    const perMonthPrincipal = (l.principalAmount || 0) / (l.tenureMonths || 1);
+    const ratio = l.monthlyEMI ? Math.min(1, perMonthPrincipal / l.monthlyEMI) : 0;
+    loanInfo.set(String(l._id), { type: "vehicle", principal: l.principalAmount || 0, ratio });
+  });
+  wLoans.forEach((l) => loanInfo.set(String(l._id), { type: "weekly", principal: l.disbursementAmount || 0, ratio: 1 }));
+  dLoans.forEach((l) => loanInfo.set(String(l._id), { type: "daily", principal: l.disbursementAmount || 0, ratio: 1 }));
+
+  const modelToType = { Loan: "vehicle", WeeklyLoan: "weekly", DailyLoan: "daily", InterestLoan: "interest" };
+  const cum = new Map();
+  const collRows = [];
+  events
+    .filter((e) => e.date)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .forEach((e) => {
+      const type = modelToType[e.loanModel];
+      if (!type) return;
+      let principal = 0;
+      if (type === "interest") {
+        principal = e.paymentType === "Interest Loan Principal" ? e.totalAmount : 0;
+      } else if (e.paymentType !== "Overdue") {
+        const info = loanInfo.get(String(e.loanId));
+        if (info) {
+          const key = String(e.loanId);
+          const remaining = Math.max(0, info.principal - (cum.get(key) || 0));
+          const isSettlement = e.paymentType === "Foreclosure" || e.paymentType === "Vehicle Sale";
+          principal = Math.min(remaining, isSettlement ? e.totalAmount : e.totalAmount * info.ratio);
+          cum.set(key, (cum.get(key) || 0) + principal);
+        }
+      }
+      collRows.push({ type, day: istDay(e.date), total: e.totalAmount || 0, principal });
+    });
+
+  const today = getTodayIST();
+  const [ty, tm] = today.split("-").map(Number);
+  let start, end = today, mode;
+  const monthsBack = (n) => {
+    const idx = ty * 12 + (tm - 1) - (n - 1);
+    return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}-01`;
+  };
+  if (interval === "weekly") { start = addDays(today, -6); mode = "day"; }
+  else if (interval === "monthly") { start = addDays(today, -29); mode = "week"; }
+  else if (interval === "3months") { start = monthsBack(3); mode = "month"; }
+  else if (interval === "6months") { start = monthsBack(6); mode = "month"; }
+  else if (interval === "yearly") { start = monthsBack(12); mode = "month"; }
+  else if (interval === "custom") {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate || "") || !/^\d{4}-\d{2}-\d{2}$/.test(endDate || "")) {
+      return next(new ErrorHandler("Custom range needs a valid start and end date", 400));
+    }
+    start = startDate; end = endDate;
+    if (start > end) return next(new ErrorHandler("Start date must be before end date", 400));
+  } else {
+    const all = [...lentRows.map((r) => r.day), ...collRows.map((r) => r.day)].sort();
+    start = all[0] || today;
+  }
+  if (interval === "all" || interval === "custom") {
+    const span = diffDays(start, end) + 1;
+    mode = span <= 14 ? "day" : span <= 100 ? "week" : span <= 800 ? "month" : "year";
+  }
+
+  const buckets = [];
+  const multiYear = start.slice(0, 4) !== end.slice(0, 4);
+  if (mode === "day" || mode === "week") {
+    const step = mode === "day" ? 1 : 7;
+    for (let s = start; s <= end; s = addDays(s, step)) {
+      const e = addDays(s, step - 1) > end ? end : addDays(s, step - 1);
+      const [, m, d] = s.split("-").map(Number);
+      buckets.push({ label: `${d} ${MON[m - 1]}`, start: s, end: e });
+    }
+  } else if (mode === "month") {
+    let [y, m] = start.split("-").map(Number);
+    const [ey, em] = end.split("-").map(Number);
+    while (y < ey || (y === ey && m <= em)) {
+      const first = `${y}-${String(m).padStart(2, "0")}-01`;
+      const last = addDays(m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`, -1);
+      buckets.push({
+        label: multiYear ? `${MON[m - 1]} ${String(y).slice(2)}` : MON[m - 1],
+        start: first < start ? start : first,
+        end: last > end ? end : last,
+      });
+      m += 1; if (m > 12) { m = 1; y += 1; }
+    }
+  } else {
+    for (let y = Number(start.slice(0, 4)); y <= Number(end.slice(0, 4)); y++) {
+      buckets.push({ label: String(y), start: `${y}-01-01` < start ? start : `${y}-01-01`, end: `${y}-12-31` > end ? end : `${y}-12-31` });
+    }
+  }
+
+  const empty = () => ({ vehicle: 0, weekly: 0, daily: 0, interest: 0 });
+  buckets.forEach((b) => { b.lent = empty(); b.collected = empty(); b.principal = empty(); });
+  const find = (day) => buckets.find((b) => day >= b.start && day <= b.end);
+  lentRows.forEach((r) => { const b = find(r.day); if (b) b.lent[r.type] += r.amount; });
+  collRows.forEach((r) => {
+    const b = find(r.day);
+    if (b) { b.collected[r.type] += r.total; b.principal[r.type] += r.principal; }
+  });
+  const round = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, Math.round(v)]));
+  buckets.forEach((b) => { b.lent = round(b.lent); b.collected = round(b.collected); b.principal = round(b.principal); });
+
+  sendResponse(res, 200, "success", "Book growth calculated", null, {
+    interval, startDate: start, endDate: end, granularity: mode, buckets,
+  });
+});
+
 module.exports = {
+  getMonthlyCollectionSummary,
+  getBookGrowth,
   getAnalyticsStats,
   exportAllData,
   getTrendStats,

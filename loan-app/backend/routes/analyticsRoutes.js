@@ -55,6 +55,24 @@ router.get(
   analyticsController.getTrendStats
 );
 
+// Collection efficiency card - sits in the all-roles part of the page, so
+// same access as /stats.
+router.get(
+  "/monthly-collection",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  requireAnalyticsViewPermission,
+  analyticsController.getMonthlyCollectionSummary
+);
+
+// Book growth card - very bottom of the page, admin-only section.
+router.get(
+  "/book-growth",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN"),
+  analyticsController.getBookGrowth
+);
+
 // 2026-08-05: Karthik wants everything from "Total Growth Trend" onward
 // restricted to SUPER_ADMIN/ADMIN only, not EMPLOYEE - EMPLOYEE removed
 // from these three.

@@ -42,3 +42,14 @@ export const getBusinessROI = async (endDate) => {
 export const getCompanyValuation = async () => {
   return await apiHandler("/api/analytics/valuation");
 };
+
+export const getMonthlyCollection = async (year, month) => {
+  return await apiHandler(`/api/analytics/monthly-collection?year=${year}&month=${month}`);
+};
+
+export const getBookGrowth = async (interval, startDate, endDate) => {
+  let url = `/api/analytics/book-growth?interval=${interval}`;
+  if (startDate) url += `&startDate=${startDate}`;
+  if (endDate) url += `&endDate=${endDate}`;
+  return await apiHandler(url);
+};

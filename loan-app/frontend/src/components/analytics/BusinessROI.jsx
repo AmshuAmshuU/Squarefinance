@@ -26,6 +26,33 @@ const fmtAbsPct = (r) => (r === null || r === undefined ? "N/A" : `${r.toFixed(2
 const fmtRs = (n) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
 const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString("en-IN") : "—");
 
+const TYPE_LETTERS = [
+  ["vehicle", "V"],
+  ["weekly", "W"],
+  ["daily", "D"],
+  ["interest", "I"],
+];
+
+// Small per-loan-type figures shown beside the headline number (V vehicle,
+// W weekly, D daily, I interest). ratio=true for XIRR values stored as 0-1
+// fractions; false for the two absolute-return values already in percent.
+const TypeSplit = ({ byType, field, ratio }) => {
+  if (!byType) return null;
+  return (
+    <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] font-bold text-slate-500 leading-tight">
+      {TYPE_LETTERS.map(([key, letter]) => {
+        const v = byType[key]?.[field];
+        const text = v === null || v === undefined ? "N/A" : `${(ratio ? v * 100 : v).toFixed(1)}%`;
+        return (
+          <span key={key} className="whitespace-nowrap">
+            {letter} {text}
+          </span>
+        );
+      })}
+    </div>
+  );
+};
+
 const BusinessROI = () => {
   const [interval, setInterval_] = useState("all");
   const [customDate, setCustomDate] = useState(today());
@@ -121,25 +148,38 @@ const BusinessROI = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
                 <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Realistic XIRR</p>
-                <p className="text-xl font-black text-slate-900">{fmtPct(data.realisticXirr)}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xl font-black text-slate-900">{fmtPct(data.realisticXirr)}</p>
+                  <TypeSplit byType={data.byType} field="realisticXirr" ratio />
+                </div>
                 <p className="text-[9px] text-slate-400 mt-1 leading-snug">Annualized. Outstanding money is placed on its real scheduled due dates, not assumed collected today.</p>
               </div>
               <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
                 <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Liquidation XIRR</p>
-                <p className="text-xl font-black text-slate-900">{fmtPct(data.liquidationXirr)}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xl font-black text-slate-900">{fmtPct(data.liquidationXirr)}</p>
+                  <TypeSplit byType={data.byType} field="liquidationXirr" ratio />
+                </div>
                 <p className="text-[9px] text-slate-400 mt-1 leading-snug">Annualized. Upper-bound scenario — as if the entire outstanding book were collected in one go on this date.</p>
               </div>
               <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
                 <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Return So Far</p>
-                <p className="text-xl font-black text-slate-900">{fmtAbsPct(data.absoluteReturnSoFar)}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xl font-black text-slate-900">{fmtAbsPct(data.absoluteReturnSoFar)}</p>
+                  <TypeSplit byType={data.byType} field="absoluteReturnSoFar" />
+                </div>
                 <p className="text-[9px] text-slate-400 mt-1 leading-snug">Not annualized. Only cash actually collected vs. cash disbursed — expected to look low while capital keeps rolling into new loans.</p>
               </div>
               <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
                 <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Return Incl. Outstanding</p>
-                <p className="text-xl font-black text-slate-900">{fmtAbsPct(data.absoluteReturnInclOutstanding)}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xl font-black text-slate-900">{fmtAbsPct(data.absoluteReturnInclOutstanding)}</p>
+                  <TypeSplit byType={data.byType} field="absoluteReturnInclOutstanding" />
+                </div>
                 <p className="text-[9px] text-slate-400 mt-1 leading-snug">Not annualized. Assumes every outstanding loan is repaid in full, no defaults.</p>
               </div>
             </div>
+            <p className="text-[9px] font-bold text-slate-400 mt-3">V vehicle, W weekly, D daily, I interest — same measure, split by loan type.</p>
             <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
               <div>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Disbursed</p>
