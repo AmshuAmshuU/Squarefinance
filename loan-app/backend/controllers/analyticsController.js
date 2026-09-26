@@ -1376,6 +1376,16 @@ const getBusinessROI = asyncHandler(async (req, res, next) => {
 // times that fixed original stake has multiplied via real compounding.
 // See memory growth_multiple_reassessment_pending.md for the full
 // discussion this decision came out of.
+//
+// Cash on hand (added 2026-09-26): with Our Investment frozen, money
+// collected but not yet relent (e.g. a foreclosure) left the loan book and
+// was counted nowhere, so valuation dipped by the full amount collected.
+// Karthik's rule: whatever is collected sits with the company as idle cash
+// until lent out, and counts toward valuation either way. Using his fact
+// "we put in 1.55cr in total, expenses included":
+//   Cash on hand = Our Investment - (Disbursed + Expenses - Collected)
+//   Company Valuation = Outstanding Loan Book + Cash on hand
+// Future fresh partner capital is deliberately not handled here yet.
 const OUR_INVESTMENT_FROZEN_AMOUNT = 15500000; // Rs 1,55,00,000
 const OUR_INVESTMENT_FROZEN_DATE = "2026-09-25";
 
@@ -1395,12 +1405,15 @@ const getCompanyValuation = asyncHandler(async (req, res, next) => {
 
   const outstandingLoanBook = roi.outstanding;
   const ourInvestment = OUR_INVESTMENT_FROZEN_AMOUNT;
-  const companyValuation = outstandingLoanBook;
+  const cashOnHand =
+    ourInvestment - (roi.disbursed + totalExpenses - roi.collectedSoFar);
+  const companyValuation = outstandingLoanBook + cashOnHand;
   const growthMultiple = ourInvestment > 0 ? companyValuation / ourInvestment : null;
 
   sendResponse(res, 200, "success", "Company valuation calculated", null, {
     companyValuation,
     outstandingLoanBook,
+    cashOnHand,
     ourInvestment,
     ourInvestmentFrozenDate: OUR_INVESTMENT_FROZEN_DATE,
     growthMultiple,

@@ -76,11 +76,21 @@ const CompanyValuation = () => {
                 {fmtRs(data.companyValuation)}
               </p>
               <p className="text-[10px] font-bold text-slate-400 mt-2.5">
-                Full-value outstanding loan book, no risk discount — the business reinvests everything, so there's no separate idle cash to add
+                Full-value outstanding loan book ({fmtRs(data.outstandingLoanBook)}) + cash on hand ({fmtRs(data.cashOnHand)}), no risk discount
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 sm:col-span-2">
+                <div className="inline-flex p-2 rounded-xl mb-3 bg-amber-50 text-amber-600">
+                  <Landmark className="w-4 h-4" />
+                </div>
+                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Cash on Hand</p>
+                <p className="text-xl font-black text-slate-900">{fmtRs(data.cashOnHand)}</p>
+                <p className="text-[9px] text-slate-400 mt-1.5 leading-snug">
+                  Our Investment − (total lent out + total expenses − total collected) — collected money not yet relent
+                </p>
+              </div>
               <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50">
                 <div className="inline-flex p-2 rounded-xl mb-3 bg-emerald-50 text-emerald-600">
                   <Wallet className="w-4 h-4" />
@@ -105,7 +115,7 @@ const CompanyValuation = () => {
 
             <p className="text-[10px] text-slate-400 font-semibold leading-relaxed mt-5 pt-4 border-t border-slate-100">
               <span className="text-slate-600 font-bold">Our Investment</span> is fixed at {fmtRs(data.ourInvestment)} as of {fmtDate(data.ourInvestmentFrozenDate)} — capital contributions stopped from that date, and the business now runs fully self-funded, relending only what it collects.{" "}
-              <span className="text-slate-600 font-bold">Company Valuation</span> is valued at full face value with no collectibility discount, same &quot;no risk&quot; basis as the Return on Investment card above. This is the whole-company number only — how founder stakes split on new capital is handled separately, outside this app.
+              <span className="text-slate-600 font-bold">Company Valuation</span> is the outstanding loan book plus any cash on hand, valued at full face value with no collectibility discount, same &quot;no risk&quot; basis as the Return on Investment card above. This is the whole-company number only — how founder stakes split on new capital is handled separately, outside this app.
             </p>
           </>
         )}
