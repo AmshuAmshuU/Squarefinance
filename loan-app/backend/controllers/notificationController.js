@@ -2,6 +2,7 @@ const Notification = require("../models/Notification");
 const asyncHandler = require("../utils/asyncHandler");
 const socketUtils = require("../utils/socket");
 const User = require("../models/User");
+const { sendPushToUser } = require("./pushController");
 
 // Helper to send notification (internal use)
 const sendNotification = async ({ recipientId, senderId, type, title, message, data }) => {
@@ -17,14 +18,20 @@ const sendNotification = async ({ recipientId, senderId, type, title, message, d
 
     const io = socketUtils.getIO();
     const recipientRoom = recipientId.toString();
-    
+
     // Emit the notification itself
     io.to(recipientRoom).emit("new_notification", notification);
-    
+
     // Emit unread count update
     const unreadCount = await Notification.countDocuments({ recipient: recipientId, isRead: false });
     io.to(recipientRoom).emit("unread_count", unreadCount);
-    
+
+    // Phone push (2026-09-28) - buzzes a locked/backgrounded phone, which
+    // the socket event above can't do since the browser suspends the tab's
+    // JS once it's backgrounded. Every notification already flows through
+    // this one function, so this is the only call site that needs it.
+    sendPushToUser(recipientId, { title, message }).catch(() => {});
+
     return notification;
   } catch (error) {
     console.error("Error sending notification:", error);

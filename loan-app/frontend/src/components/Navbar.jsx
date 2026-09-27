@@ -13,9 +13,23 @@ const Navbar = () => {
   const router = useRouter();
   const user = getUserFromToken();
   const { toggleSidebar, isDarkMode, toggleDarkMode } = useUI();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, pushEnabled, pushSupported, pushBusy, enablePush, disablePush } = useNotifications();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [pushError, setPushError] = useState("");
+
+  const handleTogglePush = async () => {
+    setPushError("");
+    try {
+      if (pushEnabled) {
+        await disablePush();
+      } else {
+        await enablePush();
+      }
+    } catch (err) {
+      setPushError(err.message || "Couldn't change notification setting.");
+    }
+  };
 
   const handleLogout = () => {
     removeToken();
@@ -171,6 +185,35 @@ const Navbar = () => {
                       {user?.role}
                     </p>
                   </div>
+
+                  {pushSupported && (
+                    <div className="px-4 py-3 border-b border-slate-50">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-bold text-slate-900">Push notifications</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Buzz this phone for approvals</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleTogglePush}
+                          disabled={pushBusy}
+                          aria-label="Toggle push notifications"
+                          className={`relative w-9 h-5 rounded-full transition-colors duration-200 shrink-0 disabled:opacity-50 ${
+                            pushEnabled ? "bg-primary" : "bg-slate-200"
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                              pushEnabled ? "translate-x-4" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      {pushError && (
+                        <p className="text-[10px] font-bold text-red-500 mt-2">{pushError}</p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="px-2 py-2">
                     <button

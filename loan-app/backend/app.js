@@ -22,6 +22,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const locationRoutes = require("./routes/locationRoutes");
 const whatsappWebhookRoutes = require("./routes/whatsappWebhookRoutes");
+const pushRoutes = require("./routes/pushRoutes");
 const { checkLoanNumberUniqueness } = require("./controllers/loanController");
 const compression = require("compression");
 
@@ -171,6 +172,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/whatsapp/webhook", whatsappWebhookRoutes);
+app.use("/api/push", pushRoutes);
 
 // Error Middleware
 app.use(errorMiddleware);
