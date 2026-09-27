@@ -343,11 +343,19 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
         .emi-table-dark-mode .bg-red-100 {
           background-color: rgba(239, 68, 68, 0.15) !important;
         }
-        .emi-table-dark-mode .bg-emerald-100\/80 {
-          background-color: rgba(16, 185, 129, 0.12) !important;
+        .emi-table-dark-mode .bg-emerald-200\/70 {
+          background-color: rgba(16, 185, 129, 0.22) !important;
         }
-        .emi-table-dark-mode .hover\:bg-emerald-200\/80:hover {
-          background-color: rgba(16, 185, 129, 0.18) !important;
+        .emi-table-dark-mode .hover\:bg-emerald-300\/70:hover {
+          background-color: rgba(16, 185, 129, 0.32) !important;
+        }
+        /* Selected-row highlight (click any EMI row to open it) - was
+           missing from this dark-mode conversion entirely, so the row
+           stayed at its near-white light-mode background while the text
+           color was already flipped to near-white for dark mode,
+           making the selected row unreadable (found 2026-09-28). */
+        .emi-table-dark-mode .bg-blue-50\/80 {
+          background-color: rgba(59, 130, 246, 0.2) !important;
         }
         .emi-table-dark-mode .text-slate-900 {
           color: #f1f5f9 !important;
@@ -491,7 +499,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
                   selectedRowId === emi._id
                     ? "bg-blue-50/80"
                     : emi.status === "Paid"
-                      ? "bg-emerald-100/80 hover:bg-emerald-200/80"
+                      ? "bg-emerald-200/70 hover:bg-emerald-300/70"
                       : "hover:bg-slate-50/50"
                 }`}
               >
