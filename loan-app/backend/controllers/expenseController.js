@@ -6,6 +6,60 @@ const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
 const { normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
+const mongoose = require("mongoose");
+const Approval = require("../models/Approval");
+const User = require("../models/User");
+const {
+  findLoanByNumber,
+  createExpenseRecord,
+  updateExpenseRecord,
+  changesForAdd,
+  changesForDelete,
+  changesForEdit,
+} = require("../utils/expenseActions");
+
+// Only Super Admin saves expense changes directly; everyone else's add /
+// edit / delete becomes a pending approval request (Karthik, 2026-09-28).
+// Only Super Admins are notified, since only they can process approvals.
+const queueExpenseApproval = async (req, { requestType, targetId, loanNumber, customerName, requestedData, headline }) => {
+  const { sendNotification, notifyApprovalCountChange } = require("./notificationController");
+
+  await Approval.create({
+    requestType,
+    targetId,
+    targetModel: "Expense",
+    loanNumber,
+    customerName,
+    requestedData,
+    requestedBy: req.user._id,
+  });
+
+  const superAdmins = await User.find({ role: "SUPER_ADMIN", _id: { $ne: req.user._id } });
+  for (const admin of superAdmins) {
+    await sendNotification({
+      recipientId: admin._id,
+      senderId: req.user._id,
+      type: "PAYMENT_REQUEST",
+      title: `New ${headline} Approval Request`,
+      message: `Employee ${req.user.name} requested approval: ${requestedData.summary}`,
+      data: { loanNumber, customerName, employeeName: req.user.name },
+    });
+  }
+  await notifyApprovalCountChange();
+};
+
+const assertNoPendingExpenseRequest = async (expenseId, next) => {
+  const pending = await Approval.findOne({
+    targetId: expenseId,
+    targetModel: "Expense",
+    status: "Pending",
+  });
+  if (pending) {
+    next(new ErrorHandler("This expense already has a change waiting for approval", 400));
+    return true;
+  }
+  return false;
+};
 
 const createExpense = asyncHandler(async (req, res, next) => {
   const {
@@ -26,33 +80,26 @@ const createExpense = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Find loanId from any of the three models
-  let loan = null;
-  if (!isOfficeExpense && loanNumber) {
-    // Try Monthly Loan first
-    loan = await Loan.findOne({ loanNumber });
-    if (!loan) {
-      // Try Daily Loan
-      loan = await DailyLoan.findOne({ loanNumber });
-    }
-    if (!loan) {
-      // Try Weekly Loan
-      loan = await WeeklyLoan.findOne({ loanNumber });
-    }
+  const fields = { loanNumber, vehicleNumber, particulars, date, amount, isOfficeExpense };
+
+  if (req.user.role !== "SUPER_ADMIN") {
+    const loan = !isOfficeExpense ? await findLoanByNumber(loanNumber) : null;
+    await queueExpenseApproval(req, {
+      requestType: "EXPENSE_ADD",
+      targetId: new mongoose.Types.ObjectId(),
+      loanNumber: isOfficeExpense ? "OFFICE" : loanNumber,
+      customerName: loan?.customerName || (isOfficeExpense ? "Office expense" : "-"),
+      requestedData: {
+        fields,
+        changes: changesForAdd(fields),
+        summary: `add expense of ₹${Number(amount).toLocaleString("en-IN")} (${particulars}) for ${isOfficeExpense ? "the office" : `loan ${loanNumber}`}.`,
+      },
+      headline: "Expense",
+    });
+    return sendResponse(res, 200, "success", "Expense sent for approval", null, { pendingApproval: true });
   }
 
-  const expense = await Expense.create({
-    loanId: loan ? loan._id : null,
-    loanNumber: isOfficeExpense ? "OFFICE" : loanNumber,
-    vehicleNumber: isOfficeExpense
-      ? "-"
-      : vehicleNumber || (loan ? loan.vehicleNumber : null),
-    particulars,
-    date: date || Date.now(),
-    amount,
-    isOfficeExpense: isOfficeExpense || false,
-    createdBy: req.user._id,
-  });
+  const expense = await createExpenseRecord(fields, req.user._id);
 
   sendResponse(
     res,
@@ -174,23 +221,30 @@ const updateExpense = asyncHandler(async (req, res, next) => {
   const expense = await Expense.findById(id);
   if (!expense) return next(new ErrorHandler("Expense not found", 404));
 
-  // If loan number changed, re-resolve the loanId
-  if (loanNumber && loanNumber !== expense.loanNumber) {
-    let loan = await Loan.findOne({ loanNumber });
-    if (!loan) loan = await DailyLoan.findOne({ loanNumber });
-    if (!loan) loan = await WeeklyLoan.findOne({ loanNumber });
-    expense.loanId = loan ? loan._id : null;
-    expense.loanNumber = isOfficeExpense ? "OFFICE" : loanNumber;
-    expense.vehicleNumber = isOfficeExpense ? "-" : vehicleNumber || (loan ? loan.vehicleNumber : expense.vehicleNumber);
+  const fields = { loanNumber, vehicleNumber, particulars, date, amount, isOfficeExpense };
+
+  if (req.user.role !== "SUPER_ADMIN") {
+    if (await assertNoPendingExpenseRequest(expense._id, next)) return;
+    const changes = changesForEdit(expense, fields);
+    if (changes.length === 0) {
+      return next(new ErrorHandler("No changes to submit", 400));
+    }
+    await queueExpenseApproval(req, {
+      requestType: "EXPENSE_EDIT",
+      targetId: expense._id,
+      loanNumber: expense.loanNumber,
+      customerName: expense.isOfficeExpense ? "Office expense" : expense.vehicleNumber || "-",
+      requestedData: {
+        fields,
+        changes,
+        summary: `edit expense "${expense.particulars}" (${changes.map((c) => c.label).join(", ")}).`,
+      },
+      headline: "Expense Edit",
+    });
+    return sendResponse(res, 200, "success", "Expense change sent for approval", null, { pendingApproval: true });
   }
 
-  if (particulars !== undefined) expense.particulars = particulars;
-  if (date !== undefined) expense.date = date;
-  if (amount !== undefined) expense.amount = amount;
-  if (isOfficeExpense !== undefined) expense.isOfficeExpense = isOfficeExpense;
-  expense.updatedBy = req.user._id;
-
-  await expense.save();
+  await updateExpenseRecord(expense, fields);
 
   sendResponse(res, 200, "success", "Expense updated successfully", null, expense);
 });
@@ -202,6 +256,22 @@ const deleteExpense = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const expense = await Expense.findById(id);
   if (!expense) return next(new ErrorHandler("Expense not found", 404));
+
+  if (req.user.role !== "SUPER_ADMIN") {
+    if (await assertNoPendingExpenseRequest(expense._id, next)) return;
+    await queueExpenseApproval(req, {
+      requestType: "EXPENSE_DELETE",
+      targetId: expense._id,
+      loanNumber: expense.loanNumber,
+      customerName: expense.isOfficeExpense ? "Office expense" : expense.vehicleNumber || "-",
+      requestedData: {
+        changes: changesForDelete(expense),
+        summary: `delete expense "${expense.particulars}" of ₹${Number(expense.amount).toLocaleString("en-IN")}.`,
+      },
+      headline: "Expense Delete",
+    });
+    return sendResponse(res, 200, "success", "Expense deletion sent for approval", null, { pendingApproval: true });
+  }
 
   await expense.deleteOne();
   sendResponse(res, 200, "success", "Expense deleted successfully", null, null);

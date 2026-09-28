@@ -11,6 +11,8 @@ const sendResponse = require("../utils/response");
 const { addMonths } = require("date-fns");
 const { sendNotification } = require("./notificationController");
 const { syncEmiPayments } = require("../utils/syncEmiPayments");
+const Expense = require("../models/Expense");
+const { createExpenseRecord, updateExpenseRecord } = require("../utils/expenseActions");
 
 // Invokes an existing asyncHandler-wrapped route handler internally (no real
 // HTTP request/response) so its exact logic can be reused without
@@ -735,6 +737,16 @@ const processApproval = asyncHandler(async (req, res, next) => {
           });
         }
       }
+    } else if (requestType === "EXPENSE_ADD") {
+      await createExpenseRecord(requestedData.fields, approval.requestedBy);
+    } else if (requestType === "EXPENSE_EDIT") {
+      const expense = await Expense.findById(targetId);
+      if (!expense) {
+        return next(new ErrorHandler("This expense no longer exists, so the edit can't be applied", 404));
+      }
+      await updateExpenseRecord(expense, requestedData.fields);
+    } else if (requestType === "EXPENSE_DELETE") {
+      await Expense.deleteOne({ _id: targetId });
     } else if (requestType === "PRINCIPAL_PAYMENT") {
       const loan = await InterestLoan.findById(targetId);
       if (loan) {
@@ -858,6 +870,28 @@ const processApproval = asyncHandler(async (req, res, next) => {
         totalApprovedAmount += parseFloat(ov.amount) || 0;
       });
     }
+  }
+
+  // Expense requests get their own wording - the payment message below
+  // would read "Payment of Rs X for loan OFFICE" for an office expense.
+  if (approval.requestType.startsWith("EXPENSE_")) {
+    const verb = { EXPENSE_ADD: "add", EXPENSE_EDIT: "edit", EXPENSE_DELETE: "delete" }[approval.requestType];
+    await sendNotification({
+      recipientId: approval.requestedBy,
+      senderId: req.user._id,
+      type: status === "Approved" ? "PAYMENT_APPROVED" : "PAYMENT_REJECTED",
+      title: `Expense Request ${status}`,
+      message: `Your request to ${verb} an expense was ${status.toLowerCase()} by ${req.user.name}: ${approval.requestedData.summary.replace(/^(add|edit|delete) /, "")}`,
+      data: {
+        loanNumber: approval.loanNumber,
+        customerName: approval.customerName,
+        employeeName: req.user.name,
+        approvalId: approval._id,
+      },
+    });
+    const { notifyApprovalCountChange: notifyCount } = require("./notificationController");
+    await notifyCount();
+    return sendResponse(res, 200, "success", `Request ${status} successfully`, null, approval);
   }
 
   // Notify the employee who requested it

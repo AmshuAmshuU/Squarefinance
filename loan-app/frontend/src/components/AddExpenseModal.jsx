@@ -91,11 +91,11 @@ const AddExpenseModal = ({ isOpen, onClose, onSuccess, editExpense = null }) => 
     setLoading(true);
     try {
       if (isEditing) {
-        await updateExpense(editExpense._id, formData);
-        showToast("Expense updated successfully", "success");
+        const res = await updateExpense(editExpense._id, formData);
+        showToast(res?.data?.pendingApproval ? res.message : "Expense updated successfully", "success");
       } else {
-        await createExpense(formData);
-        showToast("Expense added successfully", "success");
+        const res = await createExpense(formData);
+        showToast(res?.data?.pendingApproval ? res.message : "Expense added successfully", "success");
       }
       onSuccess();
       onClose();

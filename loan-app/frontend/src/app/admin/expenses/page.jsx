@@ -62,8 +62,8 @@ const ExpensesPage = () => {
     if (!deleteConfirm) return;
     setDeleting(true);
     try {
-      await deleteExpense(deleteConfirm._id);
-      showToast("Expense deleted successfully", "success");
+      const res = await deleteExpense(deleteConfirm._id);
+      showToast(res?.data?.pendingApproval ? res.message : "Expense deleted successfully", "success");
       setDeleteConfirm(null);
       fetchExpenses(currentPage);
     } catch (err) {

@@ -4,7 +4,7 @@ const approvalSchema = new mongoose.Schema(
   {
     requestType: {
       type: String,
-      enum: ["EMI_PAYMENT", "INTEREST_PAYMENT", "FORECLOSURE", "PRINCIPAL_PAYMENT", "LOAN_EDIT", "VEHICLE_SOLD"],
+      enum: ["EMI_PAYMENT", "INTEREST_PAYMENT", "FORECLOSURE", "PRINCIPAL_PAYMENT", "LOAN_EDIT", "VEHICLE_SOLD", "EXPENSE_ADD", "EXPENSE_EDIT", "EXPENSE_DELETE"],
       required: true,
     },
     targetId: {
@@ -14,7 +14,7 @@ const approvalSchema = new mongoose.Schema(
     },
     targetModel: {
       type: String,
-      enum: ["EMI", "InterestEMI", "Loan", "WeeklyLoan", "DailyLoan", "InterestLoan"],
+      enum: ["EMI", "InterestEMI", "Loan", "WeeklyLoan", "DailyLoan", "InterestLoan", "Expense"],
       required: true,
     },
     loanNumber: {

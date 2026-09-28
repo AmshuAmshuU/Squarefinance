@@ -176,16 +176,23 @@ const ApprovalsPage = () => {
                                                         return model || "N/A";
                                                     };
 
-                                                    // LOAN_EDIT: render diff card
-                                                    if (app.requestType === "LOAN_EDIT") {
+                                                    // LOAN_EDIT and expense requests: render the same
+                                                    // Current -> Proposed diff card
+                                                    const isExpenseRequest = app.requestType?.startsWith("EXPENSE_");
+                                                    const requestLabel = {
+                                                      EXPENSE_ADD: "Expense Add Request",
+                                                      EXPENSE_EDIT: "Expense Edit Request",
+                                                      EXPENSE_DELETE: "Expense Delete Request",
+                                                    }[app.requestType] || "Loan Edit Request";
+                                                    if (app.requestType === "LOAN_EDIT" || isExpenseRequest) {
                                                       return (
                                                         <tr key={app._id} className="border-b border-slate-50">
                                                           <td colSpan={8} className="px-3 py-3">
                                                             <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4">
                                                               <div className="flex items-center justify-between mb-3">
                                                                 <div>
-                                                                  <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest bg-amber-100 px-2 py-1 rounded-lg">Loan Edit Request</span>
-                                                                  <p className="text-xs font-bold text-slate-700 mt-1">Loan {app.loanNumber} — {app.customerName}</p>
+                                                                  <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest bg-amber-100 px-2 py-1 rounded-lg">{requestLabel}</span>
+                                                                  <p className="text-xs font-bold text-slate-700 mt-1">{isExpenseRequest && app.loanNumber === "OFFICE" ? "Office expense" : `Loan ${app.loanNumber} — ${app.customerName}`}</p>
                                                                   <p className="text-[10px] text-slate-400 mt-0.5">by {app.requestedBy?.name} • {new Date(app.createdAt).toLocaleString("en-IN")}</p>
                                                                 </div>
                                                                 <div className="flex gap-2">
