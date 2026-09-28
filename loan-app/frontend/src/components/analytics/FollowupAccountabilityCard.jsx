@@ -5,6 +5,7 @@ import { getFollowupDashboardSummary } from "../../services/loan.service";
 import { PhoneCall, AlertTriangle, Loader2, ChevronDown, Pencil } from "lucide-react";
 import ContactActionMenu from "../ContactActionMenu";
 import FollowupEditModal from "../FollowupEditModal";
+import CallRecordControl, { useCallRecordEvents, LOAN_MODEL_BY_TYPE } from "../CallRecordControl";
 
 // Loan number links open the loan directly in modify mode - staff coming
 // from a follow-up call almost always need to edit something (log the
@@ -44,6 +45,22 @@ const FollowupAccountabilityCard = () => {
   useEffect(() => {
     fetchSummary();
   }, [fetchSummary]);
+
+  // Patches one loan's call record in both lists (own change or a live
+  // update from another employee's call).
+  const patchCallRecord = useCallback(({ loanId, loanModel, record }) => {
+    const patch = (items) =>
+      items.map((i) =>
+        String(i._id) === String(loanId) && LOAN_MODEL_BY_TYPE[i.loanType] === loanModel
+          ? { ...i, callRecord: record }
+          : i,
+      );
+    setData((prev) => ({
+      today: { ...prev.today, items: patch(prev.today.items) },
+      stale: { ...prev.stale, items: patch(prev.stale.items) },
+    }));
+  }, []);
+  useCallRecordEvents(patchCallRecord);
 
   const toggleTab = (tab) => {
     setActiveTab((prev) => (prev === tab ? null : tab));
@@ -117,8 +134,8 @@ const FollowupAccountabilityCard = () => {
                     <thead className="sticky top-0 bg-white">
                       <tr className="border-b border-slate-100">
                         <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Loan</th>
-                        <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
                         <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile</th>
+                        <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Call record</th>
                         <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Pending</th>
                         <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Response &amp; followup</th>
                       </tr>
@@ -133,8 +150,10 @@ const FollowupAccountabilityCard = () => {
                             >
                               {item.loanNumber}
                             </Link>
+                            <p className="text-[10px] font-bold text-slate-500 mt-0.5 max-w-[110px] truncate">
+                              {item.customerName || "-"}
+                            </p>
                           </td>
-                          <td className="px-3 py-2.5 text-xs font-bold text-slate-600">{item.customerName || "-"}</td>
                           <td className="px-3 py-2.5">
                             <div className="flex flex-col gap-0.5">
                               {(item.mobileNumbers || []).length > 0 ? (
@@ -160,6 +179,16 @@ const FollowupAccountabilityCard = () => {
                                 <span className="text-xs font-bold text-slate-500">-</span>
                               )}
                             </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <CallRecordControl
+                              loanId={item._id}
+                              loanModel={LOAN_MODEL_BY_TYPE[item.loanType]}
+                              record={item.callRecord}
+                              onChange={(record) =>
+                                patchCallRecord({ loanId: item._id, loanModel: LOAN_MODEL_BY_TYPE[item.loanType], record })
+                              }
+                            />
                           </td>
                           <td className="px-3 py-2.5 whitespace-nowrap">
                             {item.pendingAmount > 0 ? (

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import Sidebar from "@/components/Sidebar";
+import LoanCallRecord from "@/components/LoanCallRecord";
 import Navbar from "@/components/Navbar";
 import InterestLoanForm from "@/components/InterestLoanForm";
 import LoanROICard from "@/components/LoanROICard";
@@ -140,6 +141,7 @@ const EditInterestLoanPage = () => {
                   <p className="text-slate-500 font-medium text-sm mt-1">
                     Updating loan record: <span className="text-slate-900 font-bold">{loan?.loanNumber}</span>
                   </p>
+                  <LoanCallRecord loanId={loan?._id} loanModel="InterestLoan" />
                 </div>
                 {loan && (
                   <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border ${

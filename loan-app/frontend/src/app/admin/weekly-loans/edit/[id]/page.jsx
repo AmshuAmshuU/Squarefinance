@@ -2,6 +2,7 @@
 import React, { useState, useEffect, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "../../../../../components/Sidebar";
+import LoanCallRecord from "../../../../../components/LoanCallRecord";
 import Navbar from "../../../../../components/Navbar";
 import AuthGuard from "../../../../../components/AuthGuard";
 import WeeklyLoanForm from "../../../../../components/WeeklyLoanForm";
@@ -165,6 +166,7 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
                     <p className="text-slate-500 font-medium text-sm">
                       Updating loan record: {loanData?.loanNumber}
                     </p>
+                    <LoanCallRecord loanId={loanData?._id} loanModel="WeeklyLoan" />
                   </div>
                 </div>
                 <LoanStatusBadge status={loanData?.status} />

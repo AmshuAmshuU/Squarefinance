@@ -4,6 +4,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import AuthGuard from "../../../../../components/AuthGuard";
 import Navbar from "../../../../../components/Navbar";
 import Sidebar from "../../../../../components/Sidebar";
+import LoanCallRecord from "../../../../../components/LoanCallRecord";
 import LoanForm from "../../../../../components/LoanForm";
 import EMITable from "../../../../../components/EMITable";
 import LoanROICard from "../../../../../components/LoanROICard";
@@ -266,6 +267,7 @@ const EditLoanPage = () => {
                       </span>
                     </div>
                   </div>
+                  <LoanCallRecord loanId={id} loanModel="Loan" />
                 </div>
                 <div className="flex items-center gap-4">
                   <LoanStatusBadge

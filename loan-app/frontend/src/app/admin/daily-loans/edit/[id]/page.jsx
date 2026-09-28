@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Sidebar from "../../../../../components/Sidebar";
+import LoanCallRecord from "../../../../../components/LoanCallRecord";
 import Navbar from "../../../../../components/Navbar";
 import AuthGuard from "../../../../../components/AuthGuard";
 import DailyLoanForm from "../../../../../components/DailyLoanForm";
@@ -157,6 +158,7 @@ const EditDailyLoanPage = () => {
                     <p className="text-slate-500 font-medium text-sm">
                       Updating loan record: {loanData?.loanNumber}
                     </p>
+                    <LoanCallRecord loanId={loanData?._id} loanModel="DailyLoan" />
                   </div>
                 </div>
                 <LoanStatusBadge status={loanData?.status} />

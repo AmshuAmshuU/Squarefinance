@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
@@ -18,6 +18,7 @@ import TableActionMenu from "../../../components/TableActionMenu";
 import ConfirmationModal from "../../../components/ConfirmationModal";
 import { useUI } from "../../../context/UIContext";
 import { getTodayIST } from "../../../utils/dateUtils";
+import CallRecordControl, { useCallRecordEvents } from "../../../components/CallRecordControl";
 
 const FollowupPaymentsPage = () => {
   const router = useRouter();
@@ -56,6 +57,16 @@ const FollowupPaymentsPage = () => {
   const [limit] = useState(25);
   const { showToast } = useToast();
   const [selectedRowId, setSelectedRowId] = useState(null);
+
+  // Patches one loan's call record (own change or another employee's live call).
+  const patchCallRecord = useCallback(({ loanId, loanModel, record }) => {
+    setData((prev) =>
+      prev.map((i) =>
+        String(i.loanId) === String(loanId) && i.loanModel === loanModel ? { ...i, callRecord: record } : i,
+      ),
+    );
+  }, []);
+  useCallRecordEvents(patchCallRecord);
 
   const toggleHighlight = (e, id) => {
     // Don't toggle if clicking a button (like call/WhatsApp) or internal interactive element
@@ -382,6 +393,9 @@ const FollowupPaymentsPage = () => {
                         <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                           Applicant Mobile
                         </th>
+                        <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                          Call Record
+                        </th>
                         <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                           Loan Type
                         </th>
@@ -464,6 +478,16 @@ const FollowupPaymentsPage = () => {
                                   </button>
                                 ))}
                               </div>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <CallRecordControl
+                                loanId={item.loanId}
+                                loanModel={item.loanModel}
+                                record={item.callRecord}
+                                onChange={(record) =>
+                                  patchCallRecord({ loanId: item.loanId, loanModel: item.loanModel, record })
+                                }
+                              />
                             </td>
                             <td className="px-3 py-3 text-center whitespace-nowrap">
                               <span

@@ -32,6 +32,7 @@ const {
   createRtoWork,
 } = require("../controllers/rtoWorkController");
 const { getExpiredDocLoans } = require("../controllers/expiredController");
+const { setCallRecord, getCallRecord } = require("../controllers/callRecordController");
 const {
   isAuthenticated,
   authorizeRoles,
@@ -47,6 +48,10 @@ router.get("/todo-list", getTodoList);
 router.get("/expired-docs", getExpiredDocLoans);
 
 router.use(isAuthenticated);
+
+// Call records: any logged-in user can log/read a call (coordination note).
+router.post("/call-record", setCallRecord);
+router.get("/call-record/:loanModel/:loanId", getCallRecord);
 
 router.get("/rto-works", getRtoWorks);
 router.post("/rto-works", createRtoWork);

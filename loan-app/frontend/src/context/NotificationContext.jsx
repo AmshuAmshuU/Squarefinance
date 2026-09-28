@@ -149,6 +149,12 @@ export const NotificationProvider = ({ children }) => {
           setUnreadCount(count);
         });
 
+        // Someone logged/cleared a follow-up call - lists on screen patch
+        // that loan live via this window event.
+        socket.on("call_record_updated", (payload) => {
+          window.dispatchEvent(new CustomEvent("call-record-updated", { detail: payload }));
+        });
+
         socket.on("connect_error", () => {
           // Silently handle connection errors - socket is optional
         });

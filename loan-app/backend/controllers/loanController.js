@@ -13,6 +13,7 @@ const { addMonths } = require("date-fns");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
 const { formatLoanResponse } = require("../utils/loanFormatter");
+const { attachCallRecords } = require("../utils/callRecords");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { notifyAdmins } = require("./notificationController");
 const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
@@ -1961,7 +1962,7 @@ const getFollowupLoans = asyncHandler(async (req, res, next) => {
   });
 
   const total = allFollowups.length;
-  const paginatedFollowups = allFollowups.slice(skip, skip + limit);
+  const paginatedFollowups = await attachCallRecords(allFollowups.slice(skip, skip + limit));
 
   sendResponse(
     res,
@@ -2178,8 +2179,8 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
     }),
   );
 
-  const today = results.flatMap((r) => r.today);
-  const stale = results.flatMap((r) => r.stale);
+  const today = await attachCallRecords(results.flatMap((r) => r.today));
+  const stale = await attachCallRecords(results.flatMap((r) => r.stale));
 
   sendResponse(res, 200, "success", "Followup dashboard summary fetched successfully", null, {
     today: { count: today.length, items: today },
