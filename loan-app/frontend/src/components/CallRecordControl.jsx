@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { setCallRecord } from "../services/callRecord.service";
 import { useToast } from "../context/ToastContext";
+import { useUI } from "../context/UIContext";
 
 // Maps a loan-type label used by the follow-up lists to the backend model.
 export const LOAN_MODEL_BY_TYPE = {
@@ -43,6 +44,7 @@ const OPTIONS = [
 // `onChange(record)` receives the new record (null after Clear).
 const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = false }) => {
   const { showToast } = useToast();
+  const { isDarkMode } = useUI();
   const [menu, setMenu] = useState(null); // { x, y } | null
   const [saving, setSaving] = useState(false);
 
@@ -106,17 +108,21 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMenu(null)} />
           <div
-            className="fixed z-50 w-44 bg-white rounded-xl border border-slate-200 shadow-xl py-1"
-            style={{ left: menu.x, top: menu.y }}
+            className="fixed z-50 w-44 rounded-xl border shadow-xl py-1"
+            style={{
+              left: menu.x,
+              top: menu.y,
+              backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",
+              borderColor: isDarkMode ? "rgba(255,255,255,0.15)" : "#e2e8f0",
+            }}
           >
             {OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => choose(opt.value)}
-                className={`w-full text-left px-3 py-2 text-xs font-bold hover:bg-slate-50 ${
-                  opt.value === "CLEAR" ? "text-slate-400" : "text-slate-700"
-                }`}
+                className="w-full text-left px-3 py-2.5 text-xs font-bold hover:bg-slate-500/20 active:bg-slate-500/30 transition-colors"
+                style={{ color: isDarkMode ? "#f1f5f9" : "#0f172a" }}
               >
                 {opt.label}
               </button>
