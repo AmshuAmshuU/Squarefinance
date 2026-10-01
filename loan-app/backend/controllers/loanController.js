@@ -992,6 +992,20 @@ const updateLoan = asyncHandler(async (req, res, next) => {
       (vehicleInformation.rtoNotes !== undefined && vehicleInformation.rtoNotes !== (loan.rtoNotes || ""));
   }
 
+  // Computed once so both `status` and the `seizedDate` stamp below agree -
+  // previously only updateSeizedStatus's dedicated "Seized" button stamped
+  // seizedDate, so a loan marked Seized directly from this general edit
+  // form (e.g. loan 30) never got a seize date, leaving the Seized
+  // Vehicles list unable to show "days since seized" for it (reported by
+  // Karthik 2026-10-01).
+  const derivedStatus =
+    statusObj?.status ||
+    (foreclosureDetails?.foreclosureDate
+      ? "Closed"
+      : statusObj?.isSeized || loan.isSeized
+        ? "Seized"
+        : "Active");
+
   const updateData = {
     // Flatten customerDetails
     ...(customerDetails && {
@@ -1054,13 +1068,14 @@ const updateLoan = asyncHandler(async (req, res, next) => {
       rtoWorkUpdatedAt: new Date(),
     }),
     // Automatic Status Derivation
-    status:
-      statusObj?.status ||
-      (foreclosureDetails?.foreclosureDate
-        ? "Closed"
-        : statusObj?.isSeized || loan.isSeized
-          ? "Seized"
-          : "Active"),
+    status: derivedStatus,
+    // Stamp the seize date the first time a loan becomes Seized through
+    // this general edit path, same as updateSeizedStatus's dedicated
+    // button already does - only when it doesn't already have one, so a
+    // later unrelated edit (e.g. a phone number change) while the loan
+    // stays Seized never resets the "days since seized" count back to 0.
+    seizedDate:
+      derivedStatus === "Seized" ? loan.seizedDate || new Date() : loan.seizedDate,
 
     paymentStatus: statusObj?.paymentStatus || loan.paymentStatus,
     // isSeized/seizedStatus derived from the Status dropdown itself, not
@@ -2651,7 +2666,14 @@ const getSeizedVehicles = asyncHandler(async (req, res, next) => {
   const limit = parseInt(req.query.limit, 10) || 25;
   const skip = (page - 1) * limit;
 
-  const query = { isSeized: true };
+  // Filters on the loan's own status field - the one source of truth every
+  // other code path (foreclosure, vehicle sale, a manual status edit,
+  // Re-activate) reliably updates - rather than the separately-maintained
+  // isSeized flag, which foreclosure/sale never reset and could leave a
+  // loan stuck showing here long after it left Seized/For Seizing (loan
+  // 135, reported by Karthik 2026-10-01: closed via foreclosure, still
+  // showed up here since isSeized never got cleared).
+  const query = { status: { $in: ["Seized", "For Seizing"] } };
 
   if (loanNumber) query.loanNumber = { $regex: loanNumber, $options: "i" };
   if (customerName)
