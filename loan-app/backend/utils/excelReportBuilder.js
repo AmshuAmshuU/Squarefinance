@@ -275,9 +275,9 @@ const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weekl
     "Interest Rate", "Processing fee", "Tenure Type", "Tenure", "Start date", "End date",
     "EMI Amount", "Overdue", "Remaining Tenure", "Remaining Principle Amount", "Next EMI DueDate",
     "Vehicle Number", "Chassis No", "Engine No", "Type of Vehicle", "Model Year", "YW Board",
-    "PAN Number", "Aadhar Number", "Guarantor Name", "Dealer name", "Dealer number", "HP Entry",
+    "PAN Number", "Aadhar Number", "Guarantor Name", "Guarantor Mobile", "Dealer name", "Dealer number", "HP Entry",
     "FC Date", "Insurance date", "Paid EMI counter", "DOCUMENTS COLLECTED", "RTO WORK PENDING",
-    "RTO WORK COMPLETED", "Value", "Remarks",
+    "RTO WORK COMPLETED", "Value", "Remarks", "Next Follow Up Date",
   ];
   formatHeader(monthlySheet, monthlyHeaders, "MONTHLY LOANS REPORT");
   monthlyLoans.forEach((loan, index) => {
@@ -287,14 +287,15 @@ const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weekl
       loan.principalAmount || 0, loan.annualInterestRate || 0, loan.processingFee || 0,
       loan.tenureType || "Monthly", loan.tenureMonths || 0, fmtDate(loan.emiStartDate),
       fmtDate(loan.emiEndDate), loan.monthlyEMI || 0, loan.odAmount || 0,
-      loan.remainingTenure || 0, loan.remainingPrincipal || loan.remainingPrincipalAmount || 0,
+      loan.remainingTenure || 0, loan.remainingPrincipalAmount || 0,
       fmtDate(loan.nextEmiDueDate), loan.vehicleNumber || "-", loan.chassisNumber || "-",
       loan.engineNumber || "-", loan.typeOfVehicle || "-", loan.modelYear || "-",
       loan.ywBoard || "-", loan.panNumber || "-", loan.aadharNumber || "-",
-      loan.guarantorName || "-", loan.dealerName || "-", loan.dealerNumber || "-",
+      loan.guarantorName || "-", joinArr(loan.guarantorMobileNumbers), loan.dealerName || "-", loan.dealerNumber || "-",
       loan.hpEntry || "Not done", fmtDate(loan.fcDate), fmtDate(loan.insuranceDate),
       loan.paidEmisCount || 0, loan.docChecklist || "-", joinArr(loan.rtoWorkPending),
       "-", loan.totalCollected || 0, loan.clientResponse || loan.status?.clientResponse || "-",
+      fmtDate(loan.nextFollowUpDate),
     ]);
   });
   autoFit(monthlySheet);
@@ -302,7 +303,7 @@ const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weekl
   // 2 & 3. Weekly & Daily
   const addDailyWeeklySheet = (worksheetName, data, title) => {
     const sheet = workbook.addWorksheet(worksheetName);
-    const headers = ["Loan No", "Customer Name", "Mobile Numbers", "Guarantor", "Guar. Mobile", "Amount", "Processing Fee", "Start Date", "End Date", "Total EMIs", "EMI Amount", "Paid EMIs", "Remaining EMIs", "Total Collected", "Overdue", "Remaining Principal", "Next EMI Date", "Status", "Remarks"];
+    const headers = ["Loan No", "Customer Name", "Mobile Numbers", "Guarantor", "Guar. Mobile", "Amount", "Processing Fee", "Start Date", "End Date", "Total EMIs", "EMI Amount", "Paid EMIs", "Remaining EMIs", "Total Collected", "Overdue", "Remaining Principal", "Next EMI Date", "Status", "Remarks", "Next Follow Up Date"];
     formatHeader(sheet, headers, title);
     data.forEach((loan) => {
       sheet.addRow([
@@ -310,10 +311,11 @@ const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weekl
         loan.guarantorName || "", joinArr(loan.guarantorMobileNumbers),
         loan.disbursementAmount || 0, loan.processingFee || 0, fmtDate(loan.startDate),
         fmtDate(loan.emiEndDate), loan.totalEmis || 0, loan.emiAmount || 0,
-        loan.paidEmis || 0, loan.remainingEmis || (loan.totalEmis - loan.paidEmis) || 0,
+        loan.genuinePaidEmis || 0, loan.remainingEmis || (loan.totalEmis - loan.genuinePaidEmis) || 0,
         loan.totalCollected || 0, loan.odAmount || 0, loan.remainingPrincipalAmount || 0,
         fmtDate(loan.nextEmiDate), typeof loan.status === "string" ? loan.status : (loan.status?.loanStatus || "Active"),
         loan.clientResponse || loan.status?.clientResponse || "",
+        fmtDate(loan.nextFollowUpDate),
       ]);
     });
     autoFit(sheet);
@@ -323,7 +325,7 @@ const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weekl
 
   // 4. Interest
   const interestSheet = workbook.addWorksheet("Interest Loans");
-  const intHeaders = ["Loan No.", "Status", "Customer Name", "Address", "Own/Rent", "Mobile Numbers", "Guarantor Name", "Guar. Mobile", "PAN Number", "Aadhar Number", "Initial Principal", "Remaining Principal", "Interest Rate (%)", "Processing Fee", "Start Date", "EMI Start Date", "Client Response", "Total Collected"];
+  const intHeaders = ["Loan No.", "Status", "Customer Name", "Address", "Own/Rent", "Mobile Numbers", "Guarantor Name", "Guar. Mobile", "PAN Number", "Aadhar Number", "Initial Principal", "Remaining Principal", "Interest Rate (%)", "Processing Fee", "Start Date", "EMI Start Date", "Client Response", "Total Collected", "Next Follow Up Date"];
   formatHeader(interestSheet, intHeaders, "INTEREST LOANS REPORT");
   interestLoans.forEach((loan) => {
     interestSheet.addRow([
@@ -333,6 +335,7 @@ const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weekl
       loan.initialPrincipalAmount || 0, loan.remainingPrincipalAmount || 0, loan.interestRate || 0,
       loan.processingFee || 0, fmtDate(loan.startDate), fmtDate(loan.emiStartDate),
       loan.clientResponse || loan.status?.clientResponse || "-", loan.totalCollected || 0,
+      fmtDate(loan.nextFollowUpDate),
     ]);
   });
   autoFit(interestSheet);

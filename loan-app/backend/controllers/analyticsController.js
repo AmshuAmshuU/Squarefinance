@@ -636,27 +636,70 @@ const getConsolidatedReportData = async () => {
   const vehicleEmis = allEmis.filter((e) => e.loanModel === "Loan");
   const weeklyEmis = allEmis.filter((e) => e.loanModel === "WeeklyLoan");
   const dailyEmis = allEmis.filter((e) => e.loanModel === "DailyLoan");
+  const groupByLoanId = (arr) => {
+    const map = {};
+    arr.forEach((e) => {
+      const k = String(e.loanId);
+      (map[k] = map[k] || []).push(e);
+    });
+    return map;
+  };
+  const weeklyEmisByLoan = groupByLoanId(weeklyEmis);
+  const dailyEmisByLoan = groupByLoanId(dailyEmis);
+
+  // A loan's real, non-cosmetic paid count: closedWithoutPayment EMIs are
+  // bulk-marked "Paid" only to tidy up the schedule display after a
+  // foreclosure/vehicle-sale (see EMI.js) - no cash actually came in for
+  // them, same exclusion rule the profit calculation already uses. Without
+  // this, a foreclosed loan's export showed every EMI as "paid" (reported
+  // by Karthik 2026-10-01). Export-only fix - the live app's own displays
+  // and the closedWithoutPayment marking logic itself are untouched.
+  const genuinePaidCount = (emis) => emis.filter((e) => e.status === "Paid" && !e.closedWithoutPayment).length;
 
   // Enhance monthly loans with computed fields from EMI records
   const enhancedMonthly = await Promise.all(monthlyLoans.map(async (loan) => {
     const emis = await EMI.find({ loanId: loan._id, loanModel: "Loan" }).lean();
-    const paidEmis = emis.filter(e => e.status === "Paid").length;
+    const paidEmis = genuinePaidCount(emis);
     const unpaidEmis = emis.filter(e => e.status !== "Paid");
     const remainingTenure = unpaidEmis.length;
     const nextEmi = unpaidEmis.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
     const nextEmiDueDate = nextEmi ? nextEmi.dueDate : null;
 
-    // Calculate remaining principal from paid EMIs
-    const emiAmount = loan.monthlyEMI || 0;
-    const interestRate = (loan.annualInterestRate || 0) / 100;
-    const principal = loan.principalAmount || 0;
-    const remainingPrincipal = loan.status === "Closed"
-      ? (loan.foreclosureAmount ? 0 : loan.soldDetails?.totalAmount ? 0 : 0)
-      : Math.max(0, Math.round(principal - (paidEmis * emiAmount * interestRate / (1 - Math.pow(1 + interestRate, -(loan.tenureMonths || 1))))));
+    // Remaining principal - the same live calculation the loan's own edit
+    // page uses (loanController.js getLoanById/getLoanByLoanNumber), NOT
+    // the raw loan.remainingPrincipal DB field - that field is only ever
+    // populated for foreclosure-detail display and defaults to 0 for every
+    // ordinary loan, which is why the export always showed 0 (reported by
+    // Karthik 2026-10-01). Duplicated here deliberately rather than shared,
+    // so the live webapp calculation itself is never touched by this fix.
+    let remainingTenureCount = 0;
+    if (emis.length > 0) {
+      emis.forEach((emi) => {
+        const emiAmount = parseFloat(emi.emiAmount) || 0;
+        const amountPaid = parseFloat(emi.amountPaid) || 0;
+        if (emiAmount > 0) {
+          let remainingPortion = (emiAmount - amountPaid) / emiAmount;
+          if (remainingPortion < 0) remainingPortion = 0;
+          remainingTenureCount += remainingPortion;
+        }
+      });
+    } else {
+      remainingTenureCount = loan.tenureMonths || 0;
+    }
+    const principalPerMonth = (loan.principalAmount || 0) / (loan.tenureMonths || 1);
+    const remainingPrincipalAmount =
+      loan.status?.toLowerCase() === "closed" && loan.foreclosureAmount
+        ? 0
+        : Math.ceil(remainingTenureCount * principalPerMonth);
 
-    // Total collected - EMI payments + OD + foreclosure + vehicle sale,
-    // matching exactly what the loan's own edit page shows (LoanForm.jsx).
-    const totalCollected = collectedByLoanId[String(loan._id)] || 0;
+    // Total collected - EMI payments + OD + foreclosure + vehicle sale
+    // (collectedByLoanId) plus the processing fee, matching exactly what
+    // the loan's own edit page shows (LoanForm.jsx "Total Collected
+    // Amount"). collectedByLoanId alone deliberately excludes the fee,
+    // same as the Collections tab - this export is the one place that
+    // needs the fee added back in to match the per-loan page Karthik
+    // checks against (reported 2026-10-01).
+    const totalCollected = (collectedByLoanId[String(loan._id)] || 0) + (loan.processingFee || 0);
 
     // Client response
     const clientResponse = loan.status?.clientResponse || loan.clientResponse || "";
@@ -668,19 +711,22 @@ const getConsolidatedReportData = async () => {
       nextEmiDueDate,
       totalCollected,
       clientResponse,
-      remainingPrincipal: loan.status === "Closed" ? 0 : (loan.remainingPrincipal || 0),
+      remainingPrincipalAmount,
     };
   }));
 
-  // Enhance weekly/daily loans with client response field
+  // Enhance weekly/daily loans with client response field + the same
+  // genuine (non-cosmetic) paid EMI count as monthly loans above.
   const enhancedWeekly = weeklyLoans.map(loan => ({
     ...loan,
     clientResponse: loan.status?.clientResponse || loan.clientResponse || "",
+    genuinePaidEmis: genuinePaidCount(weeklyEmisByLoan[String(loan._id)] || []),
   }));
 
   const enhancedDaily = dailyLoans.map(loan => ({
     ...loan,
     clientResponse: loan.status?.clientResponse || loan.clientResponse || "",
+    genuinePaidEmis: genuinePaidCount(dailyEmisByLoan[String(loan._id)] || []),
   }));
 
   // Enhance interest loans with total collected
