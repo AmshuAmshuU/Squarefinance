@@ -31,8 +31,8 @@ const setCallRecord = asyncHandler(async (req, res, next) => {
   if (!Model || !loanId) {
     return next(new ErrorHandler("A valid loan is required", 400));
   }
-  if (!["NP", "EOD", "CLEAR"].includes(response)) {
-    return next(new ErrorHandler("Response must be NP, EOD or CLEAR", 400));
+  if (!["NP", "EOD", "SWO", "CLEAR"].includes(response)) {
+    return next(new ErrorHandler("Response must be NP, EOD, SWO or CLEAR", 400));
   }
   if (!(await Model.exists({ _id: loanId }))) {
     return next(new ErrorHandler("Loan not found", 404));

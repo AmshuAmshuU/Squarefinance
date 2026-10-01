@@ -13,7 +13,7 @@ const callRecordSchema = new mongoose.Schema(
       required: true,
       enum: ["Loan", "WeeklyLoan", "DailyLoan", "InterestLoan"],
     },
-    response: { type: String, required: true, enum: ["NP", "EOD"] },
+    response: { type: String, required: true, enum: ["NP", "EOD", "SWO"] },
     calledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     calledByName: { type: String, required: true },
     calledAt: { type: Date, default: Date.now, required: true },

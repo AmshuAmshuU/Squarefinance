@@ -35,8 +35,15 @@ const shortTime = (d) =>
 const OPTIONS = [
   { value: "NP", label: "NP - not picking" },
   { value: "EOD", label: "EOD - end of day" },
+  { value: "SWO", label: "SWO - switched off" },
   { value: "CLEAR", label: "Clear" },
 ];
+
+const PILL_CLASS = {
+  NP: "bg-red-50 text-red-600",
+  EOD: "bg-amber-50 text-amber-600",
+  SWO: "bg-slate-200 text-slate-600",
+};
 
 // One loan's last-call note with the NP / EOD / Clear dropdown. Used in both
 // follow-up lists and on the loan details page, so the note reads the same
@@ -50,7 +57,7 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
 
   const openMenu = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const height = 132;
+    const height = 172; // 4 options now (NP, EOD, SWO, Clear)
     const above = rect.bottom + height > window.innerHeight;
     setMenu({ x: Math.min(rect.left, window.innerWidth - 176), y: above ? rect.top - height - 4 : rect.bottom + 4 });
   };
@@ -88,7 +95,7 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
           <span className="flex flex-col items-start gap-0.5">
             <span
               className={`px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${
-                record.response === "NP" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"
+                PILL_CLASS[record.response] || "bg-slate-100 text-slate-600"
               }`}
             >
               {record.response}
