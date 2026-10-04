@@ -1475,6 +1475,25 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
             ],
           },
           unpaidMonths: { $size: "$pendingEmisList" },
+          // The loan's regular EMI: monthlyEMI (Vehicle), emiAmount (Weekly/
+          // Daily), else the earliest pending EMI's own amount / interest (Interest
+          // loans have no fixed EMI on the loan itself).
+          loanEmiAmount: {
+            $ifNull: [
+              "$monthlyEMI",
+              {
+                $ifNull: [
+                  "$emiAmount",
+                  {
+                    $ifNull: [
+                      { $arrayElemAt: ["$pendingEmisList.emiAmount", 0] },
+                      { $arrayElemAt: ["$pendingEmisList.interestAmount", 0] },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
           totalDueAmount: {
             $reduce: {
               input: "$pendingEmisList",

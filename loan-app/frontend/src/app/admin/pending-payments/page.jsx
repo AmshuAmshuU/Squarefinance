@@ -52,6 +52,12 @@ const PendingPaymentsPage = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [limit] = useState(25);
   const { showToast } = useToast();
+  const formatFollowUpDate = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date)) return null;
+    return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  };
   const [selectedRowId, setSelectedRowId] = useState(null);
 
   // Client-side filter by loan type
@@ -207,6 +213,12 @@ const PendingPaymentsPage = () => {
         .pending-payments-dark-mode .hover\:bg-red-50\/60:hover {
           background-color: rgba(239, 68, 68, 0.15) !important;
         }
+        .pending-payments-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .pending-payments-dark-mode .border-amber-100 {
+          border-color: rgba(245, 158, 11, 0.25) !important;
+        }
         .pending-payments-dark-mode .text-slate-900 {
           color: #f1f5f9 !important;
         }
@@ -327,10 +339,7 @@ const PendingPaymentsPage = () => {
                     <thead>
                       <tr className="bg-slate-50/50 border-b border-slate-200">
                         <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                          Loan ID
-                        </th>
-                        <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                          Applicant Name
+                          Loan / Applicant
                         </th>
                          <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                           Applicant Mobile
@@ -346,10 +355,7 @@ const PendingPaymentsPage = () => {
                           Months
                         </th>
                         <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
-                          Remaining Amount
-                        </th>
-                        <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap text-red-500">
-                          Penalty
+                          EMI Amount
                         </th>
                         <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                           Days
@@ -366,7 +372,7 @@ const PendingPaymentsPage = () => {
                       {loading ? (
                         <tr>
                           <td
-                            colSpan="10"
+                            colSpan="9"
                             className="px-6 py-12 text-center text-slate-400 font-bold text-xs uppercase text-center"
                           >
                             Loading records...
@@ -375,7 +381,7 @@ const PendingPaymentsPage = () => {
                       ) : data.length === 0 ? (
                         <tr>
                           <td
-                            colSpan="10"
+                            colSpan="9"
                             className="px-6 py-12 text-center text-slate-400 font-bold text-xs uppercase text-center"
                           >
                             No records found
@@ -404,13 +410,11 @@ const PendingPaymentsPage = () => {
                             <td className="px-3 py-3 whitespace-nowrap">
                               <Link
                                 href={`/admin/pending-payments/view/${item.earliestEmiId}`}
-                                className="text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
+                                className="block text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
                               >
                                 {item.loanNumber}
                               </Link>
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap">
-                              <span className="font-black text-slate-900 text-xs uppercase tracking-tight">
+                              <span className="block mt-0.5 font-black text-slate-900 text-xs uppercase tracking-tight">
                                 {item.customerName}
                               </span>
                             </td>
@@ -456,13 +460,10 @@ const PendingPaymentsPage = () => {
                             </td>
                             <td className="px-3 py-3 text-center whitespace-nowrap">
                               <div className="flex flex-col items-center">
-                                <span className="text-sm font-black text-red-600 tracking-tight">
-                                  ₹{item.totalDueAmount.toLocaleString()}
+                                <span className="text-sm font-black text-slate-900 tracking-tight">
+                                  {item.loanEmiAmount > 0 ? `₹${Number(item.loanEmiAmount).toLocaleString()}` : "—"}
                                 </span>
                               </div>
-                            </td>
-                            <td className="px-3 py-3 text-center whitespace-nowrap font-black text-rose-500 text-xs tracking-tight bg-red-50/30">
-                              {item.penalOverdue > 0 ? `₹${item.penalOverdue.toLocaleString()}` : "—"}
                             </td>
                             <td className="px-3 py-3 text-center whitespace-nowrap">
                                 {(() => {
@@ -530,6 +531,11 @@ const PendingPaymentsPage = () => {
                                     "—"}
                                 </span>
                               </div>
+                              {formatFollowUpDate(item.nextFollowUpDate) && (
+                                <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                                  Follow-up: {formatFollowUpDate(item.nextFollowUpDate)}
+                                </span>
+                              )}
                             </td>
                             <td
                               className={`px-3 py-3 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
