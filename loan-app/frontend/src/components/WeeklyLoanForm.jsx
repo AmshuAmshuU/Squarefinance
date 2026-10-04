@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { addDays, format } from "date-fns";
 import { useFormik } from "formik";
+import { useFormDirty } from "../utils/useFormDirty";
 import * as Yup from "yup";
 import { getUserFromToken } from "../utils/auth";
 import ClientResponseSection from "./ClientResponseSection";
@@ -27,6 +28,7 @@ const _loanUniquenessCache = new Map();
 const WeeklyLoanForm = ({
   initialData,
   onSubmit,
+  formStateRef,
   onCancel,
   submitting,
   isViewOnly = false,
@@ -118,7 +120,7 @@ const WeeklyLoanForm = ({
     validateOnBlur: true,
     enableReinitialize: true,
     onSubmit: (values) => {
-      onSubmit({
+      return onSubmit({
         ...values,
         emiAmount,
         processingFee,
@@ -132,6 +134,8 @@ const WeeklyLoanForm = ({
       });
     },
   });
+
+  useFormDirty(formik, formStateRef);
 
   const handleDisbursementApply = (disbursements) => {
     setFieldValue("disbursement", disbursements);

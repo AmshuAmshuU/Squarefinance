@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import AuthGuard from "../../../../../components/AuthGuard";
 import Navbar from "../../../../../components/Navbar";
@@ -20,6 +20,7 @@ import LoanStatusBadge from "../../../../../components/LoanStatusBadge";
 import { getEMIsByLoanId } from "../../../../../services/customer";
 import { flattenLoan } from "../../../../../utils/loanUtils";
 import { useUI } from "../../../../../context/UIContext";
+import { PrevButton, NextButton, useLoanPrevNext } from "../../../../../components/LoanPrevNext";
 
 const EditLoanPage = () => {
   const router = useRouter();
@@ -32,6 +33,15 @@ const EditLoanPage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { showToast } = useToast();
+  const formStateRef = useRef(null);
+  const saveOkRef = useRef(false);
+  const { hasPrev, hasNext, goPrev, goNext, modal: prevNextModal } = useLoanPrevNext({
+    loanModel: "Loan",
+    id,
+    mode: "edit",
+    formStateRef,
+    saveSucceededRef: saveOkRef,
+  });
 
   const fetchLoanData = async () => {
     try {
@@ -112,6 +122,8 @@ const EditLoanPage = () => {
 
   useEffect(() => {
     if (id) {
+      // Show the loading screen again when PREV/NEXT switches to another loan
+      setLoading(true);
       fetchLoanData();
     }
   }, [id]);
@@ -136,6 +148,7 @@ const EditLoanPage = () => {
     setSubmitting(true);
     try {
       const res = await updateLoan(id, formData);
+      saveOkRef.current = true;
       const msg = res?.message || "";
       if (msg.toLowerCase().includes("approval")) {
         showToast("Changes submitted for approval by Super Admin", "info");
@@ -241,15 +254,18 @@ const EditLoanPage = () => {
           <Navbar />
           <main className="py-8 px-4 sm:px-8">
             <div className="max-w-6xl mx-auto">
-              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center transition-all duration-300">
-              <button
-                  onClick={() => router.push(returnTo)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
-                >
-                  <span className="text-base leading-none">←</span> Back
-                </button>
-                <div>
-                  <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">
+              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center gap-3 transition-all duration-300">
+                <div className="w-[88px] shrink-0 flex flex-col gap-2">
+                  <PrevButton disabled={!hasPrev} onClick={goPrev} />
+                  <button
+                    onClick={() => router.push(returnTo)}
+                    className="w-full flex items-center justify-center gap-1.5 px-2 py-2.5 bg-white border border-slate-200 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
+                  >
+                    <span className="text-base leading-none">←</span> Back
+                  </button>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
                     Modify Loan Parameters
                   </h1>
                    <div className="flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-2 mt-3">
@@ -269,10 +285,13 @@ const EditLoanPage = () => {
                   </div>
                   <LoanCallRecord loanId={id} loanModel="Loan" />
                 </div>
-                <div className="flex items-center gap-4">
-                  <LoanStatusBadge
-                    status={loan?.status?.status || loan?.status}
-                  />
+                <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
+                  <NextButton disabled={!hasNext} onClick={goNext} />
+                  <div className="flex justify-center">
+                    <LoanStatusBadge
+                      status={loan?.status?.status || loan?.status}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -390,6 +409,7 @@ const EditLoanPage = () => {
                   <LoanForm
                     initialData={loan}
                     onSubmit={handleSubmit}
+                    formStateRef={formStateRef}
                     onCancel={() => router.push(returnTo)}
                     submitting={submitting}
                     emis={emis}
@@ -428,6 +448,7 @@ const EditLoanPage = () => {
           </main>
         </div>
       </div>
+      {prevNextModal}
     </AuthGuard>
   );
 };

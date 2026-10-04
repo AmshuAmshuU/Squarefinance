@@ -33,6 +33,7 @@ const {
 } = require("../controllers/rtoWorkController");
 const { getExpiredDocLoans } = require("../controllers/expiredController");
 const { setCallRecord, getCallRecord } = require("../controllers/callRecordController");
+const { getLoanNeighbors } = require("../controllers/loanNeighborController");
 const {
   isAuthenticated,
   authorizeRoles,
@@ -52,6 +53,9 @@ router.use(isAuthenticated);
 // Call records: any logged-in user can log/read a call (coordination note).
 router.post("/call-record", setCallRecord);
 router.get("/call-record/:loanModel/:loanId", getCallRecord);
+
+// PREV / NEXT buttons on loan view + modify pages (same order as the lists).
+router.get("/neighbors/:loanModel/:id", getLoanNeighbors);
 
 router.get("/rto-works", getRtoWorks);
 router.post("/rto-works", createRtoWork);

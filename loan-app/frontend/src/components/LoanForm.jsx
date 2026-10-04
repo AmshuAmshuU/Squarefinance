@@ -2,6 +2,7 @@
 // Layout updated to move Additional Mobile Numbers (Customer) below the main Mobile Number field.
 import { useState, useEffect, useRef } from "react";
 import { useFormik } from "formik";
+import { useFormDirty } from "../utils/useFormDirty";
 import * as Yup from "yup";
 import { useToast } from "../context/ToastContext";
 import { useUI } from "../context/UIContext";
@@ -34,6 +35,7 @@ const ErrorMsg = ({ name, formik }) => {
 const LoanForm = ({
   initialData,
   onSubmit,
+  formStateRef,
   onCancel,
   isViewOnly,
   submitting,
@@ -318,7 +320,7 @@ const LoanForm = ({
         }
       }
 
-      onSubmit({
+      return onSubmit({
         ...values,
         vehicleInformation: {
           ...values.vehicleInformation,
@@ -327,6 +329,8 @@ const LoanForm = ({
       });
     },
   });
+
+  useFormDirty(formik, formStateRef);
 
   const handleDisbursementApply = (disbursements) => {
     formik.setFieldValue("loanTerms.disbursement", disbursements);

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "../../../../../components/Sidebar";
 import LoanCallRecord from "../../../../../components/LoanCallRecord";
@@ -20,6 +20,7 @@ import { useToast } from "../../../../../context/ToastContext";
 import { format } from "date-fns";
 import LoanStatusBadge from "../../../../../components/LoanStatusBadge";
 import { useUI } from "../../../../../context/UIContext";
+import { PrevButton, NextButton, useLoanPrevNext } from "../../../../../components/LoanPrevNext";
 
 const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
   const params = use(paramsPromise);
@@ -28,6 +29,15 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/admin/weekly-loans";
   const { showToast } = useToast();
+  const formStateRef = useRef(null);
+  const saveOkRef = useRef(false);
+  const { hasPrev, hasNext, goPrev, goNext, modal: prevNextModal } = useLoanPrevNext({
+    loanModel: "WeeklyLoan",
+    id: params.id,
+    mode: "edit",
+    formStateRef,
+    saveSucceededRef: saveOkRef,
+  });
   const [loanData, setLoanData] = useState(null);
   const [emis, setEmis] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +109,7 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
     setSubmitting(true);
     try {
       const res = await updateWeeklyLoan(params.id, formData);
+      saveOkRef.current = true;
       const msg = res?.message || "";
       if (msg.toLowerCase().includes("approval")) {
         showToast("Changes submitted for approval by Super Admin", "info");
@@ -148,19 +159,22 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
           <Navbar />
           <main className="flex-1 py-8 px-4 sm:px-8">
             <div className="max-w-5xl mx-auto">
-              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center transition-all duration-300">
-              <button
-                  onClick={() => router.push(returnTo)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
-                >
-                  <span className="text-base leading-none">←</span> Back
-                </button>
-                <div className="flex items-center gap-4">
-                  <span className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center text-2xl">
+              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center gap-3 transition-all duration-300">
+                <div className="w-[88px] shrink-0 flex flex-col gap-2">
+                  <PrevButton disabled={!hasPrev} onClick={goPrev} />
+                  <button
+                    onClick={() => router.push(returnTo)}
+                    className="w-full flex items-center justify-center gap-1.5 px-2 py-2.5 bg-white border border-slate-200 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
+                  >
+                    <span className="text-base leading-none">←</span> Back
+                  </button>
+                </div>
+                <div className="flex-1 min-w-0 flex items-center gap-4">
+                  <span className="hidden sm:flex w-12 h-12 shrink-0 bg-primary/10 text-primary rounded-2xl items-center justify-center text-2xl">
                     📝
                   </span>
-                  <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">
+                  <div className="min-w-0">
+                    <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
                       Edit Weekly Loan
                     </h1>
                     <p className="text-slate-500 font-medium text-sm">
@@ -169,7 +183,12 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
                     <LoanCallRecord loanId={loanData?._id} loanModel="WeeklyLoan" />
                   </div>
                 </div>
-                <LoanStatusBadge status={loanData?.status} />
+                <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
+                  <NextButton disabled={!hasNext} onClick={goNext} />
+                  <div className="flex justify-center">
+                    <LoanStatusBadge status={loanData?.status} />
+                  </div>
+                </div>
               </div>
 
               {loading ? (
@@ -192,6 +211,7 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
                   <WeeklyLoanForm
                     initialData={loanData}
                     onSubmit={handleSubmit}
+                    formStateRef={formStateRef}
                     onCancel={() => router.push("/admin/weekly-loans")}
                     submitting={submitting}
                   />
@@ -227,6 +247,7 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
           </main>
         </div>
       </div>
+      {prevNextModal}
     </AuthGuard>
   );
 };

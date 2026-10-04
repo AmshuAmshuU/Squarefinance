@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { format, addMonths } from "date-fns";
 import { useFormik } from "formik";
+import { useFormDirty } from "../utils/useFormDirty";
 import * as Yup from "yup";
 import { getUserFromToken } from "@/utils/auth";
 import ClientResponseSection from "./ClientResponseSection";
@@ -30,6 +31,7 @@ const ErrorMsg = ({ name, touched = {}, errors = {} }) => {
 const InterestLoanForm = ({
   initialData,
   onSubmit,
+  formStateRef,
   onCancel,
   submitting,
   isViewOnly = false,
@@ -127,9 +129,11 @@ const InterestLoanForm = ({
       // Filter empty mobile numbers
       const mobiles = values.mobileNumbers.filter((num) => num.trim() !== "");
       const guarantorMobiles = values.guarantorMobileNumbers.filter((num) => num.trim() !== "");
-      onSubmit({ ...values, mobileNumbers: mobiles, guarantorMobileNumbers: guarantorMobiles });
+      return onSubmit({ ...values, mobileNumbers: mobiles, guarantorMobileNumbers: guarantorMobiles });
     },
   });
+
+  useFormDirty(formik, formStateRef);
 
   const { values, setFieldValue, errors, touched, handleBlur } = formik;
 

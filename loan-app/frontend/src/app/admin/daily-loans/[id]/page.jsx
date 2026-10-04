@@ -20,12 +20,14 @@ import { useToast } from "../../../../context/ToastContext";
 import { format } from "date-fns";
 import LoanStatusBadge from "../../../../components/LoanStatusBadge";
 import { useUI } from "../../../../context/UIContext";
+import { PrevButton, NextButton, useLoanPrevNext } from "../../../../components/LoanPrevNext";
 
 const ViewDailyLoanPage = ({ params: paramsPromise }) => {
   const params = use(paramsPromise);
   const router = useRouter();
   const { isDarkMode } = useUI();
   const { showToast } = useToast();
+  const { hasPrev, hasNext, goPrev, goNext } = useLoanPrevNext({ loanModel: "DailyLoan", id: params.id, mode: "view" });
   const [loanData, setLoanData] = useState(null);
   const [emis, setEmis] = useState([]);
   const [history, setHistory] = useState([]);
@@ -68,6 +70,8 @@ const ViewDailyLoanPage = ({ params: paramsPromise }) => {
   }, [params.id, router, showToast]);
 
   useEffect(() => {
+    // Show the loading spinner again when PREV/NEXT switches to another loan
+    setLoading(true);
     fetchData();
   }, [params.id, fetchData]);
 
@@ -100,13 +104,16 @@ const ViewDailyLoanPage = ({ params: paramsPromise }) => {
           <Navbar />
           <main className="flex-1 py-8 px-4 sm:px-8">
             <div className="max-w-5xl mx-auto">
-              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center transition-all duration-300">
-                <div className="flex items-center gap-4">
-                  <span className="w-12 h-12 bg-blue-500/10 text-blue-600 rounded-2xl flex items-center justify-center text-2xl">
+              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center gap-3 transition-all duration-300">
+                <div className="w-[88px] shrink-0">
+                  <PrevButton disabled={!hasPrev} onClick={goPrev} />
+                </div>
+                <div className="flex-1 min-w-0 flex items-center gap-4">
+                  <span className="hidden sm:flex w-12 h-12 shrink-0 bg-blue-500/10 text-blue-600 rounded-2xl items-center justify-center text-2xl">
                     📄
                   </span>
-                  <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">
+                  <div className="min-w-0">
+                    <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
                       View Daily Loan
                     </h1>
                     <p className="text-slate-500 font-medium text-sm text-left">
@@ -114,7 +121,12 @@ const ViewDailyLoanPage = ({ params: paramsPromise }) => {
                     </p>
                   </div>
                 </div>
-                <LoanStatusBadge status={loanData?.status} />
+                <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
+                  <NextButton disabled={!hasNext} onClick={goNext} />
+                  <div className="flex justify-center">
+                    <LoanStatusBadge status={loanData?.status} />
+                  </div>
+                </div>
               </div>
 
               {loading ? (

@@ -10,6 +10,7 @@ import CustomerLocationPanel from "@/components/CustomerLocationPanel";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
 import { useUI } from "@/context/UIContext";
+import { PrevButton, NextButton, useLoanPrevNext } from "@/components/LoanPrevNext";
 
 const ViewInterestLoanPage = () => {
   const router = useRouter();
@@ -19,6 +20,7 @@ const ViewInterestLoanPage = () => {
   const [loan, setLoan] = useState(null);
   const [emis, setEmis] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { hasPrev, hasNext, goPrev, goNext } = useLoanPrevNext({ loanModel: "InterestLoan", id: id, mode: "view" });
 
   const fetchLoanData = async () => {
     try {
@@ -73,17 +75,23 @@ const ViewInterestLoanPage = () => {
                 <div className="text-center py-12 text-slate-400 font-bold">Loading profile...</div>
               ) : loan ? (
                 <>
-                  <div className="mb-8 flex justify-between items-end">
-                    <div>
-                      <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Interest Loan Profile</h1>
+                  <div className="mb-8 flex justify-between items-center gap-3">
+                    <div className="w-[88px] shrink-0">
+                      <PrevButton disabled={!hasPrev} onClick={goPrev} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">Interest Loan Profile</h1>
                       <p className="text-slate-500 font-medium text-sm">Loan Number: {loan.loanNumber} • {loan.customerName}</p>
                     </div>
-                    <button
-                      onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)}
-                      className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
-                    >
-                      Edit Profile
-                    </button>
+                    <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
+                      <NextButton disabled={!hasNext} onClick={goNext} />
+                      <button
+                        onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)}
+                        className="w-full px-2 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                      >
+                        Edit Profile
+                      </button>
+                    </div>
                   </div>
                   <InterestLoanDetails loan={loan} emis={emis} onRefresh={fetchLoanData} />
 

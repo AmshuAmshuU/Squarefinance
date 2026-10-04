@@ -19,6 +19,7 @@ import CustomerLocationPanel from "../../../../components/CustomerLocationPanel"
 import { getLoanROI } from "../../../../services/loan.service";
 import LoanStatusBadge from "../../../../components/LoanStatusBadge";
 import { useUI } from "../../../../context/UIContext";
+import { PrevButton, NextButton, useLoanPrevNext } from "../../../../components/LoanPrevNext";
 
 const ViewLoanPage = () => {
   const router = useRouter();
@@ -30,6 +31,7 @@ const ViewLoanPage = () => {
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
   const { showToast } = useToast();
+  const { hasPrev, hasNext, goPrev, goNext } = useLoanPrevNext({ loanModel: "Loan", id: id, mode: "view" });
 
   useEffect(() => {
     const fetchLoanData = async () => {
@@ -118,6 +120,8 @@ const ViewLoanPage = () => {
     };
 
     if (id && id !== "undefined") {
+      // Show the loading screen again when PREV/NEXT switches to another loan
+      setLoading(true);
       fetchLoanData();
     } else if (id === "undefined") {
       setLoading(false);
@@ -182,9 +186,12 @@ const ViewLoanPage = () => {
           <Navbar />
           <main className="py-8 px-4 sm:px-8">
             <div className="max-w-6xl mx-auto">
-              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center transition-all duration-300">
-                <div>
-                  <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">
+              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center gap-3 transition-all duration-300">
+                <div className="w-[88px] shrink-0">
+                  <PrevButton disabled={!hasPrev} onClick={goPrev} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
                     Loan Profile View
                   </h1>
                    <div className="flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-2 mt-3">
@@ -203,10 +210,13 @@ const ViewLoanPage = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <LoanStatusBadge
-                    status={loan?.status?.status || loan?.status}
-                  />
+                <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
+                  <NextButton disabled={!hasNext} onClick={goNext} />
+                  <div className="flex justify-center">
+                    <LoanStatusBadge
+                      status={loan?.status?.status || loan?.status}
+                    />
+                  </div>
                 </div>
               </div>
 
