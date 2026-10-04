@@ -12,6 +12,8 @@ const { addMonths } = require("date-fns");
 const { sendNotification } = require("./notificationController");
 const { syncEmiPayments } = require("../utils/syncEmiPayments");
 const Expense = require("../models/Expense");
+const LoanDraft = require("../models/LoanDraft");
+const { APPROVAL_VALID_HOURS } = require("../utils/rateApproval");
 const { createExpenseRecord, updateExpenseRecord } = require("../utils/expenseActions");
 
 // Invokes an existing asyncHandler-wrapped route handler internally (no real
@@ -737,6 +739,18 @@ const processApproval = asyncHandler(async (req, res, next) => {
           });
         }
       }
+    } else if (requestType === "RATE_APPROVAL") {
+      // Unlocks the saved Add Loan draft for this exact rate for 24 hours.
+      const draft = await LoanDraft.findById(targetId);
+      if (!draft || draft.status === "Completed") {
+        return next(new ErrorHandler("This draft no longer exists, so the rate can't be approved", 404));
+      }
+      const approvedAt = new Date();
+      draft.status = "Approved";
+      draft.approvedBy = req.user._id;
+      draft.approvedAt = approvedAt;
+      draft.expiresAt = new Date(approvedAt.getTime() + APPROVAL_VALID_HOURS * 60 * 60 * 1000);
+      await draft.save();
     } else if (requestType === "EXPENSE_ADD") {
       await createExpenseRecord(requestedData.fields, approval.requestedBy);
     } else if (requestType === "EXPENSE_EDIT") {
@@ -808,7 +822,12 @@ const processApproval = asyncHandler(async (req, res, next) => {
     // If rejected, revert status back for all loan/EMI types
     const { targetId, targetModel, requestType } = approval;
 
-    if (targetModel === "EMI") {
+    if (requestType === "RATE_APPROVAL") {
+      await LoanDraft.updateOne(
+        { _id: targetId, status: { $ne: "Completed" } },
+        { status: "Rejected", rejectedBy: req.user._id, rejectedAt: new Date(), rejectRemarks: remarks || "" },
+      );
+    } else if (targetModel === "EMI") {
       // Revert EMI - determine previous status from amountPaid
       const emi = await EMI.findById(targetId);
       if (emi) {
@@ -870,6 +889,29 @@ const processApproval = asyncHandler(async (req, res, next) => {
         totalApprovedAmount += parseFloat(ov.amount) || 0;
       });
     }
+  }
+
+  if (approval.requestType === "RATE_APPROVAL") {
+    const rate = approval.requestedData.requestedRate;
+    await sendNotification({
+      recipientId: approval.requestedBy,
+      senderId: req.user._id,
+      type: status === "Approved" ? "PAYMENT_APPROVED" : "PAYMENT_REJECTED",
+      title: `Interest Rate ${status}`,
+      message:
+        status === "Approved"
+          ? `Interest rate ${rate}% for the new loan ${approval.loanNumber} (${approval.customerName}) was approved by ${req.user.name}. Open it from the drafts on the Add Loan page within ${APPROVAL_VALID_HOURS} hours to finish creating it.`
+          : `Interest rate ${rate}% for the new loan ${approval.loanNumber} (${approval.customerName}) was rejected by ${req.user.name}${remarks ? `: ${remarks}` : "."}`,
+      data: {
+        loanNumber: approval.loanNumber,
+        customerName: approval.customerName,
+        employeeName: req.user.name,
+        approvalId: approval._id,
+      },
+    });
+    const { notifyApprovalCountChange: notifyRateCount } = require("./notificationController");
+    await notifyRateCount();
+    return sendResponse(res, 200, "success", `Request ${status} successfully`, null, approval);
   }
 
   // Expense requests get their own wording - the payment message below

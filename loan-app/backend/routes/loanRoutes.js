@@ -35,6 +35,12 @@ const { getExpiredDocLoans } = require("../controllers/expiredController");
 const { setCallRecord, getCallRecord } = require("../controllers/callRecordController");
 const { getLoanNeighbors } = require("../controllers/loanNeighborController");
 const {
+  saveRateDraft,
+  listLoanDrafts,
+  getLoanDraft,
+  discardLoanDraft,
+} = require("../controllers/loanDraftController");
+const {
   isAuthenticated,
   authorizeRoles,
   authorizePermissions,
@@ -56,6 +62,14 @@ router.get("/call-record/:loanModel/:loanId", getCallRecord);
 
 // PREV / NEXT buttons on loan view + modify pages (same order as the lists).
 router.get("/neighbors/:loanModel/:id", getLoanNeighbors);
+
+// Saved Add Loan drafts waiting on (or holding) a Super Admin approval for an
+// interest rate below 2.00. Visible to / usable by everyone who can create loans.
+const draftAccess = [authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"), authorizePermissions("loans.create")];
+router.post("/drafts", ...draftAccess, saveRateDraft);
+router.get("/drafts", ...draftAccess, listLoanDrafts);
+router.get("/drafts/:id", ...draftAccess, getLoanDraft);
+router.delete("/drafts/:id", ...draftAccess, discardLoanDraft);
 
 router.get("/rto-works", getRtoWorks);
 router.post("/rto-works", createRtoWork);

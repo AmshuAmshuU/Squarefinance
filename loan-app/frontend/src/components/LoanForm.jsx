@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useFormik } from "formik";
 import { useFormDirty } from "../utils/useFormDirty";
+import RateApprovalBox from "./RateApprovalBox";
 import * as Yup from "yup";
 import { useToast } from "../context/ToastContext";
 import { useUI } from "../context/UIContext";
@@ -41,11 +42,30 @@ const LoanForm = ({
   submitting,
   renderExtraActions,
   emis = [],
+  rateDraft = null,
+  onRequestRateApproval,
 }) => {
   const { showToast } = useToast();
   const { isDarkMode } = useUI();
   const user = getUserFromToken();
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
+
+  // New vehicle loans only (the Add Loan page passes onRequestRateApproval):
+  // an interest rate above 0 but below 2.00 needs a Super Admin's approval,
+  // given on a saved draft for exactly that rate and valid for 24 hours.
+  // Super Admin is never asked. The server enforces the same rule.
+  const rateGate = (values) => {
+    const rate = parseFloat(values.loanTerms.annualInterestRate);
+    const active = !!onRequestRateApproval && !initialData?._id && !isViewOnly && !isSuperAdmin;
+    const needs = active && Number.isFinite(rate) && rate > 0 && rate < 2;
+    const approved =
+      !!rateDraft &&
+      rateDraft.status === "Approved" &&
+      !!rateDraft.expiresAt &&
+      new Date(rateDraft.expiresAt) > new Date() &&
+      Number(rateDraft.requestedRate) === rate;
+    return { needs, approved, ok: !needs || approved, rate };
+  };
 
   const validationSchema = Yup.object().shape({
     customerDetails: Yup.object({
@@ -302,6 +322,10 @@ const LoanForm = ({
     validateOnBlur: true,
     enableReinitialize: true,
     onSubmit: async (values) => {
+      if (!rateGate(values).ok) {
+        showToast("An interest rate below 2.00 needs Super Admin approval first", "error");
+        return;
+      }
       // Clean up rtoWorkPending: ensure it's an array and filter out empty strings
       const rtoWork = Array.isArray(values.vehicleInformation.rtoWorkPending)
         ? values.vehicleInformation.rtoWorkPending.filter(
@@ -1313,6 +1337,14 @@ const LoanForm = ({
                 />
                 <ErrorMsg name="loanTerms.annualInterestRate" formik={formik} />
               </div>
+              {rateGate(formik.values).needs && (
+                <RateApprovalBox
+                  rate={rateGate(formik.values).rate}
+                  rateDraft={rateDraft}
+                  approved={rateGate(formik.values).approved}
+                  onRequest={() => onRequestRateApproval(formik.values)}
+                />
+              )}
 
             </div>
           </div>
@@ -2107,7 +2139,9 @@ const LoanForm = ({
                 <button
                   type="submit"
                   disabled={
-                    submitting || (formik.submitCount > 0 && !formik.isValid)
+                    submitting ||
+                    (formik.submitCount > 0 && !formik.isValid) ||
+                    !rateGate(formik.values).ok
                   }
                   className="w-full sm:w-auto bg-primary text-white px-10 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 disabled:opacity-50 transition-all order-1 sm:order-2"
                 >

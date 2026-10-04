@@ -16,6 +16,9 @@ const { formatLoanResponse } = require("../utils/loanFormatter");
 const { attachCallRecords } = require("../utils/callRecords");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { notifyAdmins } = require("./notificationController");
+const LoanDraft = require("../models/LoanDraft");
+const { closeDraftWithLoan } = require("./loanDraftController");
+const { needsRateApproval, MIN_FREE_RATE } = require("../utils/rateApproval");
 const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
 
 const extractId = (val) => {
@@ -106,6 +109,32 @@ const createLoan = asyncHandler(async (req, res, next) => {
 
   const calculatedTotalInterest = Math.ceil(p * (r / 100) * t);
 
+  // Interest rate below 2.00: only with a Super Admin's approval, which is
+  // given on a saved draft of this form (see loanDraftController). Super
+  // Admin is never asked. The approval is for that exact rate, works once and
+  // lasts 24 hours from the moment it was approved.
+  const { draftId } = req.body;
+  let claimedDraftId = null;
+  if (req.user.role !== "SUPER_ADMIN" && needsRateApproval(r)) {
+    const claimed =
+      draftId && mongoose.Types.ObjectId.isValid(draftId)
+        ? await LoanDraft.findOneAndUpdate(
+            { _id: draftId, status: "Approved", expiresAt: { $gt: new Date() }, requestedRate: r },
+            { status: "Completed", completedBy: req.user._id, completedAt: new Date() },
+            { new: true },
+          )
+        : null;
+    if (!claimed) {
+      return next(
+        new ErrorHandler(
+          `An interest rate below ${MIN_FREE_RATE.toFixed(2)} needs Super Admin approval. Request approval for this rate first, or use a saved draft whose approval is still valid for exactly this rate.`,
+          403,
+        ),
+      );
+    }
+    claimedDraftId = claimed._id;
+  }
+
   const loan = await Loan.create({
     locationToken: generateLocationToken(),
     // customerDetails
@@ -158,7 +187,23 @@ const createLoan = asyncHandler(async (req, res, next) => {
     clientResponse: statusObj?.clientResponse,
     nextFollowUpDate: statusObj?.nextFollowUpDate,
     createdBy: req.user._id,
+  }).catch(async (err) => {
+    // Loan wasn't created - give the approval back so it can be used again.
+    if (claimedDraftId) {
+      await LoanDraft.updateOne(
+        { _id: claimedDraftId },
+        { status: "Approved", $unset: { completedBy: 1, completedAt: 1 } },
+      );
+    }
+    throw err;
   });
+
+  // Record which draft this loan came from (and who finished it).
+  if (claimedDraftId) {
+    await LoanDraft.updateOne({ _id: claimedDraftId }, { loanId: loan._id });
+  } else if (draftId) {
+    await closeDraftWithLoan(draftId, req.user, loan);
+  }
 
   // Generate EMIs
   const emis = [];

@@ -183,8 +183,9 @@ const ApprovalsPage = () => {
                                                       EXPENSE_ADD: "Expense Add Request",
                                                       EXPENSE_EDIT: "Expense Edit Request",
                                                       EXPENSE_DELETE: "Expense Delete Request",
+                                                      RATE_APPROVAL: "Interest Rate Approval (new loan)",
                                                     }[app.requestType] || "Loan Edit Request";
-                                                    if (app.requestType === "LOAN_EDIT" || isExpenseRequest) {
+                                                    if (app.requestType === "LOAN_EDIT" || isExpenseRequest || app.requestType === "RATE_APPROVAL") {
                                                       return (
                                                         <tr key={app._id} className="border-b border-slate-50">
                                                           <td colSpan={8} className="px-3 py-3">
@@ -192,7 +193,7 @@ const ApprovalsPage = () => {
                                                               <div className="flex items-center justify-between mb-3">
                                                                 <div>
                                                                   <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest bg-amber-100 px-2 py-1 rounded-lg">{requestLabel}</span>
-                                                                  <p className="text-xs font-bold text-slate-700 mt-1">{isExpenseRequest && app.loanNumber === "OFFICE" ? "Office expense" : `Loan ${app.loanNumber} — ${app.customerName}`}</p>
+                                                                  <p className="text-xs font-bold text-slate-700 mt-1">{isExpenseRequest && app.loanNumber === "OFFICE" ? "Office expense" : app.requestType === "RATE_APPROVAL" ? `New vehicle loan ${app.loanNumber !== "—" ? app.loanNumber : "(number not entered yet)"} — ${app.customerName}` : `Loan ${app.loanNumber} — ${app.customerName}`}</p>
                                                                   <p className="text-[10px] text-slate-400 mt-0.5">by {app.requestedBy?.name} • {new Date(app.createdAt).toLocaleString("en-IN")}</p>
                                                                 </div>
                                                                 <div className="flex gap-2">
