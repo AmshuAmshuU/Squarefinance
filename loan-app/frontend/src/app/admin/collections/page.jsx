@@ -271,7 +271,6 @@ const CollectionsPage = () => {
           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer Name</th>
           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">EMI Paid</th>
           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Overdue</th>
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total</th>
           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Type</th>
           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Payment Mode</th>
           <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Date</th>
@@ -280,9 +279,9 @@ const CollectionsPage = () => {
       </thead>
       <tbody className="divide-y divide-slate-100">
         {loading ? (
-          <tr><td colSpan="10" className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">Synchronizing records...</td></tr>
+          <tr><td colSpan="9" className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">Synchronizing records...</td></tr>
         ) : collections.length === 0 ? (
-          <tr><td colSpan="10" className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">No transactions found for this period</td></tr>
+          <tr><td colSpan="9" className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">No transactions found for this period</td></tr>
         ) : (
           collections.map((item, idx) => (
             <tr key={idx} className="hover:bg-slate-50 transition-colors">
@@ -303,9 +302,6 @@ const CollectionsPage = () => {
               </td>
               <td className="px-6 py-4 text-xs text-right font-black text-red-600">
                 ₹{item.overdueAmount?.toLocaleString() || '0'}
-              </td>
-              <td className="px-6 py-4 text-xs text-right font-black text-indigo-600 bg-slate-50/30">
-                ₹{item.totalAmount?.toLocaleString() || item.amount?.toLocaleString() || '0'}
               </td>
               <td className="px-6 py-4 text-xs text-center">
                 <span className={`px-2 py-1 rounded-lg font-black text-[9px] uppercase border ${

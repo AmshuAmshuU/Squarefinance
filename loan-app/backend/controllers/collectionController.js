@@ -56,7 +56,15 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
 
   // getAllCollectionEvents never produces Processing Fee events, matching
   // the previous explicit exclusion.
-  const events = await getAllCollectionEvents({ startDate, endDate });
+  const rawEvents = await getAllCollectionEvents({ startDate, endDate });
+
+  // Group by loan type: Vehicle first, then Weekly, Daily, Interest, then
+  // anything else. Sort is stable, so within each group the existing
+  // newest-first order is kept. Done before paginating so groups stay
+  // together across pages.
+  const LOAN_TYPE_ORDER = { Loan: 0, WeeklyLoan: 1, DailyLoan: 2, InterestLoan: 3 };
+  const typeRank = (e) => LOAN_TYPE_ORDER[e.loanModel] ?? 4;
+  const events = [...rawEvents].sort((a, b) => typeRank(a) - typeRank(b));
 
   const total = events.length;
   const grandTotalAmount = events.reduce((acc, e) => acc + (e.totalAmount || 0), 0);
