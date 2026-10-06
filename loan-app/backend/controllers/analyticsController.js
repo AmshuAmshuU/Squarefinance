@@ -1457,7 +1457,8 @@ const OUR_INVESTMENT_FROZEN_DATE = "2026-09-25";
 
 // Always "as of now" - no historical date picker (unlike ROI), since this
 // is meant as a regular here-and-now check-in, not a historical lookback.
-const getCompanyValuation = asyncHandler(async (req, res, next) => {
+// Shared by the Company Valuation card and the Partners card.
+const computeCompanyValuation = async () => {
   const asOfDate = new Date();
 
   const { computeROI } = require("../utils/loanROI");
@@ -1476,7 +1477,7 @@ const getCompanyValuation = asyncHandler(async (req, res, next) => {
   const companyValuation = outstandingLoanBook + cashOnHand;
   const growthMultiple = ourInvestment > 0 ? companyValuation / ourInvestment : null;
 
-  sendResponse(res, 200, "success", "Company valuation calculated", null, {
+  return {
     companyValuation,
     outstandingLoanBook,
     cashOnHand,
@@ -1487,6 +1488,53 @@ const getCompanyValuation = asyncHandler(async (req, res, next) => {
     totalDisbursed: roi.disbursed,
     totalExpenses,
     asOfDate: asOfDate.toISOString(),
+  };
+};
+
+const getCompanyValuation = asyncHandler(async (req, res, next) => {
+  const data = await computeCompanyValuation();
+  sendResponse(res, 200, "success", "Company valuation calculated", null, data);
+});
+
+// Analytics "Partners" card (Super Admin only): each partner's share % (from
+// the latest dated snapshot in PartnerShareSnapshot - history is never
+// overwritten), what that share of the frozen investment was, and what it is
+// worth now at the live company valuation. Runs automatically when the card
+// is viewed - no Calculate button.
+const getPartners = asyncHandler(async (req, res, next) => {
+  const PartnerShareSnapshot = require("../models/PartnerShareSnapshot");
+  const [valuation, snapshot] = await Promise.all([
+    computeCompanyValuation(),
+    PartnerShareSnapshot.findOne({ effectiveFrom: { $lte: new Date() } })
+      .sort({ effectiveFrom: -1, createdAt: -1 })
+      .lean(),
+  ]);
+
+  const partners = (snapshot?.partners || [])
+    .map((p) => {
+      const investedAmount = Math.round((valuation.ourInvestment * p.percent) / 100);
+      const currentValue = Math.round((valuation.companyValuation * p.percent) / 100);
+      return {
+        name: p.name,
+        percent: p.percent,
+        investedAmount,
+        currentValue,
+        gainAmount: currentValue - investedAmount,
+        gainPercent: investedAmount > 0 ? ((currentValue - investedAmount) / investedAmount) * 100 : null,
+      };
+    })
+    .sort((a, b) => b.percent - a.percent);
+
+  sendResponse(res, 200, "success", "Partners calculated", null, {
+    valuation: {
+      companyValuation: valuation.companyValuation,
+      ourInvestment: valuation.ourInvestment,
+      growthMultiple: valuation.growthMultiple,
+      asOfDate: valuation.asOfDate,
+    },
+    sharesEffectiveFrom: snapshot?.effectiveFrom || null,
+    sharesReason: snapshot?.reason || "",
+    partners,
   });
 });
 
@@ -1735,5 +1783,6 @@ module.exports = {
   getSimpleStats,
   getConsolidatedReportData,
   getCompanyValuation,
+  getPartners,
   getBusinessROI,
 };

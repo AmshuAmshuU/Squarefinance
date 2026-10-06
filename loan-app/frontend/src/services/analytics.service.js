@@ -43,6 +43,11 @@ export const getCompanyValuation = async () => {
   return await apiHandler("/api/analytics/valuation");
 };
 
+// Super Admin only - partner shares and what each share is worth now.
+export const getPartners = async () => {
+  return await apiHandler("/api/analytics/partners");
+};
+
 export const getMonthlyCollection = async (year, month) => {
   return await apiHandler(`/api/analytics/monthly-collection?year=${year}&month=${month}`);
 };

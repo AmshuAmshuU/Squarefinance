@@ -107,4 +107,13 @@ router.get(
   analyticsController.getCompanyValuation
 );
 
+// Partners card: ownership data, so Super Admin only (narrower than the
+// valuation card above it).
+router.get(
+  "/partners",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN"),
+  analyticsController.getPartners
+);
+
 module.exports = router;

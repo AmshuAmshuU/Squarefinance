@@ -29,6 +29,7 @@ import ProfitOverview from "../../../components/analytics/ProfitOverview";
 import SimpleStats from "../../../components/analytics/SimpleStats";
 import BusinessROI from "../../../components/analytics/BusinessROI";
 import CompanyValuation from "../../../components/analytics/CompanyValuation";
+import PartnersCard from "../../../components/analytics/PartnersCard";
 import CollectionEfficiencyCard from "../../../components/analytics/CollectionEfficiencyCard";
 import BookGrowth from "../../../components/analytics/BookGrowth";
 import { getUserFromToken } from "../../../utils/auth";
@@ -905,6 +906,10 @@ const AnalyticsPage = () => {
 
                   {/* Book Growth - very end, on-demand only */}
                   <BookGrowth />
+
+                  {/* Partners - very last card, SUPER_ADMIN only (ownership
+                      data). Loads by itself when scrolled into view. */}
+                  {isSuperAdmin && <PartnersCard />}
                 </>
               )}
 
