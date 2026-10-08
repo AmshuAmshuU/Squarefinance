@@ -352,7 +352,7 @@ const PendingPaymentsPage = () => {
                         </th>
 
                         <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
-                          Months
+                          Pending EMIs
                         </th>
                         <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                           EMI Amount
@@ -455,7 +455,11 @@ const PendingPaymentsPage = () => {
                             <td className="px-3 py-3 text-center whitespace-nowrap">
                               <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider bg-slate-100 px-2 py-1 rounded-md">
                                 {item.unpaidMonths}{" "}
-                                {item.unpaidMonths === 1 ? "Month" : "Months"}
+                                {(() => {
+                                  // The count is of unpaid EMIs, so the unit follows the loan type
+                                  const unit = item.loanType === "Weekly" ? "Week" : item.loanType === "Daily" ? "Day" : "Month";
+                                  return item.unpaidMonths === 1 ? unit : `${unit}s`;
+                                })()}
                               </span>
                             </td>
                             <td className="px-3 py-3 text-center whitespace-nowrap">
