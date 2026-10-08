@@ -192,8 +192,8 @@ const FollowupAccountabilityCard = () => {
                               }
                             />
                           </td>
-                          <td className="relative p-0 w-[64px] min-w-[64px]">
-                            <ListPhoto fill url={item.photoThumbUrl} />
+                          <td className="px-0 py-[3px] w-[64px] min-w-[64px] text-center align-middle">
+                            <ListPhoto compact url={item.photoThumbUrl} />
                           </td>
                           <td className="px-3 py-2.5 whitespace-nowrap">
                             {item.pendingAmount > 0 ? (
