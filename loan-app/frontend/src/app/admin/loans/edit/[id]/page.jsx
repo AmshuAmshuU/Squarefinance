@@ -4,7 +4,6 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import AuthGuard from "../../../../../components/AuthGuard";
 import Navbar from "../../../../../components/Navbar";
 import Sidebar from "../../../../../components/Sidebar";
-import LoanCallRecord from "../../../../../components/LoanCallRecord";
 import LoanForm from "../../../../../components/LoanForm";
 import EMITable from "../../../../../components/EMITable";
 import LoanROICard from "../../../../../components/LoanROICard";
@@ -16,11 +15,11 @@ import {
   updateLoan,
   toggleSeized,
 } from "../../../../../services/loan.service";
-import LoanStatusBadge from "../../../../../components/LoanStatusBadge";
 import { getEMIsByLoanId } from "../../../../../services/customer";
 import { flattenLoan } from "../../../../../utils/loanUtils";
 import { useUI } from "../../../../../context/UIContext";
-import { PrevButton, NextButton, useLoanPrevNext } from "../../../../../components/LoanPrevNext";
+import { useLoanPrevNext } from "../../../../../components/LoanPrevNext";
+import VehicleLoanTopBar from "../../../../../components/VehicleLoanTopBar";
 
 const EditLoanPage = () => {
   const router = useRouter();
@@ -254,47 +253,17 @@ const EditLoanPage = () => {
           <Navbar />
           <main className="py-8 px-4 sm:px-8">
             <div className="max-w-6xl mx-auto">
-              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center gap-3 transition-all duration-300">
-                <div className="w-[88px] shrink-0 flex flex-col gap-2">
-                  <PrevButton disabled={!hasPrev} onClick={goPrev} />
-                  <button
-                    onClick={() => router.push(returnTo)}
-                    className="w-full flex items-center justify-center gap-1.5 px-2 py-2.5 bg-white border border-slate-200 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
-                  >
-                    <span className="text-base leading-none">←</span> Back
-                  </button>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
-                    Modify Loan Parameters
-                  </h1>
-                   <div className="flex flex-col sm:flex-row sm:items-center gap-x-6 gap-y-2 mt-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loan Number</span>
-                      <span className="text-[13px] font-black text-primary uppercase tracking-tight bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                        {loan?.loanTerms?.loanNumber || loan?.loanNumber}
-                        {loan?.customerDetails?.customerName ? `, ${loan.customerDetails.customerName}` : ""}
-                      </span>
-                    </div>
-                    <span className="hidden sm:inline text-slate-200">|</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vehicle Number</span>
-                      <span className="text-[13px] font-black text-slate-900 uppercase tracking-tight bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                        {loan?.vehicleInformation?.vehicleNumber || "—"}
-                      </span>
-                    </div>
-                  </div>
-                  <LoanCallRecord loanId={id} loanModel="Loan" />
-                </div>
-                <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
-                  <NextButton disabled={!hasNext} onClick={goNext} />
-                  <div className="flex justify-center">
-                    <LoanStatusBadge
-                      status={loan?.status?.status || loan?.status}
-                    />
-                  </div>
-                </div>
-              </div>
+              <VehicleLoanTopBar
+                title="Modify"
+                loan={loan}
+                loanId={id}
+                hasPrev={hasPrev}
+                hasNext={hasNext}
+                goPrev={goPrev}
+                goNext={goNext}
+                onBack={() => router.push(returnTo)}
+                showLastCall
+              />
 
               {loan && (
                 <>
