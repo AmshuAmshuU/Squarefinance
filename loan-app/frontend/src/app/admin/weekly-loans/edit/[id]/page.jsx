@@ -178,7 +178,7 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
                       Edit Weekly Loan
                     </h1>
                     <p className="text-slate-500 font-medium text-sm">
-                      Updating loan record: {loanData?.loanNumber}
+                      Updating loan record: {loanData?.loanNumber}{loanData?.customerName ? `, ${loanData.customerName}` : ""}
                     </p>
                     <LoanCallRecord loanId={loanData?._id} loanModel="WeeklyLoan" />
                   </div>

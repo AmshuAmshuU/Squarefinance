@@ -81,7 +81,7 @@ const ViewInterestLoanPage = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">Interest Loan Profile</h1>
-                      <p className="text-slate-500 font-medium text-sm">Loan Number: {loan.loanNumber} • {loan.customerName}</p>
+                      <p className="text-slate-500 font-medium text-sm">Loan Number: {loan.loanNumber}{loan.customerName ? `, ${loan.customerName}` : ""}</p>
                     </div>
                     <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
                       <NextButton disabled={!hasNext} onClick={goNext} />

@@ -273,6 +273,7 @@ const EditLoanPage = () => {
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loan Number</span>
                       <span className="text-[13px] font-black text-primary uppercase tracking-tight bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                         {loan?.loanTerms?.loanNumber || loan?.loanNumber}
+                        {loan?.customerDetails?.customerName ? `, ${loan.customerDetails.customerName}` : ""}
                       </span>
                     </div>
                     <span className="hidden sm:inline text-slate-200">|</span>

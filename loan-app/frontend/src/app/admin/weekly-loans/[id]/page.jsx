@@ -115,7 +115,7 @@ const ViewWeeklyLoanPage = ({ params: paramsPromise }) => {
                       View Weekly Loan
                     </h1>
                     <p className="text-slate-500 font-medium text-sm text-left">
-                      Loan Number: {loanData?.loanNumber}
+                      Loan Number: {loanData?.loanNumber}{loanData?.customerName ? `, ${loanData.customerName}` : ""}
                     </p>
                   </div>
                 </div>

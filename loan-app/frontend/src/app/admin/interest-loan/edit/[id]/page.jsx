@@ -151,7 +151,7 @@ const EditInterestLoanPage = () => {
                     Modify Loan Parameters
                   </h1>
                   <p className="text-slate-500 font-medium text-sm mt-1">
-                    Updating loan record: <span className="text-slate-900 font-bold">{loan?.loanNumber}</span>
+                    Updating loan record: <span className="text-slate-900 font-bold">{loan?.loanNumber}{loan?.customerName ? `, ${loan.customerName}` : ""}</span>
                   </p>
                   <LoanCallRecord loanId={loan?._id} loanModel="InterestLoan" />
                 </div>
