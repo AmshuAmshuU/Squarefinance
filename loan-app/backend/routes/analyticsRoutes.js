@@ -107,12 +107,13 @@ router.get(
   analyticsController.getCompanyValuation
 );
 
-// Partners card: ownership data, so Super Admin only (narrower than the
-// valuation card above it).
+// Partners card: same SUPER_ADMIN/ADMIN tier as the valuation card above it
+// (widened from Super Admin only on 2026-10-08 - two of the partners are
+// ADMIN accounts and there are no employees in the ADMIN role).
 router.get(
   "/partners",
   isAuthenticated,
-  authorizeRoles("SUPER_ADMIN"),
+  authorizeRoles("SUPER_ADMIN", "ADMIN"),
   analyticsController.getPartners
 );
 

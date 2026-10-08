@@ -907,9 +907,9 @@ const AnalyticsPage = () => {
                   {/* Book Growth - very end, on-demand only */}
                   <BookGrowth />
 
-                  {/* Partners - very last card, SUPER_ADMIN only (ownership
-                      data). Loads by itself when scrolled into view. */}
-                  {isSuperAdmin && <PartnersCard />}
+                  {/* Partners - very last card, SUPER_ADMIN/ADMIN like the rest of
+                      this section. Loads by itself when scrolled into view. */}
+                  <PartnersCard />
                 </>
               )}
 
