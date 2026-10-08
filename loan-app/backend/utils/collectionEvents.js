@@ -64,11 +64,11 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
     // Overdue row's collector show "System" regardless of who actually
     // collected it (found 2026-08-08, loan 16 EMI 11). updatedAt is the
     // same story as above, for Overdue-type events' ordering.
-    EMI.find({ loanModel: "Loan" }).select("loanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
+    EMI.find({ loanModel: "Loan" }).select("loanId emiNumber status paymentHistory overdue updatedBy updatedAt").lean(),
     WeeklyLoan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode updatedAt").lean(),
-    EMI.find({ loanModel: "WeeklyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
+    EMI.find({ loanModel: "WeeklyLoan" }).select("loanId emiNumber status paymentHistory overdue updatedBy updatedAt").lean(),
     DailyLoan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode updatedAt").lean(),
-    EMI.find({ loanModel: "DailyLoan" }).select("loanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
+    EMI.find({ loanModel: "DailyLoan" }).select("loanId emiNumber status paymentHistory overdue updatedBy updatedAt").lean(),
     InterestLoan.find({}).select("loanNumber customerName principalPayments").lean(),
     InterestEMI.find({}).select("interestLoanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
     User.find({}).select("name").lean(),
@@ -94,10 +94,22 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
   const events = [];
 
   const addEmiEvents = (loan, loanModel, paymentType, emis) => {
+    // Vehicle/Weekly/Daily only (Interest loans close differently): the
+    // payment that completes the loan's FINAL EMI gets isFinalEmi, so
+    // Collections can mark it with a tick. "Final" = the highest EMI number
+    // on the loan; "completes" = the EMI is fully Paid and this is its
+    // latest payment entry (so an earlier partial payment isn't marked).
+    const lastEmiNo = paymentType === "Interest" ? null : Math.max(0, ...emis.map((e) => e.emiNumber || 0));
     for (const emi of emis) {
+      const entries = (emi.paymentHistory || []).filter((ph) => ph.amount);
+      const completingEntry =
+        lastEmiNo && emi.emiNumber === lastEmiNo && emi.status === "Paid" && entries.length
+          ? entries.reduce((a, b) => (new Date(b.addedAt || b.date) >= new Date(a.addedAt || a.date) ? b : a))
+          : null;
       (emi.paymentHistory || []).forEach((ph) => {
         if (!ph.amount) return;
         events.push({
+          isFinalEmi: ph === completingEntry,
           loanId: loan._id,
           loanModel,
           loanNumber: loan.loanNumber,

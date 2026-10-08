@@ -311,8 +311,23 @@ const CollectionsPage = () => {
                   {item.loanNumber}
                 </Link>
               </td>
-              <td className="px-4 py-4 text-xs text-center font-black text-slate-500">
+              <td className="px-4 py-4 text-xs text-center font-black text-slate-500 whitespace-nowrap">
                 {item.emiNo || '-'}
+                {item.isFinalEmi && (
+                  // The payment that completed this loan's last EMI (vehicle / weekly / daily)
+                  <svg
+                    className="inline-block ml-[2px] -mt-0.5 align-middle"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    role="img"
+                    aria-label="Final EMI"
+                  >
+                    <title>Final EMI of this loan</title>
+                    <circle className="final-emi-bg fill-slate-900" cx="8" cy="8" r="8" />
+                    <path className="final-emi-check" d="M4.4 8.4 7 11 11.8 5.4" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
               </td>
               <td className="px-4 py-4 text-xs font-bold text-slate-600 uppercase whitespace-nowrap truncate max-w-[150px]">{item.customerName}</td>
               <td className={`px-4 py-4 text-xs text-right font-black whitespace-nowrap ${amountClass(item.paymentType)}`}>
@@ -479,6 +494,9 @@ const CollectionsPage = () => {
         .collections-dark-mode .border-teal-100 {
           border-color: rgba(255, 255, 255, 0.08) !important;
         }
+        /* Final-EMI tick: black dot / white tick in light, inverted in dark */
+        .collections-dark-mode .final-emi-bg { fill: #f8fafc !important; }
+        .collections-dark-mode .final-emi-check { stroke: #0f172a !important; }
         /* Amount column colours: brighter shades so they read on dark */
         .collections-dark-mode .col-amt-emi { color: #34d399 !important; }
         .collections-dark-mode .col-amt-overdue { color: #f87171 !important; }

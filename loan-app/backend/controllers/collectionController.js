@@ -76,6 +76,7 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
     loanModel: e.loanModel,
     loanNumber: e.loanNumber || "Unknown",
     emiNo: e.emiNo || "-",
+    isFinalEmi: !!e.isFinalEmi,
     customerName: e.customerName || "Unknown",
     emiAmount: e.emiAmount || 0,
     overdueAmount: e.overdueAmount || 0,
