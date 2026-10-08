@@ -2221,6 +2221,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   nextFollowUpDate: 1,
                   clientResponse: 1,
                   pendingEmis: 1,
+                  customerPhoto: 1,
                 },
               },
             ],
@@ -2235,6 +2236,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   nextFollowUpDate: 1,
                   clientResponse: 1,
                   pendingEmis: 1,
+                  customerPhoto: 1,
                 },
               },
             ],
@@ -2247,11 +2249,12 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
       // Longest-pending = earliest due date among the loan's own pending
       // EMIs - the single most-overdue item, not a sum across all of them.
       const attachPendingSummary = (item) => {
-        const { pendingEmis, ...rest } = item;
+        const { pendingEmis, customerPhoto, ...rest } = item;
         const sorted = [...(pendingEmis || [])].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
         const longest = sorted[0];
         return {
           ...rest,
+          photoThumbUrl: listPhotoUrl(customerPhoto),
           pendingAmount: longest ? Math.max(0, longest.amount) : 0,
           pendingDueDate: longest ? longest.dueDate : null,
         };

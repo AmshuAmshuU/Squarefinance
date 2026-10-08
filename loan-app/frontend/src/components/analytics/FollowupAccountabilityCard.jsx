@@ -6,6 +6,7 @@ import { PhoneCall, AlertTriangle, Loader2, ChevronDown, Pencil } from "lucide-r
 import ContactActionMenu from "../ContactActionMenu";
 import FollowupEditModal from "../FollowupEditModal";
 import CallRecordControl, { useCallRecordEvents, LOAN_MODEL_BY_TYPE } from "../CallRecordControl";
+import ListPhoto from "../ListPhoto";
 
 // Loan number links open the loan directly in modify mode - staff coming
 // from a follow-up call almost always need to edit something (log the
@@ -136,6 +137,7 @@ const FollowupAccountabilityCard = () => {
                         <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Loan</th>
                         <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile</th>
                         <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Call record</th>
+                        <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest w-[64px] min-w-[64px]">Photo</th>
                         <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Pending</th>
                         <th className="px-3 py-2.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Response &amp; followup</th>
                       </tr>
@@ -189,6 +191,9 @@ const FollowupAccountabilityCard = () => {
                                 patchCallRecord({ loanId: item._id, loanModel: LOAN_MODEL_BY_TYPE[item.loanType], record })
                               }
                             />
+                          </td>
+                          <td className="relative p-0 w-[64px] min-w-[64px]">
+                            <ListPhoto fill url={item.photoThumbUrl} />
                           </td>
                           <td className="px-3 py-2.5 whitespace-nowrap">
                             {item.pendingAmount > 0 ? (
