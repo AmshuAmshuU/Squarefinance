@@ -86,7 +86,27 @@ const thumbUrl = (publicId, version) =>
   ]);
 const fullUrl = (publicId, version) => signedUrl(publicId, version, [{ fetch_format: "auto", quality: "auto" }]);
 
+// Small passport-shaped picture for the loans lists (47 x 60 px shown, 2x for sharp screens).
+const listThumbUrl = (publicId, version) =>
+  signedUrl(publicId, version, [
+    { width: 94, height: 120, crop: "fill", gravity: "face" },
+    { fetch_format: "auto", quality: "auto" },
+  ]);
+
+// For list responses: the address of a loan's small photo, or null (no photo, or
+// photo storage not set up on this server). Computed locally - no Cloudinary call.
+const listPhotoUrl = (note) =>
+  note?.publicId && isConfigured() ? listThumbUrl(note.publicId, note.version) : null;
+
+// Adds photoThumbUrl to a loan object and drops the raw photo note.
+const withListPhoto = (doc) => {
+  const { customerPhoto, ...rest } = doc;
+  return { ...rest, photoThumbUrl: listPhotoUrl(customerPhoto) };
+};
+
 module.exports = {
+  listPhotoUrl,
+  withListPhoto,
   PREFIX,
   MAX_PHOTO_BYTES,
   isConfigured,

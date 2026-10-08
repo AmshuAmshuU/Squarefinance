@@ -3,6 +3,7 @@ const InterestLoan = require("../models/InterestLoan");
 const InterestEMI = require("../models/InterestEMI");
 const Payment = require("../models/Payment");
 const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
+const { withListPhoto } = require("../utils/cloudinaryPhotos");
 const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
@@ -281,7 +282,7 @@ exports.getAllInterestLoans = asyncHandler(async (req, res, next) => {
     findQuery.collation(collationConfig);
   }
 
-  const loans = await findQuery.lean();
+  const loans = (await findQuery.lean()).map(withListPhoto);
 
   sendResponse(res, 200, "success", "Interest loans fetched successfully", null, {
     loans,

@@ -11,6 +11,7 @@ import { Trash2 } from "lucide-react";
 import Pagination from "../../../components/Pagination";
 import ContactActionMenu from "../../../components/ContactActionMenu";
 import { useUI } from "../../../context/UIContext";
+import ListPhoto from "../../../components/ListPhoto";
 
 const LoansPage = () => {
   const router = useRouter();
@@ -302,7 +303,7 @@ const LoansPage = () => {
               <div className="md:hidden mb-8">
                 <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
                   <div className="overflow-x-auto scrollbar-none">
-                    <table className="w-full text-left border-collapse min-w-[740px]">
+                    <table className="w-full text-left border-collapse min-w-[808px]">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-100 uppercase">
                           <th className="w-[80px] min-w-[80px] max-w-[80px] pl-1.5 pr-0 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
@@ -323,6 +324,9 @@ const LoansPage = () => {
                           </th>
                           <th className="w-[100px] px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] text-center whitespace-nowrap">
                             CLIENT RESPONSE
+                          </th>
+                          <th className="w-[68px] px-3 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] text-center whitespace-nowrap">
+                            PHOTO
                           </th>
                           <th className="w-[100px] px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] text-center whitespace-nowrap sticky right-0 bg-slate-50 z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
                             ACTIONS
@@ -461,6 +465,9 @@ const LoansPage = () => {
                                     Follow-up: {formatFollowUpDate(loan.status.nextFollowUpDate)}
                                   </span>
                                 )}
+                              </td>
+                              <td className="px-2 py-1 text-center align-middle">
+                                <ListPhoto url={loan.photoThumbUrl} />
                               </td>
                               <td
                                 className={`px-3 py-3 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
@@ -606,6 +613,9 @@ const LoansPage = () => {
                             Client Response
                           </th>
                           <th className="px-3 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
+                            Photo
+                          </th>
+                          <th className="px-3 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                             Actions
                           </th>
                         </tr>
@@ -741,6 +751,9 @@ const LoansPage = () => {
                                     Follow-up: {formatFollowUpDate(loan.status.nextFollowUpDate)}
                                   </span>
                                 )}
+                              </td>
+                              <td className="px-3 py-1 text-center align-middle">
+                                <ListPhoto small url={loan.photoThumbUrl} />
                               </td>
                               <td className="px-3 py-3 whitespace-nowrap text-center">
                                 <div className="flex justify-center items-center gap-3">

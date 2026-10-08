@@ -18,6 +18,7 @@ const { generateLocationToken } = require("../utils/customerLocation");
 const { notifyAdmins } = require("./notificationController");
 const LoanDraft = require("../models/LoanDraft");
 const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
+const { listPhotoUrl } = require("../utils/cloudinaryPhotos");
 const { closeDraftWithLoan } = require("./loanDraftController");
 const { needsRateApproval, MIN_FREE_RATE } = require("../utils/rateApproval");
 const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
@@ -442,7 +443,7 @@ const getAllLoans = asyncHandler(async (req, res, next) => {
   } else {
     const findQuery = Loan.find(query)
       .select(
-        "loanNumber customerName mobileNumbers guarantorName guarantorMobileNumbers monthlyEMI tenureMonths status isSeized clientResponse nextFollowUpDate createdBy updatedBy createdAt principalAmount vehicleNumber chassisNumber engineNumber typeOfVehicle modelYear ywBoard dealerName dealerNumber hpEntry fcDate insuranceDate rtoWorkPending annualInterestRate processingFee emiStartDate emiEndDate",
+        "loanNumber customerName mobileNumbers guarantorName guarantorMobileNumbers monthlyEMI tenureMonths status isSeized clientResponse nextFollowUpDate createdBy updatedBy createdAt principalAmount vehicleNumber chassisNumber engineNumber typeOfVehicle modelYear ywBoard dealerName dealerNumber hpEntry fcDate insuranceDate rtoWorkPending annualInterestRate processingFee emiStartDate emiEndDate customerPhoto",
       )
       .sort(sortConfig)
       .skip(skip)
@@ -508,6 +509,7 @@ const getAllLoans = asyncHandler(async (req, res, next) => {
       },
       createdAt: loan.createdAt,
       repaymentStats: loan.repaymentStats || null,
+      photoThumbUrl: listPhotoUrl(loan.customerPhoto),
     };
   });
 

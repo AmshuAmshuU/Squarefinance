@@ -8,6 +8,7 @@ const Followup = require("../models/Followup");
 const Payment = require("../models/Payment");
 const SeizedVehicle = require("../models/SeizedVehicle");
 const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
+const { withListPhoto } = require("../utils/cloudinaryPhotos");
 const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
@@ -369,6 +370,7 @@ exports.getAllDailyLoans = asyncHandler(async (req, res, next) => {
   } else {
     dailyLoans = await DailyLoan.aggregate(aggregatePipeline);
   }
+  dailyLoans = dailyLoans.map(withListPhoto);
 
   sendResponse(res, 200, "success", "Daily loans fetched successfully", null, {
     dailyLoans,

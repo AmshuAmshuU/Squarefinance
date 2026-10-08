@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import ListPhoto from "./ListPhoto";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getDailyLoans, deleteDailyLoan } from "../services/dailyLoan.service";
@@ -261,7 +262,7 @@ const DailyLoansList = ({ type, title }) => {
         {/* MOBILE VIEW */}
         <div className="md:hidden">
           <div className="overflow-x-auto scrollbar-none">
-            <table className="w-full text-left border-collapse min-w-[780px]">
+            <table className="w-full text-left border-collapse min-w-[848px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
@@ -278,6 +279,7 @@ const DailyLoansList = ({ type, title }) => {
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                     CLIENT RESPONSE
                   </th>
+                  <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap w-[68px]">PHOTO</th>
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap sticky right-0 bg-slate-50 z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
                     ACTIONS
                   </th>
@@ -287,7 +289,7 @@ const DailyLoansList = ({ type, title }) => {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan="7"
                       className="px-4 py-12 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest"
                     >
                       Loading...
@@ -296,7 +298,7 @@ const DailyLoansList = ({ type, title }) => {
                 ) : loans.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="6"
+                      colSpan="7"
                       className="px-4 py-12 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest"
                     >
                       No records
@@ -394,6 +396,9 @@ const DailyLoansList = ({ type, title }) => {
                             Follow-up: {formatFollowUpDate(loan.nextFollowUpDate)}
                           </span>
                         )}
+                      </td>
+                      <td className="px-2 py-1 text-center align-middle">
+                        <ListPhoto url={loan.photoThumbUrl} />
                       </td>
                       <td
                         className={`px-4 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
@@ -504,7 +509,8 @@ const DailyLoansList = ({ type, title }) => {
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                   Client Response
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap sticky right-0 bg-slate-50 z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">PHOTO</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap sticky right-0 bg-slate-50 z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">
                   Actions
                 </th>
               </tr>
@@ -513,7 +519,7 @@ const DailyLoansList = ({ type, title }) => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan="8"
+                    colSpan="9"
                     className="px-6 py-12 text-center text-slate-400 font-bold text-xs uppercase"
                   >
                     Loading records...
@@ -522,7 +528,7 @@ const DailyLoansList = ({ type, title }) => {
               ) : loans.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="8"
+                    colSpan="9"
                     className="px-6 py-12 text-center text-slate-400 font-bold text-xs uppercase"
                   >
                     No records found
@@ -622,7 +628,10 @@ const DailyLoansList = ({ type, title }) => {
                         </span>
                       )}
                     </td>
-                    <td
+                    <td className="px-3 py-1 text-center align-middle">
+                        <ListPhoto url={loan.photoThumbUrl} />
+                      </td>
+                      <td
                       className={`px-6 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                         selectedRowId === loan._id
                           ? "bg-blue-50/80"
