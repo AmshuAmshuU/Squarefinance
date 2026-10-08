@@ -302,10 +302,10 @@ const LoansPage = () => {
               <div className="md:hidden mb-8">
                 <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
                   <div className="overflow-x-auto scrollbar-none">
-                    <table className="w-full text-left border-collapse min-w-[1000px]">
+                    <table className="w-full text-left border-collapse min-w-[740px]">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-100 uppercase">
-                          <th className="w-[80px] px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                          <th className="w-[80px] min-w-[80px] max-w-[80px] pl-1.5 pr-0 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
                             LOAN NO
                           </th>
                            <th className="px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] whitespace-nowrap">
@@ -318,17 +318,8 @@ const LoansPage = () => {
                             MOBILE
                           </th>
 
-                           <th className="w-[100px] px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] text-center whitespace-nowrap">
-                            DISBURSEMENT
-                          </th>
-                          <th className="w-[100px] px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] text-center whitespace-nowrap">
-                            EMI
-                          </th>
-                          <th className="w-[80px] px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] text-center whitespace-nowrap">
-                            TENURE
-                          </th>
-                          <th className="w-[80px] px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] text-center whitespace-nowrap">
-                            STATUS
+                           <th className="w-[100px] px-3 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] text-center whitespace-nowrap">
+                            LOAN DETAILS
                           </th>
                           <th className="w-[100px] px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] text-center whitespace-nowrap">
                             CLIENT RESPONSE
@@ -351,7 +342,7 @@ const LoansPage = () => {
                         ) : loans.length === 0 ? (
                           <tr>
                             <td
-                              colSpan="8"
+                              colSpan="7"
                               className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase"
                             >
                               No records
@@ -371,7 +362,7 @@ const LoansPage = () => {
                               }`}
                             >
                               <td
-                                className={`px-3 py-3 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
+                                className={`w-[80px] min-w-[80px] max-w-[80px] pl-1.5 pr-0 pt-1.5 pb-1 align-top whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                                   selectedRowId === loan._id
                                     ? "bg-blue-50/80"
                                     : loan.status?.status?.toLowerCase() === "closed"
@@ -381,10 +372,31 @@ const LoansPage = () => {
                               >
                                 <Link
                                   href={`/admin/loans/edit/${loan._id || loan.id || loan.status?.id}`}
-                                  className="font-bold text-slate-900 tracking-tight text-base hover:text-primary hover:underline transition-all"
+                                  className="block font-bold text-slate-900 tracking-tight text-base hover:text-primary hover:underline transition-all"
                                 >
                                   {loan.loanTerms?.loanNumber}
                                 </Link>
+                                <span
+                                  className={`mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter border ${
+                                    loan.status.status?.toLowerCase() === "closed"
+                                      ? "bg-slate-100 text-slate-500 border-slate-200"
+                                      : loan.status.status?.toLowerCase() === "for seizing"
+                                        ? "bg-amber-50 text-amber-600 border-amber-100"
+                                        : loan.status.isSeized ||
+                                            loan.status.status?.toLowerCase() === "seized"
+                                          ? "bg-red-50 text-red-500 border-red-100"
+                                          : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                                  }`}
+                                >
+                                  {loan.status.status?.toLowerCase() === "closed"
+                                    ? "Closed"
+                                    : loan.status.status?.toLowerCase() === "for seizing"
+                                      ? "For Seizing"
+                                      : loan.status.isSeized ||
+                                          loan.status.status?.toLowerCase() === "seized"
+                                        ? "Seized"
+                                        : "Active"}
+                                </span>
                               </td>
                                <td className="px-4 py-6">
                                 <span className="font-bold text-slate-700 text-base leading-tight">
@@ -423,41 +435,18 @@ const LoansPage = () => {
                                 </div>
                               </td>
 
-                               <td className="px-3 py-3 text-center whitespace-nowrap text-slate-900 font-bold text-xs">
-                                ₹{loan.loanTerms?.principalAmount?.toLocaleString() || "0"}
-                              </td>
-                              <td className="px-3 py-3 text-center whitespace-nowrap text-[#2463EB] font-black text-base">
-                                ₹
-                                {loan.loanTerms?.monthlyEMI
-                                  ?.toLocaleString()
-                                  ?.split(".")[0] || "0"}
-                              </td>
-                              <td className="px-3 py-3 text-center whitespace-nowrap">
+                               <td className="px-3 pt-1.5 pb-1 align-top text-center whitespace-nowrap">
+                                <div className="text-slate-900 font-bold text-xs">
+                                  ₹{loan.loanTerms?.principalAmount?.toLocaleString() || "0"}
+                                </div>
+                                <div className="text-[#2463EB] font-black text-base">
+                                  ₹
+                                  {loan.loanTerms?.monthlyEMI
+                                    ?.toLocaleString()
+                                    ?.split(".")[0] || "0"}
+                                </div>
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 text-slate-500 text-[10px] font-bold border border-slate-100">
                                   {loan.loanTerms?.tenureMonths}M
-                                </span>
-                              </td>
-                              <td className="px-3 py-3 text-center whitespace-nowrap">
-                                <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter border ${
-                                    loan.status.status?.toLowerCase() === "closed"
-                                      ? "bg-slate-100 text-slate-500 border-slate-200"
-                                      : loan.status.status?.toLowerCase() === "for seizing"
-                                        ? "bg-amber-50 text-amber-600 border-amber-100"
-                                        : loan.status.isSeized ||
-                                            loan.status.status?.toLowerCase() === "seized"
-                                          ? "bg-red-50 text-red-500 border-red-100"
-                                          : "bg-emerald-50 text-emerald-600 border-emerald-100"
-                                  }`}
-                                >
-                                  {loan.status.status?.toLowerCase() === "closed"
-                                    ? "Closed"
-                                    : loan.status.status?.toLowerCase() === "for seizing"
-                                      ? "For Seizing"
-                                      : loan.status.isSeized ||
-                                          loan.status.status?.toLowerCase() === "seized"
-                                        ? "Seized"
-                                        : "Active"}
                                 </span>
                               </td>
                               <td className="px-3 py-3 text-center">
