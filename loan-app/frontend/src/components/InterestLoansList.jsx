@@ -314,7 +314,7 @@ const InterestLoansList = ({ type, title }) => {
                       </td>
                       <td className={`px-4 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 group-hover:bg-slate-200" : "bg-white group-hover:bg-slate-50"}`}>
                         <div className="flex justify-center items-center gap-2">
-                           <button onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-100"><Eye size={14} /></button>
+                           <button onClick={() => router.push(`/admin/interest-loan/${loan._id}`)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-100"><Eye size={14} /></button>
                            {canEdit && <button onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-100"><Edit size={14} /></button>}
                            {isSuperAdmin && <button onClick={() => handleDelete(loan._id)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-400 border border-red-100"><Trash2 size={14} /></button>}
                         </div>
@@ -401,7 +401,7 @@ const InterestLoansList = ({ type, title }) => {
                     </td>
                     <td className={`px-6 py-5 text-center whitespace-nowrap sticky right-0 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 group-hover:bg-slate-200" : "bg-white group-hover:bg-slate-50"}`}>
                       <div className="flex justify-center items-center gap-3">
-                         <button onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-primary border border-slate-100 transition-all"><Eye size={16} /></button>
+                         <button onClick={() => router.push(`/admin/interest-loan/${loan._id}`)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-primary border border-slate-100 transition-all"><Eye size={16} /></button>
                          {canEdit && <button onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-primary border border-slate-100 transition-all"><Edit size={16} /></button>}
                          {isSuperAdmin && <button onClick={() => handleDelete(loan._id)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:text-red-600 border border-red-100 transition-all"><Trash2 size={16} /></button>}
                       </div>

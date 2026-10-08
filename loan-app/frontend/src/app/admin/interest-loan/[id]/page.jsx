@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
@@ -10,10 +10,12 @@ import CustomerLocationPanel from "@/components/CustomerLocationPanel";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
 import { useUI } from "@/context/UIContext";
-import { PrevButton, NextButton, useLoanPrevNext } from "@/components/LoanPrevNext";
+import { useLoanPrevNext } from "@/components/LoanPrevNext";
+import LoanTopBar from "@/components/LoanTopBar";
 
 const ViewInterestLoanPage = () => {
   const router = useRouter();
+  const returnTo = useSearchParams().get("returnTo") || "/admin/interest-loan";
   const { id } = useParams();
   const { showToast } = useToast();
   const { isDarkMode } = useUI();
@@ -48,6 +50,16 @@ const ViewInterestLoanPage = () => {
         .interest-loan-view-dark-mode {
           background-color: #0f172a;
         }
+        .interest-loan-view-dark-mode .bg-\[\#F8FAFC\]\/80 {
+          background-color: rgba(15, 23, 42, 0.8) !important;
+        }
+        .interest-loan-view-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .interest-loan-view-dark-mode .border-slate-100,
+        .interest-loan-view-dark-mode .border-blue-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
         .interest-loan-view-dark-mode .bg-white {
           background-color: #1e293b !important;
         }
@@ -75,24 +87,20 @@ const ViewInterestLoanPage = () => {
                 <div className="text-center py-12 text-slate-400 font-bold">Loading profile...</div>
               ) : loan ? (
                 <>
-                  <div className="mb-8 flex justify-between items-center gap-3">
-                    <div className="w-[88px] shrink-0">
-                      <PrevButton disabled={!hasPrev} onClick={goPrev} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">Interest Loan Profile</h1>
-                      <p className="text-slate-500 font-medium text-sm">Loan Number: {loan.loanNumber}{loan.customerName ? `, ${loan.customerName}` : ""}</p>
-                    </div>
-                    <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
-                      <NextButton disabled={!hasNext} onClick={goNext} />
-                      <button
-                        onClick={() => router.push(`/admin/interest-loan/edit/${loan._id}`)}
-                        className="w-full px-2 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
-                      >
-                        Edit Profile
-                      </button>
-                    </div>
-                  </div>
+                  <LoanTopBar
+                    title="View"
+                    loanModel="InterestLoan"
+                    loanId={id}
+                    loanNumber={loan?.loanNumber}
+                    customerName={loan?.customerName}
+                    status={loan?.status}
+                    hasPrev={hasPrev}
+                    hasNext={hasNext}
+                    goPrev={goPrev}
+                    goNext={goNext}
+                    onBack={() => router.push(returnTo)}
+                  />
+
                   <InterestLoanDetails loan={loan} emis={emis} onRefresh={fetchLoanData} />
 
                   <div className="mt-6">

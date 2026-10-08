@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import AuthGuard from "../../../../components/AuthGuard";
 import Navbar from "../../../../components/Navbar";
 import Sidebar from "../../../../components/Sidebar";
@@ -19,10 +19,11 @@ import CustomerLocationPanel from "../../../../components/CustomerLocationPanel"
 import { getLoanROI } from "../../../../services/loan.service";
 import { useUI } from "../../../../context/UIContext";
 import { useLoanPrevNext } from "../../../../components/LoanPrevNext";
-import VehicleLoanTopBar from "../../../../components/VehicleLoanTopBar";
+import LoanTopBar from "../../../../components/LoanTopBar";
 
 const ViewLoanPage = () => {
   const router = useRouter();
+  const returnTo = useSearchParams().get("returnTo") || "/admin/loans";
   const { id } = useParams();
   const { isDarkMode } = useUI();
   const [loan, setLoan] = useState(null);
@@ -186,14 +187,20 @@ const ViewLoanPage = () => {
           <Navbar />
           <main className="py-8 px-4 sm:px-8">
             <div className="max-w-6xl mx-auto">
-              <VehicleLoanTopBar
+              <LoanTopBar
                 title="View"
-                loan={loan}
+                loanModel="Loan"
                 loanId={id}
+                loanNumber={loan?.loanTerms?.loanNumber || loan?.loanNumber}
+                customerName={loan?.customerDetails?.customerName}
+                showVehicle
+                vehicleNumber={loan?.vehicleInformation?.vehicleNumber}
+                status={loan?.status?.status || loan?.status}
                 hasPrev={hasPrev}
                 hasNext={hasNext}
                 goPrev={goPrev}
                 goNext={goNext}
+                onBack={() => router.push(returnTo)}
               />
 
               {loan && (

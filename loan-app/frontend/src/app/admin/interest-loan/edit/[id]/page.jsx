@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import AuthGuard from "@/components/AuthGuard";
 import Sidebar from "@/components/Sidebar";
-import LoanCallRecord from "@/components/LoanCallRecord";
 import Navbar from "@/components/Navbar";
 import InterestLoanForm from "@/components/InterestLoanForm";
 import LoanROICard from "@/components/LoanROICard";
@@ -11,7 +10,8 @@ import CustomerLocationPanel from "@/components/CustomerLocationPanel";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
 import { useUI } from "@/context/UIContext";
-import { PrevButton, NextButton, useLoanPrevNext } from "@/components/LoanPrevNext";
+import { useLoanPrevNext } from "@/components/LoanPrevNext";
+import LoanTopBar from "@/components/LoanTopBar";
 
 const EditInterestLoanPage = () => {
   const router = useRouter();
@@ -95,6 +95,16 @@ const EditInterestLoanPage = () => {
         .interest-loan-edit-dark-mode {
           background-color: #0f172a;
         }
+        .interest-loan-edit-dark-mode .bg-\[\#F8FAFC\]\/80 {
+          background-color: rgba(15, 23, 42, 0.8) !important;
+        }
+        .interest-loan-edit-dark-mode .bg-blue-50 {
+          background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+        .interest-loan-edit-dark-mode .border-slate-100,
+        .interest-loan-edit-dark-mode .border-blue-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
         .interest-loan-edit-dark-mode .bg-white {
           background-color: #1e293b !important;
         }
@@ -136,39 +146,20 @@ const EditInterestLoanPage = () => {
           <Navbar />
           <main className="flex-1 p-4 sm:p-8">
             <div className="max-w-5xl mx-auto">
-              <div className="mb-8 flex justify-between items-center gap-3">
-                <div className="w-[88px] shrink-0 flex flex-col gap-2">
-                  <PrevButton disabled={!hasPrev} onClick={goPrev} />
-                  <button
-                    onClick={() => router.push(returnTo)}
-                    className="w-full flex items-center justify-center gap-1.5 px-2 py-2.5 bg-white border border-slate-200 rounded-2xl text-[10px] font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition-all shadow-sm"
-                  >
-                    <span className="text-base leading-none">←</span> Back
-                  </button>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
-                    Modify Loan Parameters
-                  </h1>
-                  <p className="text-slate-500 font-medium text-sm mt-1">
-                    Updating loan record: <span className="text-slate-900 font-bold">{loan?.loanNumber}{loan?.customerName ? `, ${loan.customerName}` : ""}</span>
-                  </p>
-                  <LoanCallRecord loanId={loan?._id} loanModel="InterestLoan" />
-                </div>
-                <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
-                  <NextButton disabled={!hasNext} onClick={goNext} />
-                  {loan && (
-                    <div className={`px-2 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 border ${
-                      loan.status === 'Active'
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                        : 'bg-slate-50 text-slate-600 border-slate-100'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${loan.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                      {loan.status}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <LoanTopBar
+                title="Modify"
+                loanModel="InterestLoan"
+                loanId={id}
+                loanNumber={loan?.loanNumber}
+                customerName={loan?.customerName}
+                status={loan?.status}
+                hasPrev={hasPrev}
+                hasNext={hasNext}
+                goPrev={goPrev}
+                goNext={goNext}
+                onBack={() => router.push(returnTo)}
+              />
+
               {loading ? (
                 <div className="text-center py-12 text-slate-400 font-bold">Loading...</div>
               ) : (

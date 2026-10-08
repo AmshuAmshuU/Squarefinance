@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "../../../../components/Sidebar";
 import Navbar from "../../../../components/Navbar";
 import AuthGuard from "../../../../components/AuthGuard";
@@ -18,13 +18,14 @@ import ForeclosureDetailsCard from "../../../../components/ForeclosureDetailsCar
 import { getWeeklyLoanROI } from "../../../../services/weeklyLoan.service";
 import { useToast } from "../../../../context/ToastContext";
 import { format } from "date-fns";
-import LoanStatusBadge from "../../../../components/LoanStatusBadge";
 import { useUI } from "../../../../context/UIContext";
-import { PrevButton, NextButton, useLoanPrevNext } from "../../../../components/LoanPrevNext";
+import { useLoanPrevNext } from "../../../../components/LoanPrevNext";
+import LoanTopBar from "../../../../components/LoanTopBar";
 
 const ViewWeeklyLoanPage = ({ params: paramsPromise }) => {
   const params = use(paramsPromise);
   const router = useRouter();
+  const returnTo = useSearchParams().get("returnTo") || "/admin/weekly-loans";
   const { isDarkMode } = useUI();
   const { showToast } = useToast();
   const { hasPrev, hasNext, goPrev, goNext } = useLoanPrevNext({ loanModel: "WeeklyLoan", id: params.id, mode: "view" });
@@ -102,30 +103,19 @@ const ViewWeeklyLoanPage = ({ params: paramsPromise }) => {
           <Navbar />
           <main className="flex-1 py-8 px-4 sm:px-8">
             <div className="max-w-5xl mx-auto">
-              <div className="sticky top-16 z-30 bg-[#F8FAFC]/80 backdrop-blur-md py-4 mb-8 border-b border-slate-100 flex justify-between items-center gap-3 transition-all duration-300">
-                <div className="w-[88px] shrink-0">
-                  <PrevButton disabled={!hasPrev} onClick={goPrev} />
-                </div>
-                <div className="flex-1 min-w-0 flex items-center gap-4">
-                  <span className="hidden sm:flex w-12 h-12 shrink-0 bg-blue-500/10 text-blue-600 rounded-2xl items-center justify-center text-2xl">
-                    📄
-                  </span>
-                  <div className="min-w-0">
-                    <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
-                      View Weekly Loan
-                    </h1>
-                    <p className="text-slate-500 font-medium text-sm text-left">
-                      Loan Number: {loanData?.loanNumber}{loanData?.customerName ? `, ${loanData.customerName}` : ""}
-                    </p>
-                  </div>
-                </div>
-                <div className="w-[88px] shrink-0 flex flex-col items-stretch gap-2">
-                  <NextButton disabled={!hasNext} onClick={goNext} />
-                  <div className="flex justify-center">
-                    <LoanStatusBadge status={loanData?.status} />
-                  </div>
-                </div>
-              </div>
+              <LoanTopBar
+                title="View"
+                loanModel="WeeklyLoan"
+                loanId={params.id}
+                loanNumber={loanData?.loanNumber}
+                customerName={loanData?.customerName}
+                status={loanData?.status}
+                hasPrev={hasPrev}
+                hasNext={hasNext}
+                goPrev={goPrev}
+                goNext={goNext}
+                onBack={() => router.push(returnTo)}
+              />
 
               {loading ? (
                 <div className="flex items-center justify-center h-64">

@@ -19,7 +19,7 @@ import { getEMIsByLoanId } from "../../../../../services/customer";
 import { flattenLoan } from "../../../../../utils/loanUtils";
 import { useUI } from "../../../../../context/UIContext";
 import { useLoanPrevNext } from "../../../../../components/LoanPrevNext";
-import VehicleLoanTopBar from "../../../../../components/VehicleLoanTopBar";
+import LoanTopBar from "../../../../../components/LoanTopBar";
 
 const EditLoanPage = () => {
   const router = useRouter();
@@ -253,16 +253,20 @@ const EditLoanPage = () => {
           <Navbar />
           <main className="py-8 px-4 sm:px-8">
             <div className="max-w-6xl mx-auto">
-              <VehicleLoanTopBar
+              <LoanTopBar
                 title="Modify"
-                loan={loan}
+                loanModel="Loan"
                 loanId={id}
+                loanNumber={loan?.loanTerms?.loanNumber || loan?.loanNumber}
+                customerName={loan?.customerDetails?.customerName}
+                showVehicle
+                vehicleNumber={loan?.vehicleInformation?.vehicleNumber}
+                status={loan?.status?.status || loan?.status}
                 hasPrev={hasPrev}
                 hasNext={hasNext}
                 goPrev={goPrev}
                 goNext={goNext}
                 onBack={() => router.push(returnTo)}
-                showLastCall
               />
 
               {loan && (
