@@ -261,31 +261,49 @@ const CollectionsPage = () => {
     return "#";
   };
 
+  // One Amount column for everything collected: normal EMIs (green), overdue
+  // (red), and the non-EMI amounts - foreclosure (blue), vehicle sale (amber)
+  // and interest loan principal (teal). Colours match the Type badge colours.
+  const amountClass = (type) =>
+    type === "Overdue" ? "col-amt-overdue text-red-600" :
+    type === "Foreclosure" ? "col-amt-foreclosure text-blue-600" :
+    type === "Vehicle Sale" ? "col-amt-sale text-amber-600" :
+    type === "Interest Loan Principal" ? "col-amt-principal text-teal-600" :
+    "col-amt-emi text-emerald-600";
+
+  const typeBadgeClass = (type) =>
+    type === 'Monthly' ? 'bg-purple-50 text-purple-600 border-purple-100' :
+    type === 'Weekly' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+    type === 'Overdue' ? 'bg-red-50 text-red-600 border-red-100' :
+    type === 'Foreclosure' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+    type === 'Vehicle Sale' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+    type === 'Interest Loan Principal' ? 'bg-teal-50 text-teal-600 border-teal-100' :
+    'bg-emerald-50 text-emerald-600 border-emerald-100';
+
   // Render Functions for distinct tables
   const renderCollectionsTable = () => (
-    <table className="w-full text-left border-collapse">
+    <table className="w-auto text-left border-collapse">
       <thead>
         <tr className="bg-slate-50 border-b border-slate-200">
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Loan No</th>
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">EMI No</th>
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer Name</th>
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">EMI Paid</th>
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Overdue</th>
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Type</th>
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Payment Mode</th>
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Date</th>
-          <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Collector</th>
+          <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Loan No</th>
+          <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">EMI No</th>
+          <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer Name</th>
+          <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+          <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Type</th>
+          <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Payment Mode</th>
+          <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Date</th>
+          <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Collector</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-slate-100">
         {loading ? (
-          <tr><td colSpan="9" className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">Synchronizing records...</td></tr>
+          <tr><td colSpan="8" className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">Synchronizing records...</td></tr>
         ) : collections.length === 0 ? (
-          <tr><td colSpan="9" className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">No transactions found for this period</td></tr>
+          <tr><td colSpan="8" className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">No transactions found for this period</td></tr>
         ) : (
           collections.map((item, idx) => (
             <tr key={idx} className="hover:bg-slate-50 transition-colors">
-              <td className="px-6 py-4 text-xs font-black text-slate-900 whitespace-nowrap">
+              <td className="px-4 py-4 text-xs font-black text-slate-900 whitespace-nowrap">
                 <Link 
                   href={getLoanEditLink(item.loanId, item.loanModel)}
                   className="text-primary hover:underline underline-offset-4 decoration-2"
@@ -293,36 +311,27 @@ const CollectionsPage = () => {
                   {item.loanNumber}
                 </Link>
               </td>
-              <td className="px-6 py-4 text-xs text-center font-black text-slate-500">
+              <td className="px-4 py-4 text-xs text-center font-black text-slate-500">
                 {item.emiNo || '-'}
               </td>
-              <td className="px-6 py-4 text-xs font-bold text-slate-600 uppercase whitespace-nowrap truncate max-w-[150px]">{item.customerName}</td>
-              <td className="px-6 py-4 text-xs text-right font-black text-emerald-600">
-                ₹{item.emiAmount?.toLocaleString() || '0'}
+              <td className="px-4 py-4 text-xs font-bold text-slate-600 uppercase whitespace-nowrap truncate max-w-[150px]">{item.customerName}</td>
+              <td className={`px-4 py-4 text-xs text-right font-black whitespace-nowrap ${amountClass(item.paymentType)}`}>
+                ₹{(item.totalAmount ?? item.amount ?? 0).toLocaleString()}
               </td>
-              <td className="px-6 py-4 text-xs text-right font-black text-red-600">
-                ₹{item.overdueAmount?.toLocaleString() || '0'}
-              </td>
-              <td className="px-6 py-4 text-xs text-center">
-                <span className={`px-2 py-1 rounded-lg font-black text-[9px] uppercase border ${
-                  item.paymentType === 'Monthly' ? 'bg-purple-50 text-purple-600 border-purple-100' :
-                  item.paymentType === 'Weekly' ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                  item.paymentType === 'Overdue' ? 'bg-red-50 text-red-600 border-red-100' :
-                  item.paymentType === 'Foreclosure' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                  'bg-emerald-50 text-emerald-600 border-emerald-100'
-                }`}>
+              <td className="px-4 py-4 text-xs text-center">
+                <span className={`px-2 py-1 rounded-lg font-black text-[9px] uppercase border whitespace-nowrap ${typeBadgeClass(item.paymentType)}`}>
                   {item.paymentType}
                 </span>
               </td>
-              <td className="px-6 py-4 text-xs text-center font-bold text-slate-500 uppercase whitespace-nowrap">
+              <td className="px-4 py-4 text-xs text-center font-bold text-slate-500 uppercase whitespace-nowrap">
                 {item.paymentMode || '-'}
               </td>
-              <td className="px-6 py-4 text-xs font-bold text-slate-500 text-center whitespace-nowrap">
+              <td className="px-4 py-4 text-xs font-bold text-slate-500 text-center whitespace-nowrap">
                 {item.date || item.createdAt ? 
                   format(new Date(item.date || item.createdAt), "dd-MM-yyyy") : 
                   '-'}
               </td>
-              <td className="px-6 py-4 text-xs font-bold text-slate-600 uppercase text-center whitespace-nowrap">
+              <td className="px-4 py-4 text-xs font-bold text-slate-600 uppercase text-center whitespace-nowrap">
                 {item.updatedBy || 'N/A'}
               </td>
             </tr>
@@ -460,6 +469,22 @@ const CollectionsPage = () => {
         .collections-dark-mode .bg-emerald-50 {
           background-color: rgba(16, 185, 129, 0.15) !important;
         }
+        .collections-dark-mode .bg-amber-50 {
+          background-color: rgba(245, 158, 11, 0.15) !important;
+        }
+        .collections-dark-mode .bg-teal-50 {
+          background-color: rgba(20, 184, 166, 0.15) !important;
+        }
+        .collections-dark-mode .border-amber-100,
+        .collections-dark-mode .border-teal-100 {
+          border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+        /* Amount column colours: brighter shades so they read on dark */
+        .collections-dark-mode .col-amt-emi { color: #34d399 !important; }
+        .collections-dark-mode .col-amt-overdue { color: #f87171 !important; }
+        .collections-dark-mode .col-amt-foreclosure { color: #60a5fa !important; }
+        .collections-dark-mode .col-amt-sale { color: #fbbf24 !important; }
+        .collections-dark-mode .col-amt-principal { color: #2dd4bf !important; }
         .collections-dark-mode .text-slate-900,
         .collections-dark-mode .text-slate-800 {
           color: #f1f5f9 !important;
