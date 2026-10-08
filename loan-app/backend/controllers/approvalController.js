@@ -14,6 +14,8 @@ const { syncEmiPayments } = require("../utils/syncEmiPayments");
 const Expense = require("../models/Expense");
 const LoanDraft = require("../models/LoanDraft");
 const { APPROVAL_VALID_HOURS } = require("../utils/rateApproval");
+const photoStore = require("../utils/cloudinaryPhotos");
+const { saveNote: savePhotoNote, MODELS: PHOTO_MODELS } = require("./photoController");
 const { createExpenseRecord, updateExpenseRecord } = require("../utils/expenseActions");
 
 // Invokes an existing asyncHandler-wrapped route handler internally (no real
@@ -48,7 +50,24 @@ const getPendingApprovals = asyncHandler(async (req, res, next) => {
     .populate("requestedBy", "name")
     .sort({ createdAt: -1 });
 
-  sendResponse(res, 200, "success", "Pending approvals fetched", null, approvals);
+  // Photo requests show the proposed (and current) picture on the approval card.
+  const withPreviews = await Promise.all(
+    approvals.map(async (a) => {
+      if (a.requestType !== "PHOTO_CHANGE") return a;
+      const o = a.toObject();
+      const d = o.requestedData || {};
+      if (d.pendingPublicId) d.newPhotoUrl = photoStore.fullUrl(d.pendingPublicId, d.pendingVersion);
+      const Model = PHOTO_MODELS[a.targetModel];
+      const loanDoc = Model ? await Model.findById(a.targetId).select("customerPhoto").lean() : null;
+      if (loanDoc?.customerPhoto?.publicId) {
+        d.currentPhotoUrl = photoStore.fullUrl(loanDoc.customerPhoto.publicId, loanDoc.customerPhoto.version);
+      }
+      o.requestedData = d;
+      return o;
+    }),
+  );
+
+  sendResponse(res, 200, "success", "Pending approvals fetched", null, withPreviews);
 });
 
 // Process an approval request
@@ -751,6 +770,26 @@ const processApproval = asyncHandler(async (req, res, next) => {
       draft.approvedAt = approvedAt;
       draft.expiresAt = new Date(approvedAt.getTime() + APPROVAL_VALID_HOURS * 60 * 60 * 1000);
       await draft.save();
+    } else if (requestType === "PHOTO_CHANGE") {
+      const PhotoModel = PHOTO_MODELS[targetModel];
+      const loanDoc = PhotoModel ? await PhotoModel.findById(targetId).select("customerPhoto") : null;
+      if (!loanDoc) {
+        await photoStore.destroyAsset(requestedData.pendingPublicId);
+        return next(new ErrorHandler("This loan no longer exists, so the photo change can't be applied", 404));
+      }
+      if (requestedData.action === "delete") {
+        await photoStore.destroyAsset(loanDoc.customerPhoto?.publicId);
+        await savePhotoNote(PhotoModel, targetId, null);
+      } else {
+        const moved = await photoStore.renameAsset(requestedData.pendingPublicId, photoStore.finalPublicId(targetModel, targetId));
+        await savePhotoNote(PhotoModel, targetId, {
+          publicId: moved.public_id,
+          version: moved.version,
+          bytes: moved.bytes,
+          uploadedBy: approval.requestedBy,
+          uploadedAt: new Date(),
+        });
+      }
     } else if (requestType === "EXPENSE_ADD") {
       await createExpenseRecord(requestedData.fields, approval.requestedBy);
     } else if (requestType === "EXPENSE_EDIT") {
@@ -827,6 +866,10 @@ const processApproval = asyncHandler(async (req, res, next) => {
         { _id: targetId, status: { $ne: "Completed" } },
         { status: "Rejected", rejectedBy: req.user._id, rejectedAt: new Date(), rejectRemarks: remarks || "" },
       );
+    } else if (requestType === "PHOTO_CHANGE") {
+      if (approval.requestedData?.action === "set") {
+        await photoStore.destroyAsset(approval.requestedData.pendingPublicId);
+      }
     } else if (targetModel === "EMI") {
       // Revert EMI - determine previous status from amountPaid
       const emi = await EMI.findById(targetId);
@@ -889,6 +932,21 @@ const processApproval = asyncHandler(async (req, res, next) => {
         totalApprovedAmount += parseFloat(ov.amount) || 0;
       });
     }
+  }
+
+  if (approval.requestType === "PHOTO_CHANGE") {
+    const what = approval.requestedData.action === "delete" ? "delete the photo of" : "change the photo of";
+    await sendNotification({
+      recipientId: approval.requestedBy,
+      senderId: req.user._id,
+      type: status === "Approved" ? "PAYMENT_APPROVED" : "PAYMENT_REJECTED",
+      title: `Customer Photo ${status}`,
+      message: `Your request to ${what} loan ${approval.loanNumber} (${approval.customerName}) was ${status.toLowerCase()} by ${req.user.name}.`,
+      data: { loanNumber: approval.loanNumber, customerName: approval.customerName, employeeName: req.user.name, approvalId: approval._id },
+    });
+    const { notifyApprovalCountChange: notifyPhotoCount } = require("./notificationController");
+    await notifyPhotoCount();
+    return sendResponse(res, 200, "success", `Request ${status} successfully`, null, approval);
   }
 
   if (approval.requestType === "RATE_APPROVAL") {

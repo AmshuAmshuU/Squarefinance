@@ -3,26 +3,7 @@ import React from "react";
 import { PrevButton, NextButton } from "./LoanPrevNext";
 import LoanStatusBadge from "./LoanStatusBadge";
 import LoanCallRecord from "./LoanCallRecord";
-import { useUI } from "../context/UIContext";
-
-// 2cm x 2cm is about 76 CSS pixels. Placeholder for the customer's photo -
-// a real photo will replace the silhouette once uploading is built.
-const CustomerPhotoBox = () => {
-  const { isDarkMode } = useUI();
-  return (
-    <div
-      className={`w-[76px] h-[76px] rounded-xl border flex items-center justify-center overflow-hidden ${
-        isDarkMode ? "bg-slate-700 border-white/10 text-slate-400" : "bg-slate-200 border-slate-300 text-slate-400"
-      }`}
-      aria-label="Customer photo"
-    >
-      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
-      </svg>
-    </div>
-  );
-};
+import CustomerPhoto from "./CustomerPhoto";
 
 // The locked top bar of every loan's Modify and Profile view page (Vehicle,
 // Weekly, Daily and Interest alike). Compact on purpose, to make room for the
@@ -78,7 +59,7 @@ const LoanTopBar = ({
         <LoanStatusBadge status={status} />
       </div>
       <div className="flex justify-center">
-        <CustomerPhotoBox />
+        <CustomerPhoto loanModel={loanModel} loanId={loanId} />
       </div>
     </div>
   </div>

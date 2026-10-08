@@ -10,6 +10,7 @@ const customerRoutes = require("./routes/customerroutes");
 const emiUtilityRoutes = require("./routes/emiUtilityRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const weeklyLoanRoutes = require("./routes/weeklyLoanRoutes");
+const photoRoutes = require("./routes/photoRoutes");
 const dailyLoanRoutes = require("./routes/dailyLoanRoutes");
 const loanEmiRoutes = require("./routes/loanEmiRoutes");
 const todoRoutes = require("./routes/todoRoutes");
@@ -173,6 +174,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/whatsapp/webhook", whatsappWebhookRoutes);
 app.use("/api/push", pushRoutes);
+app.use("/api/photos", photoRoutes);
 
 // Error Middleware
 app.use(errorMiddleware);

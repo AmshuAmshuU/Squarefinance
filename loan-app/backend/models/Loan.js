@@ -288,6 +288,15 @@ const loanSchema = new mongoose.Schema(
         type: String,
       },
     },
+    // Customer photo: the picture itself is in Cloudinary (private); this is
+    // just the note of where it is. See controllers/photoController.js.
+    customerPhoto: {
+      publicId: { type: String },
+      version: { type: Number },
+      bytes: { type: Number },
+      uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      uploadedAt: { type: Date },
+    },
     // Permanent per-loan link a customer taps to share their current
     // location (WhatsApp signup/reminder messages) - see
     // utils/customerLocation.js. locationToken never changes once set;

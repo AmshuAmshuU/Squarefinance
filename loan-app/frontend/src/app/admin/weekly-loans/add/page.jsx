@@ -8,12 +8,14 @@ import WeeklyLoanForm from "../../../../components/WeeklyLoanForm";
 import { createWeeklyLoan } from "../../../../services/weeklyLoan.service";
 import { useToast } from "../../../../context/ToastContext";
 import { useUI } from "../../../../context/UIContext";
+import CustomerPhotoPicker from "../../../../components/CustomerPhotoPicker";
 
 const AddWeeklyLoanPage = () => {
   const router = useRouter();
   const { showToast } = useToast();
   const { isDarkMode } = useUI();
   const [submitting, setSubmitting] = useState(false);
+  const [photoTemp, setPhotoTemp] = useState(null);
 
   const initialData = {
     loanNumber: "",
@@ -34,7 +36,7 @@ const AddWeeklyLoanPage = () => {
   const handleSubmit = async (formData) => {
     setSubmitting(true);
     try {
-      await createWeeklyLoan(formData);
+      await createWeeklyLoan({ ...formData, photoTempId: photoTemp?.token });
       showToast("Weekly loan record created successfully", "success");
       router.push("/admin/weekly-loans");
     } catch (err) {
@@ -71,6 +73,9 @@ const AddWeeklyLoanPage = () => {
                   Create a new weekly repayment loan record
                 </p>
               </div>
+
+              <CustomerPhotoPicker loanModel="WeeklyLoan" value={photoTemp} onChange={setPhotoTemp} />
+
 
               <WeeklyLoanForm
                 initialData={initialData}

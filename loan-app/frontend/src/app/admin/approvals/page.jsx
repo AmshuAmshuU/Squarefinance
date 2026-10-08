@@ -184,8 +184,9 @@ const ApprovalsPage = () => {
                                                       EXPENSE_EDIT: "Expense Edit Request",
                                                       EXPENSE_DELETE: "Expense Delete Request",
                                                       RATE_APPROVAL: "Interest Rate Approval (new loan)",
+                                                      PHOTO_CHANGE: "Customer Photo Request",
                                                     }[app.requestType] || "Loan Edit Request";
-                                                    if (app.requestType === "LOAN_EDIT" || isExpenseRequest || app.requestType === "RATE_APPROVAL") {
+                                                    if (app.requestType === "LOAN_EDIT" || isExpenseRequest || app.requestType === "RATE_APPROVAL" || app.requestType === "PHOTO_CHANGE") {
                                                       return (
                                                         <tr key={app._id} className="border-b border-slate-50">
                                                           <td colSpan={8} className="px-3 py-3">
@@ -219,6 +220,26 @@ const ApprovalsPage = () => {
                                                                   ))}
                                                                 </tbody>
                                                               </table>
+                                                              {app.requestType === "PHOTO_CHANGE" && (
+                                                                <div className="flex flex-wrap items-start gap-4 mt-3">
+                                                                  {app.requestedData?.currentPhotoUrl && (
+                                                                    <div>
+                                                                      <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">Current photo</p>
+                                                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                      <img src={app.requestedData.currentPhotoUrl} alt="Current" className="w-28 rounded-xl border border-slate-200" />
+                                                                    </div>
+                                                                  )}
+                                                                  {app.requestedData?.newPhotoUrl ? (
+                                                                    <div>
+                                                                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Proposed photo</p>
+                                                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                      <img src={app.requestedData.newPhotoUrl} alt="Proposed" className="w-28 rounded-xl border border-emerald-200" />
+                                                                    </div>
+                                                                  ) : (
+                                                                    <p className="text-xs font-bold text-rose-500">The photo will be deleted.</p>
+                                                                  )}
+                                                                </div>
+                                                              )}
                                                             </div>
                                                           </td>
                                                         </tr>

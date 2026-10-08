@@ -17,6 +17,7 @@ const { attachCallRecords } = require("../utils/callRecords");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { notifyAdmins } = require("./notificationController");
 const LoanDraft = require("../models/LoanDraft");
+const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
 const { closeDraftWithLoan } = require("./loanDraftController");
 const { needsRateApproval, MIN_FREE_RATE } = require("../utils/rateApproval");
 const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
@@ -204,6 +205,9 @@ const createLoan = asyncHandler(async (req, res, next) => {
   } else if (draftId) {
     await closeDraftWithLoan(draftId, req.user, loan);
   }
+
+  // Attach the customer photo taken while filling in the form (if any)
+  await adoptTempPhoto(req.body.photoTempId, "Loan", loan, req.user);
 
   // Generate EMIs
   const emis = [];
@@ -3073,6 +3077,7 @@ const deleteLoan = asyncHandler(async (req, res, next) => {
   ]);
 
   await loan.deleteOne();
+  await removeLoanPhoto(loan);
 
   sendResponse(
     res,

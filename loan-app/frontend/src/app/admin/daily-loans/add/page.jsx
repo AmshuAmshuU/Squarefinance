@@ -8,6 +8,7 @@ import DailyLoanForm from "../../../../components/DailyLoanForm";
 import { createDailyLoan } from "../../../../services/dailyLoan.service";
 import { useToast } from "../../../../context/ToastContext";
 import { useUI } from "../../../../context/UIContext";
+import CustomerPhotoPicker from "../../../../components/CustomerPhotoPicker";
 import { getTodayIST } from "../../../../utils/dateUtils";
 
 const AddDailyLoanPage = () => {
@@ -15,6 +16,7 @@ const AddDailyLoanPage = () => {
   const { showToast } = useToast();
   const { isDarkMode } = useUI();
   const [submitting, setSubmitting] = useState(false);
+  const [photoTemp, setPhotoTemp] = useState(null);
 
   const initialData = {
     loanNumber: "",
@@ -35,7 +37,7 @@ const AddDailyLoanPage = () => {
   const handleSubmit = async (formData) => {
     setSubmitting(true);
     try {
-      await createDailyLoan(formData);
+      await createDailyLoan({ ...formData, photoTempId: photoTemp?.token });
       showToast("Daily loan record created successfully", "success");
       router.push("/admin/daily-loans");
     } catch (err) {
@@ -72,6 +74,9 @@ const AddDailyLoanPage = () => {
                   Create a new daily repayment loan record
                 </p>
               </div>
+
+              <CustomerPhotoPicker loanModel="DailyLoan" value={photoTemp} onChange={setPhotoTemp} />
+
 
               <DailyLoanForm
                 initialData={initialData}

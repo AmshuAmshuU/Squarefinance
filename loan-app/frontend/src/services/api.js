@@ -23,6 +23,11 @@ const apiHandler = async (endpoint, options = {}, isRetry = false) => {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  // File uploads (FormData): let the browser set the multipart header itself.
+  if (typeof FormData !== "undefined" && options.body instanceof FormData) {
+    delete headers["Content-Type"];
+  }
+
   const config = {
     ...options,
     headers,

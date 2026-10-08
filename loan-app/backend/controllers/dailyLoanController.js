@@ -7,6 +7,7 @@ const ClosedLoan = require("../models/ClosedLoan");
 const Followup = require("../models/Followup");
 const Payment = require("../models/Payment");
 const SeizedVehicle = require("../models/SeizedVehicle");
+const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
 const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
@@ -112,6 +113,9 @@ exports.createDailyLoan = asyncHandler(async (req, res, next) => {
     status: status || "Active",
     createdBy: req.user._id,
   });
+
+  // Attach the customer photo taken while filling in the form (if any)
+  await adoptTempPhoto(req.body.photoTempId, "DailyLoan", dailyLoan, req.user);
 
   // Generate EMIs
   const emis = [];
@@ -898,6 +902,7 @@ exports.deleteDailyLoan = asyncHandler(async (req, res, next) => {
   ]);
 
   await dailyLoan.deleteOne();
+  await removeLoanPhoto(dailyLoan);
   sendResponse(res, 200, "success", "Daily loan deleted successfully");
 });
 

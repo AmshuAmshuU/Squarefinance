@@ -8,17 +8,19 @@ import InterestLoanForm from "@/components/InterestLoanForm";
 import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
 import { useUI } from "@/context/UIContext";
+import CustomerPhotoPicker from "@/components/CustomerPhotoPicker";
 
 const AddInterestLoanPage = () => {
   const router = useRouter();
   const { showToast } = useToast();
   const { isDarkMode } = useUI();
   const [submitting, setSubmitting] = useState(false);
+  const [photoTemp, setPhotoTemp] = useState(null);
 
   const handleSubmit = async (values) => {
     setSubmitting(true);
     try {
-      await interestLoanService.createLoan(values);
+      await interestLoanService.createLoan({ ...values, photoTempId: photoTemp?.token });
       showToast("Interest loan created successfully", "success");
       router.push("/admin/interest-loan");
     } catch (err) {
@@ -51,6 +53,8 @@ const AddInterestLoanPage = () => {
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Add New Interest Loan</h1>
                 <p className="text-slate-500 font-medium text-sm">Create a new standalone interest-based loan profile.</p>
               </div>
+              <CustomerPhotoPicker loanModel="InterestLoan" value={photoTemp} onChange={setPhotoTemp} />
+
               <InterestLoanForm 
                 onSubmit={handleSubmit} 
                 submitting={submitting} 

@@ -6,6 +6,7 @@ import Navbar from "../../../../components/Navbar";
 import Sidebar from "../../../../components/Sidebar";
 import LoanForm from "../../../../components/LoanForm";
 import LoanDraftsPanel from "../../../../components/LoanDraftsPanel";
+import CustomerPhotoPicker from "../../../../components/CustomerPhotoPicker";
 import { createLoan } from "../../../../services/loan.service";
 import { saveRateDraft, getLoanDraft } from "../../../../services/loanDraft.service";
 import { useToast } from "../../../../context/ToastContext";
@@ -20,6 +21,7 @@ const AddLoanPage = () => {
   const draftId = searchParams.get("draft");
   const [draft, setDraft] = useState(null);
   const [draftLoading, setDraftLoading] = useState(!!draftId);
+  const [photoTemp, setPhotoTemp] = useState(null);
 
   const blankData = {
     customerDetails: {
@@ -84,6 +86,7 @@ const AddLoanPage = () => {
           return;
         }
         setDraft(res.data);
+        setPhotoTemp(res.data.formData?.photoTemp || null);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -112,7 +115,7 @@ const AddLoanPage = () => {
   // Admin to approve it. The employee can leave and come back later.
   const handleRequestRateApproval = async (values) => {
     try {
-      const res = await saveRateDraft(draft?._id, values);
+      const res = await saveRateDraft(draft?._id, { ...values, photoTemp });
       showToast(res.message || "Draft saved", "success");
       if (!draft?._id) {
         router.replace(`/admin/loans/add?draft=${res.data._id}`);
@@ -128,7 +131,7 @@ const AddLoanPage = () => {
   const handleSubmit = async (formData) => {
     setSubmitting(true);
     try {
-      await createLoan(draft?._id ? { ...formData, draftId: draft._id } : formData);
+      await createLoan({ ...formData, ...(draft?._id ? { draftId: draft._id } : {}), photoTempId: photoTemp?.token });
       showToast("Loan profile created successfully", "success");
       router.push("/admin/loans");
     } catch (err) {
@@ -169,6 +172,8 @@ const AddLoanPage = () => {
               </div>
 
               <LoanDraftsPanel activeDraftId={draft?._id} />
+
+              <CustomerPhotoPicker loanModel="Loan" value={photoTemp} onChange={setPhotoTemp} />
 
               {draftLoading ? (
                 <div className="text-center py-12 text-slate-400 font-bold">Opening draft...</div>

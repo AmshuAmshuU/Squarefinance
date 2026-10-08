@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const InterestLoan = require("../models/InterestLoan");
 const InterestEMI = require("../models/InterestEMI");
 const Payment = require("../models/Payment");
+const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
 const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
@@ -149,6 +150,9 @@ exports.createInterestLoan = asyncHandler(async (req, res, next) => {
     status: remainingP <= 0 ? "Closed" : (req.body.status || "Active"),
     remarks,
   });
+
+  // Attach the customer photo taken while filling in the form (if any)
+  await adoptTempPhoto(req.body.photoTempId, "InterestLoan", interestLoan, req.user);
 
   // Generate EMIs from emiStartDate until today (Catch-up loop)
   const today = normalizeToMidnight(new Date());
@@ -1064,6 +1068,7 @@ exports.deleteInterestLoan = asyncHandler(async (req, res, next) => {
   await InterestEMI.deleteMany({ interestLoanId: loan._id });
   await Payment.deleteMany({ loanId: loan._id, loanModel: "InterestLoan" });
   await loan.deleteOne();
+  await removeLoanPhoto(loan);
   sendResponse(res, 200, "success", "Interest loan deleted successfully");
 });
 
