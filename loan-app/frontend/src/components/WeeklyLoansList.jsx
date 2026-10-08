@@ -267,7 +267,7 @@ const WeeklyLoansList = ({ type, title }) => {
         {/* MOBILE VIEW */}
         <div className="md:hidden">
           <div className="overflow-x-auto scrollbar-none">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
+            <table className="w-full text-left border-collapse min-w-[780px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
@@ -280,15 +280,7 @@ const WeeklyLoansList = ({ type, title }) => {
                     MOBILE
                   </th>
 
-                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
-                    EMI
-                  </th>
-                  <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
-                    DISBURSEMENT
-                  </th>
-                  <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
-                    STATUS
-                  </th>
+                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">DETAILS</th>
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                     CLIENT RESPONSE
                   </th>
@@ -301,7 +293,7 @@ const WeeklyLoansList = ({ type, title }) => {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="6"
                       className="px-4 py-12 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest"
                     >
                       Loading...
@@ -310,7 +302,7 @@ const WeeklyLoansList = ({ type, title }) => {
                 ) : loans.length === 0 ? (
                   <tr>
                     <td
-                      colSpan="8"
+                      colSpan="6"
                       className="px-4 py-12 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest"
                     >
                       No records
@@ -330,7 +322,7 @@ const WeeklyLoansList = ({ type, title }) => {
                       }`}
                     >
                       <td
-                        className={`px-4 py-5 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
+                        className={`pl-2 pr-0 pt-2 pb-1.5 align-top whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                           selectedRowId === loan._id
                             ? "bg-blue-50/80"
                             : loan.status === "Closed"
@@ -344,6 +336,19 @@ const WeeklyLoansList = ({ type, title }) => {
                         >
                           {loan.loanNumber}
                         </Link>
+                        <div className="mt-1">
+                          <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${
+                            loan.status === "Active"
+                              ? "bg-green-100 text-green-600 border-green-200"
+                              : loan.status === "Closed"
+                                ? "bg-slate-100 text-slate-500 border-slate-200"
+                                : "bg-orange-100 text-orange-600 border-orange-200"
+                          }`}
+                        >
+                          {loan.status}
+                        </span>
+                        </div>
                       </td>
                       <td className="px-4 py-5 whitespace-nowrap">
                         <span className="font-black text-slate-900 text-xs uppercase tracking-tighter">
@@ -373,31 +378,19 @@ const WeeklyLoansList = ({ type, title }) => {
                         </div>
                       </td>
 
-                       <td className="px-4 py-5 text-center whitespace-nowrap">
-                        <div className="flex flex-col items-center">
+                       <td className="px-4 pt-2 pb-2 align-top text-center whitespace-nowrap">
+                        <div>
+                          <span className="font-bold text-slate-900 text-[10px]">
+                          ₹{loan.principalAmount?.toLocaleString()}
+                        </span>
+                        </div>
+                        <div>
                           <span className="font-black text-primary text-[11px]">
                             ₹{loan.emiAmount?.toLocaleString()}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-5 text-center whitespace-nowrap">
-                        <span className="font-bold text-slate-900 text-[10px]">
-                          ₹{loan.principalAmount?.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-5 text-center whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${
-                            loan.status === "Active"
-                              ? "bg-green-100 text-green-600 border-green-200"
-                              : loan.status === "Closed"
-                                ? "bg-slate-100 text-slate-500 border-slate-200"
-                                : "bg-orange-100 text-orange-600 border-orange-200"
-                          }`}
-                        >
-                          {loan.status}
-                        </span>
-                      </td>
+
                       <td className="px-4 py-5 text-center">
                         <span className="text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 block max-h-[60px] overflow-y-auto whitespace-normal break-words scrollbar-none mx-auto">
                           {loan.clientResponse || "—"}

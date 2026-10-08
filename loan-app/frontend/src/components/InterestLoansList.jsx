@@ -242,24 +242,22 @@ const InterestLoansList = ({ type, title }) => {
         {/* MOBILE VIEW */}
         <div className="md:hidden">
           <div className="overflow-x-auto scrollbar-none">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
+            <table className="w-full text-left border-collapse min-w-[780px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">LOAN NO</th>
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">CUSTOMER NAME</th>
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">MOBILE</th>
-                  <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">INTEREST</th>
-                  <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">DISBURSEMENT</th>
-                  <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">STATUS</th>
+                  <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">DETAILS</th>
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">CLIENT RESPONSE</th>
                   <th className="px-4 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap sticky right-0 bg-slate-50 z-20 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)]">ACTIONS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan="8" className="px-4 py-12 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest">Loading...</td></tr>
+                  <tr><td colSpan="6" className="px-4 py-12 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest">Loading...</td></tr>
                 ) : loans.length === 0 ? (
-                  <tr><td colSpan="8" className="px-4 py-12 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest">No records</td></tr>
+                  <tr><td colSpan="6" className="px-4 py-12 text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest">No records</td></tr>
                 ) : (
                   loans.map((loan) => (
                     <tr
@@ -267,8 +265,15 @@ const InterestLoansList = ({ type, title }) => {
                       onClick={(e) => toggleHighlight(e, loan._id)}
                       className={`cursor-pointer transition-colors group ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 active:bg-slate-200" : "active:bg-slate-50"}`}
                     >
-                      <td className={`px-4 py-5 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 group-hover:bg-slate-200 border-l-4 border-slate-500" : "bg-white group-hover:bg-slate-50"}`}>
+                      <td className={`pl-2 pr-0 pt-2 pb-1.5 align-top whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${selectedRowId === loan._id ? "bg-blue-50/80" : loan.status === "Closed" ? "bg-slate-200/70 group-hover:bg-slate-200 border-l-4 border-slate-500" : "bg-white group-hover:bg-slate-50"}`}>
                         <Link href={`/admin/interest-loan/edit/${loan._id}`} className="text-[10px] font-black text-primary uppercase tracking-tighter bg-blue-50 px-2 py-1 rounded-md">{loan.loanNumber}</Link>
+                        <div className="mt-1">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${
+                          loan.status === "Active" ? "bg-green-100 text-green-600 border-green-200" :
+                          loan.status === "Closed" ? "bg-slate-100 text-slate-500 border-slate-200" :
+                          "bg-orange-100 text-orange-600 border-orange-200"
+                        }`}>{loan.status}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-5 whitespace-nowrap">
                         <span className="font-black text-slate-900 text-xs uppercase tracking-tighter">{loan.customerName}</span>
@@ -289,19 +294,15 @@ const InterestLoansList = ({ type, title }) => {
                           ))}
                         </div>
                       </td>
-                      <td className="px-4 py-5 text-center whitespace-nowrap">
-                        <span className="font-black text-primary text-[10px]">₹{Math.round((loan.remainingPrincipalAmount * loan.interestRate) / 100).toLocaleString("en-IN")}</span>
+                      <td className="px-4 pt-2 pb-2 align-top text-center whitespace-nowrap">
+                        <div>
+                          <span className="font-bold text-slate-900 text-[10px]">₹{(loan.principalAmount || loan.initialPrincipalAmount)?.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="font-black text-primary text-[10px]">₹{Math.round((loan.remainingPrincipalAmount * loan.interestRate) / 100).toLocaleString("en-IN")}</span>
+                        </div>
                       </td>
-                      <td className="px-4 py-5 text-center whitespace-nowrap">
-                        <span className="font-bold text-slate-900 text-[10px]">₹{(loan.principalAmount || loan.initialPrincipalAmount)?.toLocaleString("en-IN")}</span>
-                      </td>
-                      <td className="px-4 py-5 text-center whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${
-                          loan.status === "Active" ? "bg-green-100 text-green-600 border-green-200" :
-                          loan.status === "Closed" ? "bg-slate-100 text-slate-500 border-slate-200" :
-                          "bg-orange-100 text-orange-600 border-orange-200"
-                        }`}>{loan.status}</span>
-                      </td>
+
                       <td className="px-4 py-5 text-center">
                         <span className="text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 block max-h-[60px] overflow-y-auto whitespace-normal break-words scrollbar-none mx-auto">
                           {loan.clientResponse || "—"}
