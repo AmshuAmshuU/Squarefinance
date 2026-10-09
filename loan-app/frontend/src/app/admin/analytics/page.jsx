@@ -22,7 +22,6 @@ import { saveAs } from "file-saver";
 import { useToast } from "../../../context/ToastContext";
 import { useUI } from "../../../context/UIContext";
 import CollectionTrendChart from "../../../components/analytics/CollectionTrendChart";
-import DistributionPieCharts from "../../../components/analytics/DistributionPieCharts";
 import PaymentModeTable from "../../../components/analytics/PaymentModeTable";
 import ProfitOverview from "../../../components/analytics/ProfitOverview";
 import ExpensesCard from "../../../components/analytics/ExpensesCard";
@@ -33,6 +32,21 @@ import PartnersCard from "../../../components/analytics/PartnersCard";
 import CollectionEfficiencyCard from "../../../components/analytics/CollectionEfficiencyCard";
 import BookGrowth from "../../../components/analytics/BookGrowth";
 import { getUserFromToken } from "../../../utils/auth";
+
+// Each loan type's share of a Disbursed/Collected column, as "70%" - shown in
+// brackets next to the type name (replaced the two pie charts that showed
+// the same split). Shares of the four types' own sum, whole numbers.
+const loanTypeShare = (breakdown, key) => {
+  const total = ["monthly", "weekly", "daily", "interest"].reduce(
+    (sum, k) => sum + (breakdown?.[k] || 0),
+    0,
+  );
+  if (!total) return null;
+  const value = breakdown?.[key] || 0;
+  if (value <= 0) return "0%";
+  const pct = Math.round((value / total) * 100);
+  return pct < 1 ? "<1%" : `${pct}%`;
+};
 
 const AnalyticsPage = () => {
   const [stats, setStats] = useState(null);
@@ -645,11 +659,15 @@ const AnalyticsPage = () => {
                       ].map(row => {
                         const allTime = stats?.cards?.disbursementBreakdown?.[row.key] || 0;
                         const active = stats?.cards?.activeDisbursed?.[row.key] || 0;
+                        const share = loanTypeShare(stats?.cards?.disbursementBreakdown, row.key);
                         return (
                           <tr key={row.key}>
                             <td className="py-1.5 flex items-center gap-1.5">
                               <span className={`w-1.5 h-1.5 rounded-full ${row.color}`}></span>
-                              <span className="font-bold text-slate-600">{row.label}</span>
+                              <span className="font-bold text-slate-600">
+                                {row.label}
+                                {share && <span className="ml-1 text-[9px] font-semibold text-slate-400">({share})</span>}
+                              </span>
                             </td>
                             <td className="py-1.5 text-right font-black text-slate-700">₹{allTime.toLocaleString("en-IN")}</td>
                             <td className="py-1.5 text-right font-black text-blue-600">₹{active.toLocaleString("en-IN")}</td>
@@ -694,11 +712,15 @@ const AnalyticsPage = () => {
                       ].map(row => {
                         const collected = stats?.cards?.collectedBreakdown?.[row.key] || 0;
                         const future = stats?.cards?.futureIncome?.[row.key] || 0;
+                        const share = loanTypeShare(stats?.cards?.collectedBreakdown, row.key);
                         return (
                           <tr key={row.key}>
                             <td className="py-1.5 flex items-center gap-1.5">
                               <span className={`w-1.5 h-1.5 rounded-full ${row.color}`}></span>
-                              <span className="font-bold text-slate-600">{row.label}</span>
+                              <span className="font-bold text-slate-600">
+                                {row.label}
+                                {share && <span className="ml-1 text-[9px] font-semibold text-slate-400">({share})</span>}
+                              </span>
                             </td>
                             <td className="py-1.5 text-right font-black text-emerald-600">₹{collected.toLocaleString("en-IN")}</td>
                             <td className="py-1.5 text-right font-black text-amber-600">₹{future.toLocaleString("en-IN")}</td>
@@ -856,17 +878,11 @@ const AnalyticsPage = () => {
                 </div>
               </div>
 
-              {/* Financial Breakdown & Audit */}
-              <div className="grid grid-cols-1 xl:grid-cols-5 gap-10 mt-10">
-                <div className="xl:col-span-3">
-                  <DistributionPieCharts 
-                    disbursementData={stats?.cards?.disbursementBreakdown || {}} 
-                    collectionData={stats?.cards?.collectedBreakdown || {}} 
-                  />
-                </div>
-                <div className="xl:col-span-2">
-                  <PaymentModeTable data={stats?.cards?.paymentModeStats || {}} />
-                </div>
+              {/* Financial Breakdown & Audit (the loan-type split that used to be
+                  two pie charts now sits beside the type names in the first
+                  two cards) */}
+              <div className="mt-10">
+                <PaymentModeTable data={stats?.cards?.paymentModeStats || {}} />
               </div>
 
               {/* Collection Efficiency - last card visible to every role that
