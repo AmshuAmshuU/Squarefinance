@@ -74,8 +74,8 @@ const Navbar = () => {
       }
     `}</style>
     <nav className={`sticky top-0 z-40 w-full h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm transition-colors duration-300 ${isDarkMode ? "navbar-dark-mode" : ""}`}>
-      {/* 🛺 Auto-rickshaw static mascot */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+      {/* 🛺 Auto-rickshaw static mascot - screen-centred on tablets/computers */}
+      <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none z-10">
         <img
           src="/auto.png"
           alt="Square Finance Auto"
@@ -83,7 +83,7 @@ const Navbar = () => {
         />
       </div>
       <div className="h-full flex items-center justify-between px-4 sm:px-8">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 shrink-0">
           <button
             onClick={toggleSidebar}
             className="md:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-xl transition-colors"
@@ -114,7 +114,21 @@ const Navbar = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        {/* Same mascot on phones: sits in the free space between the logo and
+            the right-hand buttons (instead of the exact screen centre) so it
+            can never cover the dark-mode toggle, whatever the screen width or
+            the signed-in name's length. Hidden on very narrow phones where
+            there is no free space. */}
+        <div className="md:hidden hidden min-[350px]:flex flex-1 min-w-0 justify-center px-1 pointer-events-none">
+          <img
+            src="/auto.png"
+            alt="Square Finance Auto"
+            className="max-w-full"
+            style={{ width: "52px", height: "40px", objectFit: "contain", filter: "drop-shadow(1px 1px 2px rgba(0,0,0,0.12))" }}
+          />
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {/* Dark mode toggle */}
           <button
             type="button"
