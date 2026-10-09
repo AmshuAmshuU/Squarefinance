@@ -12,7 +12,6 @@ import {
   Clock,
   CheckCircle,
   BarChart2,
-  Wallet,
   AlertCircle,
   Download,
 } from "lucide-react";
@@ -26,6 +25,7 @@ import CollectionTrendChart from "../../../components/analytics/CollectionTrendC
 import DistributionPieCharts from "../../../components/analytics/DistributionPieCharts";
 import PaymentModeTable from "../../../components/analytics/PaymentModeTable";
 import ProfitOverview from "../../../components/analytics/ProfitOverview";
+import ExpensesCard from "../../../components/analytics/ExpensesCard";
 import SimpleStats from "../../../components/analytics/SimpleStats";
 import BusinessROI from "../../../components/analytics/BusinessROI";
 import CompanyValuation from "../../../components/analytics/CompanyValuation";
@@ -718,12 +718,7 @@ const AnalyticsPage = () => {
                     <p className="text-[9px] text-slate-400 mt-2 italic">* Interest expected includes ₹{(stats?.cards?.futureIncome?.interestPrincipal || 0).toLocaleString("en-IN")} remaining principal</p>
                   )}
                 </div>
-                <StatsCard
-                  title="Total Expenses"
-                  value={`₹${stats?.cards?.totalExpenses?.toLocaleString("en-IN") || "0"}`}
-                  icon={<Wallet className="w-6 h-6" />}
-                  color="danger"
-                />
+                <ExpensesCard fallbackTotal={stats?.cards?.totalExpenses || 0} />
                 {/* Pending Payments Mini Table */}
                 <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-3 mb-4">

@@ -31,6 +31,16 @@ router.get(
   analyticsController.getAnalyticsStats
 );
 
+// Bar graph inside the Total Expenses card - same access as /stats, since the
+// card itself sits in the all-roles part of the page.
+router.get(
+  "/expense-trend",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  requireAnalyticsViewPermission,
+  analyticsController.getExpenseTrend
+);
+
 router.get(
   "/export-data",
   isAuthenticated,

@@ -1773,7 +1773,63 @@ const getBookGrowth = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Expenses card bar graph: expenses per day (short ranges) or per month
+// (longer ranges), over the same interval options as the Profit card.
+// Every period in the range is returned, including zero-expense ones, so the
+// graph needs no gap-filling. Buckets are IST calendar days/months.
+const getExpenseTrend = asyncHandler(async (req, res, next) => {
+  const { interval = "all", startDate: customStart, endDate: customEnd } = req.query;
+  const { startDate, endDate } = getProfitDateRange(interval, customStart, customEnd);
+
+  const diffDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+  const daily =
+    interval === "weekly" ||
+    interval === "monthly" ||
+    (interval === "custom" && diffDays <= 32);
+  const format = daily ? "%Y-%m-%d" : "%Y-%m";
+
+  const rows = await Expense.aggregate([
+    { $match: { date: { $gte: startDate, $lte: endDate } } },
+    {
+      $group: {
+        _id: { $dateToString: { format, date: "$date", timezone: "Asia/Kolkata" } },
+        amount: { $sum: "$amount" },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+  const byKey = new Map(rows.map((r) => [r._id, r.amount]));
+
+  const istDay = (d) => new Date(d).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const firstKey = interval === "all" ? rows[0]?._id : istDay(startDate).slice(0, daily ? 10 : 7);
+  const lastKey = istDay(endDate).slice(0, daily ? 10 : 7);
+
+  const points = [];
+  if (firstKey) {
+    // Walk calendar days/months with UTC maths so server timezone never matters.
+    const [y0, m0, d0 = 1] = firstKey.split("-").map(Number);
+    const [y1, m1, d1 = 1] = lastKey.split("-").map(Number);
+    const cur = new Date(Date.UTC(y0, m0 - 1, d0));
+    const last = new Date(Date.UTC(y1, m1 - 1, d1));
+    while (cur <= last) {
+      const key = cur.toISOString().slice(0, daily ? 10 : 7);
+      points.push({ key, amount: Math.round(byKey.get(key) || 0) });
+      if (daily) cur.setUTCDate(cur.getUTCDate() + 1);
+      else cur.setUTCMonth(cur.getUTCMonth() + 1);
+    }
+  }
+
+  const total = points.reduce((sum, p) => sum + p.amount, 0);
+  sendResponse(res, 200, "success", "Expense trend fetched", null, {
+    interval,
+    granularity: daily ? "day" : "month",
+    total,
+    points,
+  });
+});
+
 module.exports = {
+  getExpenseTrend,
   getMonthlyCollectionSummary,
   getBookGrowth,
   getAnalyticsStats,
