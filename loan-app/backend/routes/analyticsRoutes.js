@@ -28,6 +28,7 @@ router.get(
   isAuthenticated,
   authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
   requireAnalyticsViewPermission,
+  analyticsController.snapshotAfterStats, // Super Admin only: quiet monthly snapshot after the response
   analyticsController.getAnalyticsStats
 );
 

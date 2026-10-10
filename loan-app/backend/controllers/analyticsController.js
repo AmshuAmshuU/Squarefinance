@@ -11,6 +11,7 @@ const sendResponse = require("../utils/response");
 const InterestLoan = require("../models/InterestLoan");
 const InterestEMI = require("../models/InterestEMI");
 const Payment = require("../models/Payment");
+const MonthlyProfitSnapshot = require("../models/MonthlyProfitSnapshot");
 const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
 
 // Invokes an existing asyncHandler-wrapped route handler internally (no real
@@ -1828,7 +1829,140 @@ const getExpenseTrend = asyncHandler(async (req, res, next) => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Monthly expected-vs-actual snapshots (model: MonthlyProfitSnapshot).
+// Taken quietly, after the response has been sent, whenever the SUPER ADMIN
+// opens Analytics. Nothing is captured for months before SNAPSHOT_START_MONTH
+// - the expected figures for those dates were never recorded, and Karthik
+// does not want guessed history in this table.
+// ---------------------------------------------------------------------------
+const SNAPSHOT_START_MONTH = "2026-11";
+const SNAPSHOT_THROTTLE_MS = 10 * 60 * 1000; // at most one capture per 10 minutes
+
+const nextMonthKey = (key) => {
+  const [y, m] = key.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+};
+const lastDayOfMonthKey = (key) => {
+  const [y, m] = key.split("-").map(Number);
+  return `${key}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, "0")}`;
+};
+
+// Exact profit for a month (or month-to-date when endDay is given), using the
+// Profit card's own calculation so the numbers always match it.
+const computeMonthActual = async (monthKey, endDay) => {
+  const data = await invokeInternal(getProfitStats, {
+    query: { interval: "custom", startDate: `${monthKey}-01`, endDate: endDay || lastDayOfMonthKey(monthKey) },
+  });
+  return {
+    data,
+    actual: {
+      total: data.totalProfit,
+      vehicle: data.breakdown.monthly,
+      weekly: data.breakdown.weekly,
+      daily: data.breakdown.daily,
+      interest: data.breakdown.interest,
+    },
+  };
+};
+
+// Re-calculates and freezes (finalized: true) every finished month that is not
+// frozen yet, and adds a row (actual profit only) for any finished month that
+// has none, between the earliest stored month and the current month.
+const finalizePastMonths = async (currentMonth, now) => {
+  const rows = await MonthlyProfitSnapshot.find({}).select("month actualProfit.finalized").lean();
+  if (!rows.length) return;
+  const byMonth = new Map(rows.map((r) => [r.month, r]));
+  const earliest = rows.map((r) => r.month).sort()[0];
+  for (let k = earliest; k < currentMonth; k = nextMonthKey(k)) {
+    if (byMonth.get(k)?.actualProfit?.finalized) continue;
+    const { actual } = await computeMonthActual(k);
+    await MonthlyProfitSnapshot.updateOne(
+      { month: k },
+      { $set: { actualProfit: { ...actual, finalized: true, calculatedAt: now } }, $setOnInsert: { source: "snapshot" } },
+      { upsert: true },
+    );
+  }
+};
+
+// statsData = the `data` of the /stats response the Super Admin just received
+// (it already holds the Monthly EMI Expected card figures).
+const recordMonthlySnapshot = async (
+  statsData,
+  { now = new Date(), startMonth = SNAPSHOT_START_MONTH, skipThrottle = false } = {},
+) => {
+  const today = now.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const month = today.slice(0, 7);
+  if (month < startMonth) return { skipped: "before start month" };
+
+  const cards = statsData?.cards;
+  if (!cards || cards.totalMonthlyEmiExpected === undefined || !cards.monthlyEmiBreakdown) {
+    return { skipped: "no stats" };
+  }
+
+  if (!skipThrottle) {
+    const existing = await MonthlyProfitSnapshot.findOne({ month }).select("closing.capturedAt").lean();
+    const last = existing?.closing?.capturedAt;
+    if (last && now - new Date(last) < SNAPSHOT_THROTTLE_MS) return { skipped: "throttled" };
+  }
+
+  const { data: profit, actual } = await computeMonthActual(month, today);
+  const breakdown = cards.monthlyEmiBreakdown;
+  const snap = {
+    capturedAt: now,
+    expectedMonthlyEmi: {
+      total: cards.totalMonthlyEmiExpected,
+      vehicle: breakdown.monthly || 0,
+      weekly: breakdown.weekly || 0,
+      daily: breakdown.daily || 0,
+      interest: breakdown.interest || 0,
+    },
+    expectedProfit: {
+      total: profit.expectedNextMonth.total,
+      vehicle: profit.expectedNextMonth.breakdown.monthly,
+      interest: profit.expectedNextMonth.breakdown.interest,
+    },
+  };
+
+  try {
+    await MonthlyProfitSnapshot.updateOne({ month }, { $setOnInsert: { source: "snapshot" } }, { upsert: true });
+  } catch (err) {
+    if (err.code !== 11000) throw err; // another visit created it first - fine
+  }
+  // Opening is written only if it is still missing, so it can never be replaced.
+  await MonthlyProfitSnapshot.updateOne({ month, opening: { $exists: false } }, { $set: { opening: snap } });
+  await MonthlyProfitSnapshot.updateOne(
+    { month },
+    { $set: { closing: snap, actualProfit: { ...actual, finalized: false, calculatedAt: now } } },
+  );
+
+  await finalizePastMonths(month, now);
+  return { captured: month };
+};
+
+// Route middleware for GET /api/analytics/stats: after the Super Admin's
+// response has gone out, quietly record the monthly snapshot. A failure here is
+// only logged - it can never affect the Analytics page.
+const snapshotAfterStats = (req, res, next) => {
+  if (req.user?.role !== "SUPER_ADMIN") return next();
+  const originalJson = res.json.bind(res);
+  res.json = (payload) => {
+    const result = originalJson(payload);
+    if (payload?.data?.cards) {
+      setImmediate(() => {
+        recordMonthlySnapshot(payload.data).catch((err) => console.error("Monthly snapshot failed:", err.message));
+      });
+    }
+    return result;
+  };
+  next();
+};
+
 module.exports = {
+  recordMonthlySnapshot,
+  snapshotAfterStats,
+  SNAPSHOT_START_MONTH,
   getExpenseTrend,
   getMonthlyCollectionSummary,
   getBookGrowth,
