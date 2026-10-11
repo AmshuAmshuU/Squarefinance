@@ -205,6 +205,13 @@ const FollowupAccountabilityCard = () => {
                                   Due {formatDate(item.pendingDueDate)}
                                 </p>
                               </>
+                            ) : item.dueTodayAmount > 0 ? (
+                              <>
+                                <p className="text-xs font-black text-amber-600">
+                                  ₹{item.dueTodayAmount.toLocaleString("en-IN")}
+                                </p>
+                                <p className="text-[9px] font-bold text-amber-500 mt-0.5">Today</p>
+                              </>
                             ) : (
                               <span className="text-xs font-bold text-slate-300">-</span>
                             )}

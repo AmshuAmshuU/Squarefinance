@@ -2141,6 +2141,20 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
         },
       };
 
+      // Outstanding amount of every unpaid EMI whose own due date is today
+      // (IST). Shown amber as "Today" in the Pending column - this includes
+      // an EMI due later today that isn't "pending" yet by the clock, which
+      // pendingEmisExpr above deliberately leaves out.
+      const dueTodayEmisExpr = {
+        $map: {
+          input: { $filter: { input: "$emis", as: "emi", cond: emiDueTodayCond } },
+          as: "emi",
+          in: {
+            amount: { $subtract: [{ $ifNull: [`$$emi.${amountField}`, 0] }, { $ifNull: ["$$emi.amountPaid", 0] }] },
+          },
+        },
+      };
+
       const pipeline = [
         { $match: { status: "Active" } },
         {
@@ -2206,6 +2220,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
               ],
             },
             pendingEmis: pendingEmisExpr,
+            dueTodayEmis: dueTodayEmisExpr,
           },
         },
         {
@@ -2221,6 +2236,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   nextFollowUpDate: 1,
                   clientResponse: 1,
                   pendingEmis: 1,
+                  dueTodayEmis: 1,
                   customerPhoto: 1,
                 },
               },
@@ -2248,15 +2264,29 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
 
       // Longest-pending = earliest due date among the loan's own pending
       // EMIs - the single most-overdue item, not a sum across all of them.
+      //
+      // An EMI that is due TODAY is reported separately as dueTodayAmount
+      // (shown amber, "Today") instead of as a red pending amount: a real
+      // pending amount is only one from an EARLIER day (or a part-paid EMI of
+      // another day). If a loan has both, the older red one still wins on the
+      // card.
+      const isDueToday = (d) => {
+        const t = new Date(d);
+        return t >= todayStart && t <= todayEnd;
+      };
       const attachPendingSummary = (item) => {
-        const { pendingEmis, customerPhoto, ...rest } = item;
-        const sorted = [...(pendingEmis || [])].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        const { pendingEmis, dueTodayEmis, customerPhoto, ...rest } = item;
+        const sorted = [...(pendingEmis || [])]
+          .filter((e) => !isDueToday(e.dueDate))
+          .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
         const longest = sorted[0];
+        const dueTodayAmount = (dueTodayEmis || []).reduce((sum, e) => sum + Math.max(0, e.amount), 0);
         return {
           ...rest,
           photoThumbUrl: listPhotoUrl(customerPhoto),
           pendingAmount: longest ? Math.max(0, longest.amount) : 0,
           pendingDueDate: longest ? longest.dueDate : null,
+          dueTodayAmount,
         };
       };
       const attachType = (list) => (list || []).map((l) => ({ ...attachPendingSummary(l), loanType }));
