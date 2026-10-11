@@ -15,6 +15,7 @@ const sendResponse = require("../utils/response");
 const { formatLoanResponse } = require("../utils/loanFormatter");
 const { attachCallRecords } = require("../utils/callRecords");
 const { generateLocationToken } = require("../utils/customerLocation");
+const { normalizeHouseLocation } = require("../utils/houseLocation");
 const { notifyAdmins } = require("./notificationController");
 const LoanDraft = require("../models/LoanDraft");
 const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
@@ -142,6 +143,7 @@ const createLoan = asyncHandler(async (req, res, next) => {
     // customerDetails
     customerName: customerDetails.customerName,
     address: customerDetails.address,
+    houseLocation: normalizeHouseLocation(customerDetails.houseLocation) || undefined,
     ownRent: customerDetails.ownRent,
     mobileNumbers: customerDetails.mobileNumbers,
     panNumber: customerDetails.panNumber,
@@ -920,6 +922,8 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     // ...req.body spread, which would otherwise leave flatBody.status
     // holding the whole nested status object instead of the string
     // computeLoanDiff expects to compare against loan.status.
+    // Reject anything that is not a Google Maps link before it goes for approval.
+    normalizeHouseLocation(req.body.customerDetails?.houseLocation);
     const flatBody = { ...req.body, ...req.body.customerDetails, ...req.body.loanTerms, ...req.body.vehicleInformation, ...req.body.status };
     const changes = computeLoanDiff(loan, flatBody);
 
@@ -1062,6 +1066,8 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     ...(customerDetails && {
       customerName: customerDetails.customerName,
       address: customerDetails.address,
+      // undefined = not sent (leave as is), null = removed, object = new value
+      houseLocation: normalizeHouseLocation(customerDetails.houseLocation),
       ownRent: customerDetails.ownRent,
       mobileNumbers: customerDetails.mobileNumbers,
       panNumber: customerDetails.panNumber,

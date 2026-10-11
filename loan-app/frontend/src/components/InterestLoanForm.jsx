@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { format, addMonths } from "date-fns";
 import { useFormik } from "formik";
 import { useFormDirty } from "../utils/useFormDirty";
+import HouseLocationCard from "./HouseLocationCard";
 import * as Yup from "yup";
 import { getUserFromToken } from "@/utils/auth";
 import ClientResponseSection from "./ClientResponseSection";
@@ -93,6 +94,7 @@ const InterestLoanForm = ({
       loanNumber: initialData?.loanNumber || "",
       customerName: initialData?.customerName || "",
       address: initialData?.address || "",
+      houseLocation: initialData?.houseLocation || null,
       ownRent: initialData?.ownRent || "Own",
       mobileNumbers:
         initialData?.mobileNumbers?.length > 0
@@ -419,6 +421,13 @@ const InterestLoanForm = ({
                   rows="2"
                   className={getFieldClass("address")}
                 ></textarea>
+                <div className="pt-1.5">
+                  <HouseLocationCard
+                    value={values.houseLocation}
+                    onChange={(v) => formik.setFieldValue("houseLocation", v)}
+                    readOnly={isViewOnly}
+                  />
+                </div>
               </div>
 
               <div className="space-y-6">

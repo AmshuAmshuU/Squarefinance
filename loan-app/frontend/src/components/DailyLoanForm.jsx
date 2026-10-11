@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { addDays, format } from "date-fns";
 import { useFormik } from "formik";
 import { useFormDirty } from "../utils/useFormDirty";
+import HouseLocationCard from "./HouseLocationCard";
 import * as Yup from "yup";
 import { getUserFromToken } from "../utils/auth";
 import ClientResponseSection from "./ClientResponseSection";
@@ -496,6 +497,14 @@ const DailyLoanForm = ({
                 </button>
               )}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <HouseLocationCard
+              value={values.houseLocation}
+              onChange={(v) => setFieldValue("houseLocation", v)}
+              readOnly={isViewOnly}
+            />
           </div>
 
           <div className="space-y-2">

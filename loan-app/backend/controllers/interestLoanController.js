@@ -17,6 +17,7 @@ const {
 } = require("../utils/dateUtils");
 const { syncEmiPayments } = require("../utils/syncEmiPayments");
 const { generateLocationToken } = require("../utils/customerLocation");
+const { normalizeHouseLocation } = require("../utils/houseLocation");
 
 // Helper to recalculate pending EMIs when principal changes
 const recalculatePendingEMIs = async (interestLoanId) => {
@@ -131,6 +132,7 @@ exports.createInterestLoan = asyncHandler(async (req, res, next) => {
     customerName,
     locationToken: generateLocationToken(),
     address,
+    houseLocation: normalizeHouseLocation(req.body.houseLocation) || undefined,
     ownRent,
     mobileNumbers,
     panNumber,
@@ -803,6 +805,8 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
     loan.updatedBy = req.user._id;
     await loan.save();
 
+    // Reject anything that is not a Google Maps link before it goes for approval.
+    normalizeHouseLocation(req.body.houseLocation);
     const changes = computeInterestLoanDiff(loan, req.body);
     if (changes.length === 0) {
       return sendResponse(res, 200, "success", "No changes detected", null, loan);
@@ -931,6 +935,9 @@ exports.updateInterestLoan = asyncHandler(async (req, res, next) => {
   ];
   for (const field of directFields) {
     if (req.body[field] !== undefined) loan[field] = req.body[field];
+  }
+  if (req.body.houseLocation !== undefined) {
+    loan.houseLocation = normalizeHouseLocation(req.body.houseLocation) || undefined;
   }
   if (req.body.nextFollowUpDate !== undefined) {
     loan.nextFollowUpDate = req.body.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null;

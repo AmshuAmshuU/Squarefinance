@@ -12,6 +12,7 @@ const formatLoanResponse = (loanDoc) => {
     customerDetails: {
       customerName: loan.customerName,
       address: loan.address,
+      houseLocation: loan.houseLocation || null,
       ownRent: loan.ownRent,
       panNumber: loan.panNumber,
       aadharNumber: loan.aadharNumber,

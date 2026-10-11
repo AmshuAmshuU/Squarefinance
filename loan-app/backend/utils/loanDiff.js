@@ -5,6 +5,7 @@ const LOAN_FIELDS = {
   guarantorName: "Guarantor Name",
   guarantorMobileNumbers: "Guarantor Mobile Numbers",
   address: "Address",
+  houseLocation: "House Location",
   ownRent: "Own/Rent",
   panNumber: "PAN Number",
   aadharNumber: "Aadhar Number",
@@ -40,6 +41,8 @@ const LOAN_FIELDS = {
 const formatValue = (val) => {
   if (val === null || val === undefined || val === "") return "—";
   if (Array.isArray(val)) return val.join(", ");
+  // House location is stored as { link, savedBy, savedAt } - compare/show the link.
+  if (typeof val === "object" && !(val instanceof Date) && val.link !== undefined) return String(val.link);
   if (val instanceof Date || (typeof val === "string" && val.match(/^\d{4}-\d{2}-\d{2}/))) {
     const d = new Date(val);
     if (!isNaN(d)) return d.toLocaleDateString("en-IN");
@@ -73,6 +76,7 @@ const INTEREST_LOAN_FIELDS = {
   guarantorName: "Guarantor Name",
   guarantorMobileNumbers: "Guarantor Mobile Numbers",
   address: "Address",
+  houseLocation: "House Location",
   ownRent: "Own/Rent",
   panNumber: "PAN Number",
   aadharNumber: "Aadhar Number",

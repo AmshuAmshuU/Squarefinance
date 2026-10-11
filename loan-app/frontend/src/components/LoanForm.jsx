@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useFormik } from "formik";
 import { useFormDirty } from "../utils/useFormDirty";
+import HouseLocationCard from "./HouseLocationCard";
 import RateApprovalBox from "./RateApprovalBox";
 import * as Yup from "yup";
 import { useToast } from "../context/ToastContext";
@@ -229,6 +230,7 @@ const LoanForm = ({
       customerDetails: {
         customerName: initialData?.customerDetails?.customerName || "",
         address: initialData?.customerDetails?.address || "",
+        houseLocation: initialData?.customerDetails?.houseLocation || null,
         ownRent: initialData?.customerDetails?.ownRent || "Own",
         mobileNumbers: Array.isArray(
           initialData?.customerDetails?.mobileNumbers,
@@ -848,6 +850,13 @@ const LoanForm = ({
                   className={getFieldClass("customerDetails.address")}
                 ></textarea>
                 <ErrorMsg name="customerDetails.address" formik={formik} />
+                <div className="pt-1.5">
+                  <HouseLocationCard
+                    value={formik.values.customerDetails.houseLocation}
+                    onChange={(v) => formik.setFieldValue("customerDetails.houseLocation", v)}
+                    readOnly={isViewOnly}
+                  />
+                </div>
               </div>
               {/* Left Column: Own/Rent & PAN */}
               <div className="space-y-6">

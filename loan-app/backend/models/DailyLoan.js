@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { houseLocationSchema } = require("../utils/houseLocation");
 
 const dailyLoanSchema = new mongoose.Schema(
   {
@@ -202,6 +203,10 @@ const dailyLoanSchema = new mongoose.Schema(
       uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       uploadedAt: { type: Date },
     },
+    // Customer's HOUSE location on Google Maps (a link staff paste, or the spot
+    // saved with "Use my current location"). Unrelated to the customer-shared
+    // location below. See utils/houseLocation.js.
+    houseLocation: { type: houseLocationSchema },
     // Permanent per-loan link a customer taps to share their current
     // location (WhatsApp signup/reminder messages) - see
     // utils/customerLocation.js. locationToken never changes once set;

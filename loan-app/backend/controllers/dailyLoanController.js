@@ -13,6 +13,7 @@ const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
 const { generateLocationToken } = require("../utils/customerLocation");
+const { normalizeHouseLocation } = require("../utils/houseLocation");
 const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
 
 // Create Daily Loan
@@ -84,6 +85,7 @@ exports.createDailyLoan = asyncHandler(async (req, res, next) => {
     loanNumber,
     customerName,
     locationToken: generateLocationToken(),
+    houseLocation: normalizeHouseLocation(req.body.houseLocation) || undefined,
     mobileNumbers,
     disbursementAmount: amount,
     startDate: disburseDate,
@@ -437,6 +439,8 @@ exports.updateDailyLoan = asyncHandler(async (req, res, next) => {
     dailyLoan.clientResponseUpdatedAt = new Date();
     await dailyLoan.save();
 
+    // Reject anything that is not a Google Maps link before it goes for approval.
+    normalizeHouseLocation(req.body.houseLocation);
     const changes = computeLoanDiff(dailyLoan, req.body);
     if (changes.length === 0) {
       return sendResponse(res, 200, "success", "No changes detected", null, dailyLoan);
@@ -532,6 +536,11 @@ exports.updateDailyLoan = asyncHandler(async (req, res, next) => {
     paymentMode: paymentMode || dailyLoan.paymentMode,
     chequeNumber: chequeNumber !== undefined ? chequeNumber : dailyLoan.chequeNumber,
     disbursement: req.body.disbursement || dailyLoan.disbursement,
+    // undefined = not sent (leave as is), null = removed, object = new value
+    houseLocation:
+      req.body.houseLocation !== undefined
+        ? normalizeHouseLocation(req.body.houseLocation)
+        : dailyLoan.houseLocation,
     updatedBy: req.user._id,
   };
 

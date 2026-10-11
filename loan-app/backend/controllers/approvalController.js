@@ -15,6 +15,7 @@ const Expense = require("../models/Expense");
 const LoanDraft = require("../models/LoanDraft");
 const { APPROVAL_VALID_HOURS } = require("../utils/rateApproval");
 const photoStore = require("../utils/cloudinaryPhotos");
+const { normalizeHouseLocation } = require("../utils/houseLocation");
 const { saveNote: savePhotoNote, MODELS: PHOTO_MODELS } = require("./photoController");
 const { createExpenseRecord, updateExpenseRecord } = require("../utils/expenseActions");
 
@@ -467,6 +468,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
               ...(customerDetails && {
                 customerName: customerDetails.customerName,
                 address: customerDetails.address,
+                houseLocation: normalizeHouseLocation(customerDetails.houseLocation),
                 ownRent: customerDetails.ownRent,
                 mobileNumbers: customerDetails.mobileNumbers,
                 panNumber: customerDetails.panNumber,
@@ -659,6 +661,9 @@ const processApproval = asyncHandler(async (req, res, next) => {
             ];
             for (const field of directFields) {
               if (newValues[field] !== undefined) loan[field] = newValues[field];
+            }
+            if (newValues.houseLocation !== undefined) {
+              loan.houseLocation = normalizeHouseLocation(newValues.houseLocation) || undefined;
             }
             if (newValues.nextFollowUpDate !== undefined) {
               loan.nextFollowUpDate = newValues.nextFollowUpDate ? new Date(newValues.nextFollowUpDate) : null;

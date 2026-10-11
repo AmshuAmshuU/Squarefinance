@@ -5,6 +5,7 @@ import interestLoanService from "@/services/interestLoanService";
 import { useToast } from "@/context/ToastContext";
 import { useUI } from "@/context/UIContext";
 import { Plus, IndianRupee, History, Info } from "lucide-react";
+import HouseLocationCard from "@/components/HouseLocationCard";
 
 const InterestLoanDetails = ({ loan, emis, onRefresh }) => {
   const { showToast } = useToast();
@@ -270,6 +271,9 @@ const InterestLoanDetails = ({ loan, emis, onRefresh }) => {
               <div>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Address</p>
                 <p className="text-xs font-bold text-slate-600 leading-relaxed">{loan.address || "—"}</p>
+                <div className="pt-2">
+                  <HouseLocationCard value={loan.houseLocation} readOnly />
+                </div>
               </div>
 
               {/* Guarantor Info */}
