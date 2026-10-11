@@ -10,6 +10,7 @@ const socketUtils = require("../utils/socket");
 const { toPublic } = require("../utils/callRecords");
 
 const MODELS = { Loan, WeeklyLoan, DailyLoan, InterestLoan };
+const VALID_RESPONSES = ["NP", "EOD", "SWO", "1HR", "2HR", "3HR", "4HR", "5HR", "6HR", "CLEAR"];
 
 // Tells every connected user's follow-up list to update this loan's call
 // record live, so a second employee sees the first one's call without
@@ -31,8 +32,8 @@ const setCallRecord = asyncHandler(async (req, res, next) => {
   if (!Model || !loanId) {
     return next(new ErrorHandler("A valid loan is required", 400));
   }
-  if (!["NP", "EOD", "SWO", "CLEAR"].includes(response)) {
-    return next(new ErrorHandler("Response must be NP, EOD, SWO or CLEAR", 400));
+  if (!VALID_RESPONSES.includes(response)) {
+    return next(new ErrorHandler("Response must be NP, EOD, SWO, 1HR to 6HR or CLEAR", 400));
   }
   if (!(await Model.exists({ _id: loanId }))) {
     return next(new ErrorHandler("Loan not found", 404));

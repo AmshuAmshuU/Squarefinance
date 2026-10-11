@@ -36,6 +36,12 @@ const OPTIONS = [
   { value: "NP", label: "NP - not picking" },
   { value: "EOD", label: "EOD - end of day" },
   { value: "SWO", label: "SWO - switched off" },
+  { value: "1HR", label: "1 hr" },
+  { value: "2HR", label: "2 hr" },
+  { value: "3HR", label: "3 hr" },
+  { value: "4HR", label: "4 hr" },
+  { value: "5HR", label: "5 hr" },
+  { value: "6HR", label: "6 hr" },
   { value: "CLEAR", label: "Clear" },
 ];
 
@@ -43,9 +49,18 @@ const PILL_CLASS = {
   NP: "bg-red-50 text-red-600",
   EOD: "bg-amber-50 text-amber-600",
   SWO: "bg-slate-200 text-slate-600",
+  "1HR": "bg-blue-50 text-blue-600",
+  "2HR": "bg-blue-50 text-blue-600",
+  "3HR": "bg-blue-50 text-blue-600",
+  "4HR": "bg-blue-50 text-blue-600",
+  "5HR": "bg-blue-50 text-blue-600",
+  "6HR": "bg-blue-50 text-blue-600",
 };
 
-// One loan's last-call note with the NP / EOD / Clear dropdown. Used in both
+// "3HR" is stored; the pill reads "3 HR".
+const pillText = (response) => (/^\dHR$/.test(response) ? `${response[0]} HR` : response);
+
+// One loan's last-call note with the NP / EOD / SWO / 1-6 hr / Clear dropdown. Used in both
 // follow-up lists and on the loan details page, so the note reads the same
 // everywhere. `record` is { response, calledByName, calledAt } or null;
 // `onChange(record)` receives the new record (null after Clear).
@@ -57,9 +72,13 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
 
   const openMenu = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const height = 172; // 4 options now (NP, EOD, SWO, Clear)
-    const above = rect.bottom + height > window.innerHeight;
-    setMenu({ x: Math.min(rect.left, window.innerWidth - 176), y: above ? rect.top - height - 4 : rect.bottom + 4 });
+    // 10 options now - taller than some phone screens, so the menu is capped
+    // to the screen height (scrolls if needed) and kept fully on screen.
+    const height = Math.min(OPTIONS.length * 38 + 8, window.innerHeight - 16);
+    const fitsBelow = rect.bottom + 4 + height <= window.innerHeight - 8;
+    const fitsAbove = rect.top - height - 4 >= 8;
+    const y = fitsBelow ? rect.bottom + 4 : fitsAbove ? rect.top - height - 4 : Math.max(8, window.innerHeight - height - 8);
+    setMenu({ x: Math.min(rect.left, window.innerWidth - 176), y, maxHeight: height });
   };
 
   const choose = async (value) => {
@@ -98,7 +117,7 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
                 PILL_CLASS[record.response] || "bg-slate-100 text-slate-600"
               }`}
             >
-              {record.response}
+              {pillText(record.response)}
             </span>
             <span className="text-[10px] font-bold text-slate-500 leading-tight whitespace-nowrap">
               {record.calledByName.slice(0, 4)} · {when}
@@ -119,6 +138,8 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
             style={{
               left: menu.x,
               top: menu.y,
+              maxHeight: menu.maxHeight,
+              overflowY: "auto",
               backgroundColor: isDarkMode ? "#1e293b" : "#ffffff",
               borderColor: isDarkMode ? "rgba(255,255,255,0.15)" : "#e2e8f0",
             }}

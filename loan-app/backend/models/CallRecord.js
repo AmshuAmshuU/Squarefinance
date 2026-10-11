@@ -13,7 +13,8 @@ const callRecordSchema = new mongoose.Schema(
       required: true,
       enum: ["Loan", "WeeklyLoan", "DailyLoan", "InterestLoan"],
     },
-    response: { type: String, required: true, enum: ["NP", "EOD", "SWO"] },
+    // NP / EOD / SWO = outcome of the call; 1HR..6HR = "call again in 1..6 hours".
+    response: { type: String, required: true, enum: ["NP", "EOD", "SWO", "1HR", "2HR", "3HR", "4HR", "5HR", "6HR"] },
     calledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     calledByName: { type: String, required: true },
     calledAt: { type: Date, default: Date.now, required: true },
