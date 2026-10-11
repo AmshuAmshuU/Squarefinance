@@ -57,8 +57,9 @@ const PILL_CLASS = {
   "6HR": "bg-amber-50 text-amber-600", // same amber as EOD
 };
 
-// "3HR" is stored; the pill reads "3 HR".
-const pillText = (response) => (/^\dHR$/.test(response) ? `${response[0]} HR` : response);
+// "3HR" is stored; the pill reads "3 hr" (lower case, unlike NP / EOD / SWO).
+const isHourResponse = (response) => /^\dHR$/.test(response);
+const pillText = (response) => (isHourResponse(response) ? `${response[0]} hr` : response);
 
 // One loan's last-call note with the NP / EOD / SWO / 1-6 hr / Clear dropdown. Used in both
 // follow-up lists and on the loan details page, so the note reads the same
@@ -113,7 +114,9 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
         {record ? (
           <span className="flex flex-col items-start gap-0.5">
             <span
-              className={`px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                isHourResponse(record.response) ? "normal-case tracking-normal" : "uppercase tracking-wide"
+              } ${
                 isDarkMode && record.response === "SWO"
                   ? ""
                   : PILL_CLASS[record.response] || "bg-slate-100 text-slate-600"
