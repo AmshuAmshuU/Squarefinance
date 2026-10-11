@@ -49,12 +49,12 @@ const PILL_CLASS = {
   NP: "bg-red-50 text-red-600",
   EOD: "bg-amber-50 text-amber-600",
   SWO: "bg-slate-200 text-slate-600",
-  "1HR": "bg-blue-50 text-blue-600",
-  "2HR": "bg-blue-50 text-blue-600",
-  "3HR": "bg-blue-50 text-blue-600",
-  "4HR": "bg-blue-50 text-blue-600",
-  "5HR": "bg-blue-50 text-blue-600",
-  "6HR": "bg-blue-50 text-blue-600",
+  "1HR": "bg-amber-50 text-amber-600", // same amber as EOD
+  "2HR": "bg-amber-50 text-amber-600", // same amber as EOD
+  "3HR": "bg-amber-50 text-amber-600", // same amber as EOD
+  "4HR": "bg-amber-50 text-amber-600", // same amber as EOD
+  "5HR": "bg-amber-50 text-amber-600", // same amber as EOD
+  "6HR": "bg-amber-50 text-amber-600", // same amber as EOD
 };
 
 // "3HR" is stored; the pill reads "3 HR".
@@ -114,8 +114,18 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
           <span className="flex flex-col items-start gap-0.5">
             <span
               className={`px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${
-                PILL_CLASS[record.response] || "bg-slate-100 text-slate-600"
+                isDarkMode && record.response === "SWO"
+                  ? ""
+                  : PILL_CLASS[record.response] || "bg-slate-100 text-slate-600"
               }`}
+              // SWO's light-mode grey turned into a pale box with weak letters in
+              // dark mode - give it its own dark colours (no class, so the page's
+              // dark-mode overrides can't touch it).
+              style={
+                isDarkMode && record.response === "SWO"
+                  ? { backgroundColor: "rgba(148,163,184,0.28)", color: "#e2e8f0" }
+                  : undefined
+              }
             >
               {pillText(record.response)}
             </span>
