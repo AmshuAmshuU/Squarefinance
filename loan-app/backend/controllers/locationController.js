@@ -13,6 +13,7 @@ const {
   MODELS,
 } = require("../utils/customerLocation");
 const { sendLocationLinkMessage } = require("../utils/whatsapp");
+const { recordLocationUpdate } = require("./locationUpdateController");
 
 const getLoanByLocationToken = asyncHandler(async (req, res, next) => {
   const result = await findLoanByLocationToken(req.params.token);
@@ -36,6 +37,10 @@ const updateLoanLocation = asyncHandler(async (req, res, next) => {
   if (!updated) {
     return next(new ErrorHandler("This link is no longer valid", 404));
   }
+
+  // Customer request is done - now tell the staff (history row, banner,
+  // phone push). Never throws, so it cannot break the customer page.
+  recordLocationUpdate({ ...updated, lat, lng });
 
   sendResponse(res, 200, "success", "Location updated", null, null);
 });

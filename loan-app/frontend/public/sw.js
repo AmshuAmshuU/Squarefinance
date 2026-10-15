@@ -12,12 +12,25 @@ self.addEventListener("push", (event) => {
     // Non-JSON payload - fall back to the default text above.
   }
 
+  // Urgent alerts (customer shared their location) stay on screen until
+  // acted on, re-alert even if one for the same loan is already showing, and
+  // vibrate where the phone allows it (Android; iPhones ignore these).
+  const urgentOptions = payload.urgent
+    ? {
+        requireInteraction: true,
+        tag: payload.tag || "urgent",
+        renotify: true,
+        vibrate: [250, 120, 250, 120, 500],
+      }
+    : {};
+
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
       icon: "/pwa-icon-192.png",
       badge: "/pwa-icon-192.png",
       data: { url: payload.url || "/admin/dashboard" },
+      ...urgentOptions,
     }),
   );
 });

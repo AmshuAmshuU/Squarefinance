@@ -1,7 +1,10 @@
 "use client";
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { useToast } from "../context/ToastContext";
+import { useUI } from "../context/UIContext";
 import { sendLocationLinkToCustomer } from "../services/location.service";
+import { getLoanLocationHistory } from "../services/locationUpdate.service";
 
 // Small discreet control pair shown on every loan's view/edit page:
 //   - "Customer location" opens the last-shared coordinates in Google Maps
@@ -13,8 +16,32 @@ import { sendLocationLinkToCustomer } from "../services/location.service";
 //     when it goes out.
 const CustomerLocationPanel = ({ lat, lng, lastLocationAt, loanModel, loanId }) => {
   const { showToast } = useToast();
+  const { isDarkMode } = useUI();
   const [sending, setSending] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const hasLocation = typeof lat === "number" && typeof lng === "number";
+
+  // Every time this customer shared their location (newest first). Opened on
+  // demand, visible to everyone.
+  const openHistory = async () => {
+    setShowHistory(true);
+    setHistoryLoading(true);
+    try {
+      const res = await getLoanLocationHistory(loanModel, loanId);
+      setHistory(res.data?.items || []);
+    } catch (err) {
+      setHistory([]);
+      showToast(err.message || "Could not load the location history", "error");
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const hc = isDarkMode
+    ? { card: "#1e293b", border: "rgba(255,255,255,0.12)", text: "#f1f5f9", muted: "#94a3b8", btnBg: "rgba(59,130,246,0.2)", btnText: "#93c5fd", ok: "#34d399" }
+    : { card: "#ffffff", border: "#e2e8f0", text: "#0f172a", muted: "#64748b", btnBg: "#eff6ff", btnText: "#2563eb", ok: "#059669" };
 
   const openMap = () => {
     if (!hasLocation) return;
@@ -67,6 +94,19 @@ const CustomerLocationPanel = ({ lat, lng, lastLocationAt, loanModel, loanId }) 
 
         <button
           type="button"
+          onClick={openHistory}
+          className="customer-location-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-colors text-slate-500 border-slate-200 hover:bg-slate-50 cursor-pointer"
+          title="Every time this customer shared their location"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          Location history
+        </button>
+
+        <button
+          type="button"
           onClick={handleSend}
           disabled={sending}
           className="customer-location-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border text-slate-500 border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -84,6 +124,54 @@ const CustomerLocationPanel = ({ lat, lng, lastLocationAt, loanModel, loanId }) 
           </span>
         )}
       </div>
+
+      {showHistory &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(15,23,42,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+            onClick={() => setShowHistory(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: "100%", maxWidth: 440, maxHeight: "80vh", overflowY: "auto", background: hc.card, border: `1px solid ${hc.border}`, borderRadius: 18, padding: 16 }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: hc.text }}>Location history</h3>
+                <button type="button" onClick={() => setShowHistory(false)} style={{ fontSize: 11, fontWeight: 800, color: hc.muted, background: "transparent", border: "none", cursor: "pointer" }}>
+                  Close
+                </button>
+              </div>
+              {historyLoading ? (
+                <p style={{ fontSize: 12, color: hc.muted }}>Loading...</p>
+              ) : history.length === 0 ? (
+                <p style={{ fontSize: 12, color: hc.muted }}>This customer has not shared a location yet.</p>
+              ) : (
+                history.map((h, i) => (
+                  <div key={h._id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "9px 0", borderTop: i ? `1px solid ${hc.border}` : "none" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: hc.text }}>
+                        {new Date(h.at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+                        {i === 0 && <span style={{ marginLeft: 8, fontSize: 9, fontWeight: 900, color: hc.ok }}>LATEST</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: hc.muted, marginTop: 2 }}>
+                        {Number(h.lat).toFixed(5)}, {Number(h.lng).toFixed(5)}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.open(`https://www.google.com/maps?q=${h.lat},${h.lng}`, "_blank", "noopener,noreferrer")}
+                      style={{ fontSize: 11, fontWeight: 800, padding: "7px 12px", borderRadius: 10, border: "none", background: hc.btnBg, color: hc.btnText, cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      Open map
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
 
       <style jsx global>{`
         .loan-view-dark-mode .customer-location-btn,

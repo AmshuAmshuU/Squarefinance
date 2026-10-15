@@ -36,13 +36,17 @@ async function findLoanByLocationToken(token) {
 // by whoever's updatedBy happens to be stamped on it (same reasoning as
 // the EMI schedule-sync fix elsewhere in this app).
 async function updateLocationByToken(token, lat, lng) {
-  for (const { Model } of MODELS) {
+  for (const { Model, name } of MODELS) {
     const updated = await Model.findOneAndUpdate(
       { locationToken: token },
       { lastLocationLat: lat, lastLocationLng: lng, lastLocationAt: new Date() },
       { timestamps: false }
-    );
-    if (updated) return true;
+    ).select("loanNumber customerName");
+    // Returns what the staff alert needs (which loan, of which type), or
+    // false when no loan owns this token.
+    if (updated) {
+      return { loanId: updated._id, loanModel: name, loanNumber: updated.loanNumber, customerName: updated.customerName };
+    }
   }
   return false;
 }

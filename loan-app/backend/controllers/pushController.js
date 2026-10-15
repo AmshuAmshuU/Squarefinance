@@ -66,13 +66,16 @@ const getStatus = asyncHandler(async (req, res, next) => {
 // notificationController.sendNotification() - the single place every
 // in-app notification (approval requests, approve/reject results) already
 // flows through, so this needs no extra call sites anywhere else.
-const sendPushToUser = async (userId, { title, message, url }) => {
+const sendPushToUser = async (userId, { title, message, url, urgent = false, tag }) => {
   if (!process.env.VAPID_PUBLIC_KEY) return;
 
   const subs = await PushSubscription.find({ user: userId });
   if (subs.length === 0) return;
 
-  const payload = JSON.stringify({ title, body: message, url: url || "/admin/dashboard" });
+  const payload = JSON.stringify({ title, body: message, url: url || "/admin/dashboard", urgent, tag });
+  // Urgent alerts (customer location updates) ask the push service for high
+  // priority so a sleeping phone is woken straight away instead of batched.
+  const sendOptions = urgent ? { urgency: "high", TTL: 3600 } : undefined;
 
   await Promise.all(
     subs.map(async (sub) => {
@@ -80,6 +83,7 @@ const sendPushToUser = async (userId, { title, message, url }) => {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: sub.keys },
           payload,
+          sendOptions,
         );
       } catch (err) {
         // 404/410 = the browser/OS has invalidated this subscription

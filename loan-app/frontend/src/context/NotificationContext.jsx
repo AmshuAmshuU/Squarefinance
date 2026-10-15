@@ -155,6 +155,13 @@ export const NotificationProvider = ({ children }) => {
           window.dispatchEvent(new CustomEvent("call-record-updated", { detail: payload }));
         });
 
+        // A customer just shared their location - the location alert banner
+        // (LocationAlertContext) and the Location Updates page re-check on
+        // this window event. The socket carries only an id, no details.
+        socket.on("location_updated", (payload) => {
+          window.dispatchEvent(new CustomEvent("location-updated", { detail: payload }));
+        });
+
         socket.on("connect_error", () => {
           // Silently handle connection errors - socket is optional
         });

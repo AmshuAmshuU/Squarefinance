@@ -7,6 +7,7 @@ import { getUserFromToken } from "../utils/auth";
 import Logo from "./Logo";
 import { useUI } from "../context/UIContext";
 import { getPendingApprovals } from "../services/approvalService";
+import { useLocationAlerts } from "../context/LocationAlertContext";
 
 const navItems = [
   { name: "Dashboard", href: "/admin/dashboard", icon: "📊" },
@@ -16,6 +17,7 @@ const navItems = [
     icon: "✅",
     roles: ["SUPER_ADMIN"],
   },
+  { name: "Location Updates", href: "/admin/location-updates", icon: "📍" },
   //{ name: "Customers", href: "/admin/customers", icon: "👤" },
   { name: "To-Do List", href: "/admin/todo", icon: "📋" },
   { name: "Collections", href: "/admin/collections", icon: "🏦" },
@@ -71,6 +73,7 @@ const Sidebar = () => {
   const { isSidebarOpen, closeSidebar, isDarkMode } = useUI();
   const [expandedMenus, setExpandedMenus] = useState({});
   const [pendingCount, setPendingCount] = useState(0);
+  const { count: locationUnseen } = useLocationAlerts();
 
   useEffect(() => {
     let interval;
@@ -319,6 +322,11 @@ const Sidebar = () => {
                       {pendingCount}
                     </span>
                   )}
+                  {item.name === "Location Updates" && locationUnseen > 0 && (
+                    <span className="ml-auto bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse">
+                      {locationUnseen}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -456,6 +464,11 @@ const Sidebar = () => {
                     {item.name === "Approvals" && pendingCount > 0 && (
                       <span className="ml-auto bg-rose-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">
                         {pendingCount}
+                      </span>
+                    )}
+                    {item.name === "Location Updates" && locationUnseen > 0 && (
+                      <span className="ml-auto bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                        {locationUnseen}
                       </span>
                     )}
                   </Link>
