@@ -57,6 +57,7 @@ const formatLoanResponse = (loanDoc) => {
       rtoWorkUpdatedAt: loan.rtoWorkUpdatedAt || null,
     },
     repaymentStats: loan.repaymentStats || null,
+    seizingNotices: loan.seizingNotices || [],
     status:
       loan.status?.toLowerCase() === "closed"
         ? {

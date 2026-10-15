@@ -43,9 +43,12 @@ export const updateLoan = async (id, loanData) => {
   });
 };
 
-export const toggleSeized = async (id) => {
+// `notice` = what the "Send seizing notice" popup collected; required by the
+// server when marking a loan For Seizing.
+export const toggleSeized = async (id, notice) => {
   return await apiHandler(`/api/loans/${id}/seized`, {
     method: "PATCH",
+    body: JSON.stringify({ notice }),
   });
 };
 

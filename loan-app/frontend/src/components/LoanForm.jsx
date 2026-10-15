@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useFormik } from "formik";
 import { useFormDirty } from "../utils/useFormDirty";
 import HouseLocationCard from "./HouseLocationCard";
+import SeizingNoticePopup from "./SeizingNoticePopup";
 import RateApprovalBox from "./RateApprovalBox";
 import * as Yup from "yup";
 import { useToast } from "../context/ToastContext";
@@ -172,6 +173,9 @@ const LoanForm = ({
   });
 
   const [rtoOptions, setRtoOptions] = useState([]);
+  // Form values held back while the "Send seizing notice" popup is open.
+  const [noticeValues, setNoticeValues] = useState(null);
+  const [noticeSaving, setNoticeSaving] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [isRtoDropdownOpen, setIsRtoDropdownOpen] = useState(false);
   const [activeContactMenu, setActiveContactMenu] = useState(null); // { number, name, type, x, y }
@@ -328,33 +332,62 @@ const LoanForm = ({
         showToast("An interest rate below 2.00 needs Super Admin approval first", "error");
         return;
       }
-      // Clean up rtoWorkPending: ensure it's an array and filter out empty strings
-      const rtoWork = Array.isArray(values.vehicleInformation.rtoWorkPending)
-        ? values.vehicleInformation.rtoWorkPending.filter(
-          (w) => w.trim() !== "",
-        )
-        : [];
-
-      // Save any new options to the backend
-      for (const work of rtoWork) {
-        if (!rtoOptions.includes(work)) {
-          try {
-            await createRtoWork(work);
-          } catch (err) {
-            console.error("Failed to save new RTO work option", err);
-          }
-        }
+      // Moving an existing loan INTO "For Seizing": the customer must be sent
+      // the seizing notice first (everyone, Super Admin included). Hold the
+      // save and open the popup; it calls saveForm() once both steps are done.
+      if (
+        initialData?._id &&
+        !isViewOnly &&
+        values.status?.status === "For Seizing" &&
+        initialData?.status?.status !== "For Seizing"
+      ) {
+        setNoticeValues(values);
+        return;
       }
-
-      return onSubmit({
-        ...values,
-        vehicleInformation: {
-          ...values.vehicleInformation,
-          rtoWorkPending: rtoWork,
-        },
-      });
+      return saveForm(values);
     },
   });
+
+  const saveForm = async (values, seizingNotice) => {
+    // Clean up rtoWorkPending: ensure it's an array and filter out empty strings
+    const rtoWork = Array.isArray(values.vehicleInformation.rtoWorkPending)
+      ? values.vehicleInformation.rtoWorkPending.filter(
+        (w) => w.trim() !== "",
+      )
+      : [];
+
+    // Save any new options to the backend
+    for (const work of rtoWork) {
+      if (!rtoOptions.includes(work)) {
+        try {
+          await createRtoWork(work);
+        } catch (err) {
+          console.error("Failed to save new RTO work option", err);
+        }
+      }
+    }
+
+    return onSubmit({
+      ...values,
+      vehicleInformation: {
+        ...values.vehicleInformation,
+        rtoWorkPending: rtoWork,
+      },
+      ...(seizingNotice && { seizingNotice }),
+    });
+  };
+
+  const confirmSeizingNotice = async (notice) => {
+    const values = noticeValues;
+    if (!values) return;
+    setNoticeSaving(true);
+    try {
+      await saveForm(values, notice);
+    } finally {
+      setNoticeSaving(false);
+      setNoticeValues(null);
+    }
+  };
 
   useFormDirty(formik, formStateRef);
 
@@ -703,6 +736,18 @@ const LoanForm = ({
         }
       `}</style>
       <div className="p-8">
+        {noticeValues && (
+          <SeizingNoticePopup
+            loan={{
+              customerName: noticeValues.customerDetails?.customerName,
+              vehicleNumber: noticeValues.vehicleInformation?.vehicleNumber,
+              mobileNumbers: noticeValues.customerDetails?.mobileNumbers,
+            }}
+            confirming={noticeSaving}
+            onClose={() => setNoticeValues(null)}
+            onConfirm={confirmSeizingNotice}
+          />
+        )}
         <form
           onSubmit={formik.handleSubmit}
           onKeyDown={(e) => { if (e.key === "Enter" && e.target.tagName !== "TEXTAREA" && e.target.type !== "submit") e.preventDefault(); }}

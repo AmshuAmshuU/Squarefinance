@@ -16,6 +16,7 @@ import { useToast } from "../../../context/ToastContext";
 import Link from "next/link";
 import TableActionMenu from "../../../components/TableActionMenu";
 import ConfirmationModal from "../../../components/ConfirmationModal";
+import SeizingNoticePopup from "../../../components/SeizingNoticePopup";
 import { useUI } from "../../../context/UIContext";
 import { getTodayIST } from "../../../utils/dateUtils";
 import CallRecordControl, { useCallRecordEvents } from "../../../components/CallRecordControl";
@@ -43,6 +44,8 @@ const FollowupPaymentsPage = () => {
   });
   const [activeContactMenu, setActiveContactMenu] = useState(null);
   const [showSeizeModal, setShowSeizeModal] = useState(false);
+  const [seizeItem, setSeizeItem] = useState(null);
+  const [seizeSaving, setSeizeSaving] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
@@ -175,9 +178,33 @@ const FollowupPaymentsPage = () => {
     setIsFilterOpen(false);
   };
 
-  const handleSeizeClick = (loanId) => {
-    setSelectedLoan({ loanId });
+  // Vehicle (Monthly) loans must send the customer the seizing notice first.
+  const handleSeizeClick = (item) => {
+    if (!item.loanType || item.loanType === "Monthly") {
+      setSeizeItem(item);
+      return;
+    }
+    setSelectedLoan({ loanId: item.loanId });
     setShowSeizeModal(true);
+  };
+
+  const confirmSeizeWithNotice = async (notice) => {
+    if (!seizeItem?.loanId) return;
+    setSeizeSaving(true);
+    try {
+      const res = await toggleSeized(seizeItem.loanId, notice);
+      const waitingForApproval = (res?.message || "").toLowerCase().includes("approval");
+      showToast(
+        waitingForApproval ? "Notice recorded. Sent to Super Admin for approval" : "Vehicle marked For Seizing",
+        waitingForApproval ? "info" : "success",
+      );
+      setSeizeItem(null);
+      fetchFollowups({ ...filters, page: currentPage, limit });
+    } catch (err) {
+      showToast(err.message || "Failed to seize vehicle", "error");
+    } finally {
+      setSeizeSaving(false);
+    }
   };
 
   const confirmSeize = async () => {
@@ -545,7 +572,7 @@ const FollowupPaymentsPage = () => {
                                   {
                                     label: "Seize Vehicle",
                                     onClick: () =>
-                                      handleSeizeClick(item.loanId),
+                                      handleSeizeClick(item),
                                   },
                                 ]}
                               />
@@ -760,6 +787,15 @@ const FollowupPaymentsPage = () => {
           contact={activeContactMenu}
           onClose={() => setActiveContactMenu(null)}
         />
+
+        {seizeItem && (
+          <SeizingNoticePopup
+            loan={seizeItem}
+            confirming={seizeSaving}
+            onClose={() => setSeizeItem(null)}
+            onConfirm={confirmSeizeWithNotice}
+          />
+        )}
 
         <ConfirmationModal
           isOpen={showSeizeModal}

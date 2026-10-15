@@ -7,6 +7,7 @@ import Sidebar from "../../../../../components/Sidebar";
 import LoanForm from "../../../../../components/LoanForm";
 import EMITable from "../../../../../components/EMITable";
 import LoanROICard from "../../../../../components/LoanROICard";
+import SeizingNoticeRecord from "../../../../../components/SeizingNoticeRecord";
 import CustomerLocationPanel from "../../../../../components/CustomerLocationPanel";
 import { getLoanROI } from "../../../../../services/loan.service";
 import { useToast } from "../../../../../context/ToastContext";
@@ -414,6 +415,8 @@ const EditLoanPage = () => {
                       loanId={id}
                     />
                   </div>
+
+                  <SeizingNoticeRecord notices={loan?.seizingNotices} />
 
                   <LoanROICard fetchFn={getLoanROI} loanId={id} />
                 </>

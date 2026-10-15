@@ -16,6 +16,7 @@ const LoanDraft = require("../models/LoanDraft");
 const { APPROVAL_VALID_HOURS } = require("../utils/rateApproval");
 const photoStore = require("../utils/cloudinaryPhotos");
 const { normalizeHouseLocation } = require("../utils/houseLocation");
+const { applyForSeizing } = require("../utils/seizingNotice");
 const { saveNote: savePhotoNote, MODELS: PHOTO_MODELS } = require("./photoController");
 const { createExpenseRecord, updateExpenseRecord } = require("../utils/expenseActions");
 
@@ -795,6 +796,14 @@ const processApproval = asyncHandler(async (req, res, next) => {
           uploadedAt: new Date(),
         });
       }
+    } else if (requestType === "FOR_SEIZING") {
+      // The customer notice was already sent (and saved on the loan) when the
+      // request was made - approving just flags the vehicle For Seizing.
+      const loan = await Loan.findById(targetId);
+      if (!loan) {
+        return next(new ErrorHandler("This loan no longer exists, so it can't be marked For Seizing", 404));
+      }
+      if (!loan.isSeized) await applyForSeizing(loan, req.user._id);
     } else if (requestType === "EXPENSE_ADD") {
       await createExpenseRecord(requestedData.fields, approval.requestedBy);
     } else if (requestType === "EXPENSE_EDIT") {
@@ -951,6 +960,20 @@ const processApproval = asyncHandler(async (req, res, next) => {
     });
     const { notifyApprovalCountChange: notifyPhotoCount } = require("./notificationController");
     await notifyPhotoCount();
+    return sendResponse(res, 200, "success", `Request ${status} successfully`, null, approval);
+  }
+
+  if (approval.requestType === "FOR_SEIZING") {
+    await sendNotification({
+      recipientId: approval.requestedBy,
+      senderId: req.user._id,
+      type: status === "Approved" ? "PAYMENT_APPROVED" : "PAYMENT_REJECTED",
+      title: `For Seizing ${status}`,
+      message: `Your request to mark loan ${approval.loanNumber} (${approval.customerName}) For Seizing was ${status.toLowerCase()} by ${req.user.name}.`,
+      data: { loanNumber: approval.loanNumber, customerName: approval.customerName, employeeName: req.user.name, approvalId: approval._id },
+    });
+    const { notifyApprovalCountChange: notifySeizeCount } = require("./notificationController");
+    await notifySeizeCount();
     return sendResponse(res, 200, "success", `Request ${status} successfully`, null, approval);
   }
 

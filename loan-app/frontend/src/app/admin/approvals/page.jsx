@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "../../../context/ToastContext";
 import { getPendingApprovals, processApproval } from "../../../services/approvalService";
 import { useUI } from "../../../context/UIContext";
+import { SeizingNoticeLine } from "../../../components/SeizingNoticeRecord";
 
 const ApprovalsPage = () => {
     const router = useRouter();
@@ -185,8 +186,15 @@ const ApprovalsPage = () => {
                                                       EXPENSE_DELETE: "Expense Delete Request",
                                                       RATE_APPROVAL: "Interest Rate Approval (new loan)",
                                                       PHOTO_CHANGE: "Customer Photo Request",
+                                                      FOR_SEIZING: "For Seizing Request",
                                                     }[app.requestType] || "Loan Edit Request";
-                                                    if (app.requestType === "LOAN_EDIT" || isExpenseRequest || app.requestType === "RATE_APPROVAL" || app.requestType === "PHOTO_CHANGE") {
+                                                    // The customer seizing notice (WhatsApp + SMS) the employee sent
+                                                    // before asking - shown as proof for both ways of asking.
+                                                    const seizingNotice = app.requestType === "FOR_SEIZING" ? app.requestedData?.notice : app.requestedData?.seizingNotice;
+                                                    const displayChanges = app.requestType === "FOR_SEIZING"
+                                                      ? [{ label: "Vehicle Status", oldValue: "Active", newValue: "For Seizing" }]
+                                                      : (app.requestedData?.changes || []);
+                                                    if (app.requestType === "LOAN_EDIT" || isExpenseRequest || app.requestType === "RATE_APPROVAL" || app.requestType === "PHOTO_CHANGE" || app.requestType === "FOR_SEIZING") {
                                                       return (
                                                         <tr key={app._id} className="border-b border-slate-50">
                                                           <td colSpan={8} className="px-3 py-3">
@@ -211,7 +219,7 @@ const ApprovalsPage = () => {
                                                                   </tr>
                                                                 </thead>
                                                                 <tbody className="divide-y divide-amber-50">
-                                                                  {(app.requestedData?.changes || []).map((change, idx) => (
+                                                                  {displayChanges.map((change, idx) => (
                                                                     <tr key={idx}>
                                                                       <td className="py-1.5 pr-4 font-bold text-slate-600">{change.label}</td>
                                                                       <td className="py-1.5 pr-4 text-rose-500">{change.oldValue}</td>
@@ -220,6 +228,15 @@ const ApprovalsPage = () => {
                                                                   ))}
                                                                 </tbody>
                                                               </table>
+                                                              {seizingNotice && (
+                                                                <div
+                                                                  className="mt-3 rounded-xl px-3 py-2"
+                                                                  style={{ background: isDarkMode ? "rgba(16,185,129,0.12)" : "#ecfdf5", border: `1px solid ${isDarkMode ? "rgba(52,211,153,0.35)" : "#a7f3d0"}` }}
+                                                                >
+                                                                  <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: isDarkMode ? "#34d399" : "#059669" }}>✓ Customer already sent the seizing notice</p>
+                                                                  <SeizingNoticeLine notice={seizingNotice} color={isDarkMode ? "#a7f3d0" : "#047857"} />
+                                                                </div>
+                                                              )}
                                                               {app.requestType === "PHOTO_CHANGE" && (
                                                                 <div className="flex flex-wrap items-start gap-4 mt-3">
                                                                   {app.requestedData?.currentPhotoUrl && (

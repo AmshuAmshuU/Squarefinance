@@ -16,6 +16,7 @@ const { formatLoanResponse } = require("../utils/loanFormatter");
 const { attachCallRecords } = require("../utils/callRecords");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { normalizeHouseLocation } = require("../utils/houseLocation");
+const { buildSeizingNotice, applyForSeizing } = require("../utils/seizingNotice");
 const { notifyAdmins } = require("./notificationController");
 const LoanDraft = require("../models/LoanDraft");
 const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
@@ -897,12 +898,25 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Loan not found", 404));
   }
 
+  // Moving a loan INTO "For Seizing" needs the customer notice (WhatsApp +
+  // SMS popup) to have been sent first - for everyone, Super Admin included.
+  // Later saves while it already is For Seizing don't need a new one.
+  const movingToForSeizing =
+    req.body?.status?.status === "For Seizing" && loan.status !== "For Seizing";
+  const seizingNotice = movingToForSeizing
+    ? buildSeizingNotice(req.body.seizingNotice, req.user)
+    : null;
+
   // If employee, create approval request instead of saving directly
   const isSuperAdmin = req.user.role === "SUPER_ADMIN";
   if (!isSuperAdmin) {
     const { computeLoanDiff } = require("../utils/loanDiff");
     const Approval = require("../models/Approval");
     const { notifyAdmins } = require("./notificationController");
+
+    // The notice has already gone out, so it is recorded on the loan now
+    // even though the status change itself still waits for approval.
+    if (seizingNotice) loan.seizingNotices = [...(loan.seizingNotices || []), seizingNotice];
 
     // Save clientResponse and nextFollowUpDate directly — for vehicle loans these are inside status object
     const statusObj = req.body.status || {};
@@ -938,7 +952,7 @@ const updateLoan = asyncHandler(async (req, res, next) => {
       loanNumber: loan.loanNumber,
       customerName: loan.customerName || "—",
       requestedBy: req.user._id,
-      requestedData: { changes, newValues: req.body },
+      requestedData: { changes, newValues: req.body, ...(seizingNotice && { seizingNotice }) },
       status: "Pending",
     });
 
@@ -1194,6 +1208,14 @@ const updateLoan = asyncHandler(async (req, res, next) => {
     runValidators: true,
   });
 
+  if (seizingNotice) {
+    loan = await Loan.findByIdAndUpdate(
+      loan._id,
+      { $push: { seizingNotices: seizingNotice } },
+      { new: true, timestamps: false },
+    );
+  }
+
   // Handle SeizedVehicle, ClosedLoan, and Followup records after update
   if (updateData.status === "Seized" || updateData.isSeized) {
     await SeizedVehicle.findOneAndUpdate(
@@ -1362,41 +1384,54 @@ const toggleSeizedStatus = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Loan not found", 404));
   }
 
-  loan.isSeized = !loan.isSeized;
+  if (!loan.isSeized) {
+    // Marking For Seizing: the customer must have been sent the notice first
+    // (the popup sends it along), for everyone including the Super Admin.
+    // Anyone else's request waits for Super Admin approval - the notice has
+    // already gone out, so it is saved on the loan straight away.
+    const notice = buildSeizingNotice(req.body?.notice, req.user);
 
-  // Simultaneously update the status field to match isSeized. Status
-  // starts at "For Seizing" (not "Seized") - the vehicle hasn't actually
-  // been physically seized yet at this point, only flagged for it.
-  // updateSeizedStatus bumps status to "Seized" once seizedStatus is
-  // actually advanced to "Seized" on the Seized Vehicles page.
-  if (loan.isSeized) {
-    loan.status = "For Seizing";
-    // loan.seizedDate = new Date(); // Removed to defer countdown
-    loan.seizedStatus = "For Seizing";
+    if (req.user.role === "SUPER_ADMIN") {
+      await applyForSeizing(loan, req.user._id, notice);
+    } else {
+      const Approval = require("../models/Approval");
+      const alreadyAsked = await Approval.findOne({
+        requestType: "FOR_SEIZING",
+        targetId: loan._id,
+        status: "Pending",
+      });
+      if (alreadyAsked) {
+        return next(new ErrorHandler("A request to mark this vehicle For Seizing is already waiting for approval", 400));
+      }
+
+      await Loan.updateOne({ _id: loan._id }, { $push: { seizingNotices: notice } }, { timestamps: false });
+      await Approval.create({
+        requestType: "FOR_SEIZING",
+        targetId: loan._id,
+        targetModel: "Loan",
+        loanNumber: loan.loanNumber,
+        customerName: loan.customerName || "—",
+        requestedBy: req.user._id,
+        requestedData: { notice, summary: "Mark vehicle For Seizing" },
+        status: "Pending",
+      });
+      await notifyAdmins({
+        senderId: req.user._id,
+        type: "LOAN_EDIT_REQUEST",
+        title: "For Seizing Approval Request",
+        message: `${req.user.name} sent the seizing notice and asked to mark loan ${loan.loanNumber} (${loan.customerName || "—"}) For Seizing.`,
+        data: { loanNumber: loan.loanNumber },
+      });
+      return sendResponse(res, 200, "success", "Seizing notice recorded. The request was sent to the Super Admin for approval", null, formatLoanResponse(loan));
+    }
   } else {
-    // If we are un-seizing, revert to Active.
+    // Un-seizing: revert to Active.
+    loan.isSeized = false;
     loan.status = "Active";
     loan.seizedDate = undefined;
     loan.seizedStatus = undefined;
-  }
-
-  await loan.save();
-
-  if (loan.isSeized) {
-    await SeizedVehicle.findOneAndUpdate(
-      { loanId: loan._id },
-      {
-        loanId: loan._id,
-        loanModel: "Loan",
-        seizedDate: new Date(),
-        status: "For Seizing",
-        remarks: "Status toggled to Seized",
-        createdBy: req.user._id,
-      },
-      { upsert: true, new: true },
-    );
-  } else {
-    // If un-seizing, we could update the SeizedVehicle status to Re-activate or delete it
+    await loan.save();
+    // Could also delete the SeizedVehicle record; it is marked Re-activate instead.
     await SeizedVehicle.findOneAndUpdate(
       { loanId: loan._id },
       { status: "Re-activate", remarks: "Status toggled back to Active" },

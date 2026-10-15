@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { houseLocationSchema } = require("../utils/houseLocation");
+const { seizingNoticeSchema } = require("../utils/seizingNotice");
 
 const loanSchema = new mongoose.Schema(
   {
@@ -302,6 +303,9 @@ const loanSchema = new mongoose.Schema(
     // saved with "Use my current location"). Unrelated to the customer-shared
     // location below. See utils/houseLocation.js.
     houseLocation: { type: houseLocationSchema },
+    // One entry every time the customer was sent a "For Seizing" notice
+    // (WhatsApp + SMS) - see utils/seizingNotice.js.
+    seizingNotices: { type: [seizingNoticeSchema], default: undefined },
     // Permanent per-loan link a customer taps to share their current
     // location (WhatsApp signup/reminder messages) - see
     // utils/customerLocation.js. locationToken never changes once set;

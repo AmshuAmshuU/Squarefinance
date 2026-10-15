@@ -15,6 +15,7 @@ import { getEMIsByLoanId } from "../../../../services/customer";
 import { flattenLoan } from "../../../../utils/loanUtils";
 import FollowupHistory from "../../../../components/FollowupHistory";
 import LoanROICard from "../../../../components/LoanROICard";
+import SeizingNoticeRecord from "../../../../components/SeizingNoticeRecord";
 import CustomerLocationPanel from "../../../../components/CustomerLocationPanel";
 import { getLoanROI } from "../../../../services/loan.service";
 import { useUI } from "../../../../context/UIContext";
@@ -346,6 +347,8 @@ const ViewLoanPage = () => {
                       loanId={id}
                     />
                   </div>
+
+                  <SeizingNoticeRecord notices={loan?.seizingNotices} />
 
                   <LoanROICard fetchFn={getLoanROI} loanId={id} />
                 </>
