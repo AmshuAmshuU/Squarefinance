@@ -31,7 +31,7 @@ const labelFor = (key, granularity) => {
 };
 
 const ExpensesCard = ({ fallbackTotal }) => {
-  const [interval, setIntervalValue] = useState("all");
+  const [interval, setIntervalValue] = useState("6months");
   const [customDates, setCustomDates] = useState({
     start: getISTDateNDaysAgo(30),
     end: getTodayIST(),
