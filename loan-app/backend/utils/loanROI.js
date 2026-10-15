@@ -85,15 +85,27 @@ function xirr(flows) {
 }
 
 // hist: [{date, amount}] real, already-happened flows (negative = disbursed, positive = collected)
-// future: [{date, amount}] real scheduled future flows (positive only), after asOfDate
+// future: [{date, amount}] scheduled flows (positive only) on their own due dates.
+//   Ones already past asOfDate (overdue) are treated as paid ON asOfDate - see below.
 // pending: number - outstanding amount with no better date than asOfDate itself
 //   (either genuinely undated, like Interest loan principal, or was already
 //   due by asOfDate but not yet collected by then)
 function computeROI(hist, future, pending = 0, asOfDate = new Date()) {
   const futureTotal = (future || []).reduce((s, f) => s + f.amount, 0) + (pending || 0);
 
-  const realisticFlows = [...hist, ...(future || [])];
-  if (pending > 0) realisticFlows.push({ date: asOfDate, amount: pending });
+  // An unpaid EMI whose due date has already passed can't be collected in the
+  // past - the earliest it can arrive is today (the "as of" date). So it is
+  // dated asOfDate here instead of on its old due date (which made a loan with
+  // missed EMIs keep showing its day-one XIRR). Only EMIs still to fall due
+  // keep their own scheduled date. Once a payment is actually entered it moves
+  // into `hist` on its real date. Liquidation/outstanding/absolute figures
+  // are unaffected: they already use asOfDate or plain totals.
+  const upcoming = (future || []).filter((f) => f.date >= asOfDate);
+  const overdueTotal = (future || []).filter((f) => f.date < asOfDate).reduce((s, f) => s + f.amount, 0);
+  const dueNow = (pending || 0) + overdueTotal;
+
+  const realisticFlows = [...hist, ...upcoming];
+  if (dueNow > 0) realisticFlows.push({ date: asOfDate, amount: dueNow });
 
   const liquidationFlows = futureTotal > 0
     ? [...hist, { date: asOfDate, amount: futureTotal }]
@@ -168,9 +180,8 @@ function vehicleLoanFlows(loan, emis, asOfDate = new Date()) {
     for (const emi of emis) {
       const wasPaidByThen = emi.status === "Paid" && !emi.closedWithoutPayment && emi.amountPaid && emi.paymentDate && new Date(emi.paymentDate) <= asOfDate;
       if (wasPaidByThen || emi.closedWithoutPayment) continue; // already counted, or a phantom bulk-close entry
-      // Always use the EMI's own real due date, even if it's already in
-      // the past relative to asOfDate (overdue) - that's still a real,
-      // known reference point, not something to arbitrarily collapse.
+      // Always the EMI's own due date here; computeROI() moves any that are
+      // already past asOfDate (overdue, unpaid) onto asOfDate itself.
       future.push({ date: emi.dueDate ? new Date(emi.dueDate) : asOfDate, amount: emi.emiAmount || 0 });
     }
   }
