@@ -302,7 +302,15 @@ const CollectionsPage = () => {
           <tr><td colSpan="8" className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase tracking-widest">No transactions found for this period</td></tr>
         ) : (
           collections.map((item, idx) => (
-            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+            <tr
+              key={idx}
+              // The list is grouped by loan type (Vehicle, Weekly, Daily,
+              // Interest): type-divider draws a thicker line where one type
+              // ends and the next begins (colours in the style block below).
+              className={`hover:bg-slate-50 transition-colors ${
+                idx > 0 && item.loanModel !== collections[idx - 1].loanModel ? "type-divider" : ""
+              }`}
+            >
               <td className="px-4 py-4 text-xs font-black text-slate-900 whitespace-nowrap">
                 <Link 
                   href={getLoanEditLink(item.loanId, item.loanModel)}
@@ -533,6 +541,14 @@ const CollectionsPage = () => {
         }
         .collections-dark-mode input[type="date"] {
           color-scheme: dark;
+        }
+        /* Thicker line where one loan type ends and the next begins (the list
+           is grouped Vehicle / Weekly / Daily / Interest). */
+        tbody tr.type-divider {
+          border-top: 3px solid #94a3b8;
+        }
+        .collections-dark-mode tbody tr.type-divider {
+          border-top: 3px solid rgba(255, 255, 255, 0.4) !important;
         }
       `}</style>
       <div className={`min-h-screen bg-[#F8FAFC] flex font-sans transition-colors duration-300 ${isDarkMode ? "collections-dark-mode" : ""}`}>
