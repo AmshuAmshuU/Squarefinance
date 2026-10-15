@@ -1594,6 +1594,7 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
           updatedBy: { _id: 1, name: 1 },
           updatedAt: 1,
           paymentStatus: 1,
+          customerPhoto: 1,
           loanModel: { $literal: modelName },
           loanType: { $literal: loanType },
         },
@@ -1653,7 +1654,12 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
   );
 
   const total = allResults.length;
-  const paginatedResults = allResults.slice(skip, skip + limit);
+  // Only this page's rows get a signed thumbnail address (customerPhoto itself
+  // stays on the server) - same photoThumbUrl the loan lists use.
+  const paginatedResults = allResults.slice(skip, skip + limit).map(({ customerPhoto, ...row }) => ({
+    ...row,
+    photoThumbUrl: listPhotoUrl(customerPhoto),
+  }));
 
   sendResponse(
     res,

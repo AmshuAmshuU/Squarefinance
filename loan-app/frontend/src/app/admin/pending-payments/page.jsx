@@ -17,9 +17,20 @@ import { useToast } from "../../../context/ToastContext";
 import Link from "next/link";
 import TableActionMenu from "../../../components/TableActionMenu";
 import ConfirmationModal from "../../../components/ConfirmationModal";
+import ListPhoto from "../../../components/ListPhoto";
 import { hasPermission } from "../../../utils/auth";
 import { subMonths, subDays, differenceInCalendarDays, startOfDay } from "date-fns";
 import { useUI } from "../../../context/UIContext";
+
+// First three columns, so Loan + Mobile + Photo all fit on a phone screen
+// without sideways scrolling: the loan column no longer stretches to the
+// longest customer name (115px, names wrap to two lines), and the Mobile and
+// Photo columns shrink-wrap their content (width 1% + no wrapping = exactly the
+// width of 10 digits / the 43px photo tile, whatever font the phone uses), so
+// the photo starts right after the number with no gap.
+const COL_LOAN = { width: 115, minWidth: 115, maxWidth: 115 };
+const COL_MOBILE = { width: "1%" };
+const COL_PHOTO = { width: "1%" };
 
 const PendingPaymentsPage = () => {
   const router = useRouter();
@@ -338,11 +349,14 @@ const PendingPaymentsPage = () => {
                   <table className="w-full text-left border-collapse min-w-[1000px]">
                     <thead>
                       <tr className="bg-slate-50/50 border-b border-slate-200">
-                        <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                          Loan / Applicant
+                        <th style={COL_LOAN} className="pl-3 pr-1 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap overflow-hidden">
+                          Loan
                         </th>
-                         <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                          Applicant Mobile
+                         <th style={COL_MOBILE} className="pl-1 pr-0 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap overflow-hidden">
+                          Mobile
+                        </th>
+                        <th style={COL_PHOTO} className="px-0 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap overflow-hidden">
+                          Photo
                         </th>
                         <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                           Vehicle Number
@@ -372,7 +386,7 @@ const PendingPaymentsPage = () => {
                       {loading ? (
                         <tr>
                           <td
-                            colSpan="9"
+                            colSpan="10"
                             className="px-6 py-12 text-center text-slate-400 font-bold text-xs uppercase text-center"
                           >
                             Loading records...
@@ -381,7 +395,7 @@ const PendingPaymentsPage = () => {
                       ) : data.length === 0 ? (
                         <tr>
                           <td
-                            colSpan="9"
+                            colSpan="10"
                             className="px-6 py-12 text-center text-slate-400 font-bold text-xs uppercase text-center"
                           >
                             No records found
@@ -407,18 +421,18 @@ const PendingPaymentsPage = () => {
                             onClick={(e) => toggleHighlight(e, item.loanId)}
                             className={`cursor-pointer transition-colors group ${rowClass}`}
                           >
-                            <td className="px-3 py-3 whitespace-nowrap">
+                            <td style={COL_LOAN} className="pl-3 pr-1 py-3 overflow-hidden">
                               <Link
                                 href={`/admin/pending-payments/view/${item.earliestEmiId}`}
                                 className="block text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
                               >
                                 {item.loanNumber}
                               </Link>
-                              <span className="block mt-0.5 font-black text-slate-900 text-xs uppercase tracking-tight">
+                              <span className="line-clamp-2 mt-0.5 font-black text-slate-900 text-xs uppercase tracking-tight leading-tight break-words">
                                 {item.customerName}
                               </span>
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap">
+                            <td style={COL_MOBILE} className="pl-1 pr-0 py-3 whitespace-nowrap overflow-hidden">
                                <div className="flex flex-col gap-0.5 mt-1">
                                 {(item.mobileNumbers || []).map((num, idx) => (
                                   <button
@@ -440,6 +454,9 @@ const PendingPaymentsPage = () => {
                                     </button>
                                   ))}
                                 </div>
+                              </td>
+                              <td style={COL_PHOTO} className="px-0 py-[3px] align-middle overflow-hidden">
+                                <ListPhoto compact url={item.photoThumbUrl} />
                               </td>
                               <td className="px-3 py-3 whitespace-nowrap">
                                 <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
