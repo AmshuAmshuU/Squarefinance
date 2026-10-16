@@ -26,7 +26,7 @@ const EditInterestLoanPage = () => {
   const [emis, setEmis] = useState([]);
   const formStateRef = useRef(null);
   const saveOkRef = useRef(false);
-  const { hasPrev, hasNext, goPrev, goNext, modal: prevNextModal } = useLoanPrevNext({
+  const { hasPrev, hasNext, goPrev, goNext, goBack, modal: prevNextModal } = useLoanPrevNext({
     loanModel: "InterestLoan",
     id,
     mode: "edit",
@@ -157,7 +157,7 @@ const EditInterestLoanPage = () => {
                 hasNext={hasNext}
                 goPrev={goPrev}
                 goNext={goNext}
-                onBack={() => router.push(returnTo)}
+                onBack={() => goBack(returnTo)}
               />
 
               {loading ? (
@@ -171,7 +171,7 @@ const EditInterestLoanPage = () => {
                     submitting={submitting}
                     emis={emis}
                     onRefresh={fetchLoan}
-                    onCancel={() => router.push(returnTo)}
+                    onCancel={() => goBack(returnTo)}
                   />
 
                   <div className="mt-6">

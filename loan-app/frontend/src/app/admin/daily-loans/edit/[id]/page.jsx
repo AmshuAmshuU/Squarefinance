@@ -29,7 +29,7 @@ const EditDailyLoanPage = () => {
   const { showToast } = useToast();
   const formStateRef = useRef(null);
   const saveOkRef = useRef(false);
-  const { hasPrev, hasNext, goPrev, goNext, modal: prevNextModal } = useLoanPrevNext({
+  const { hasPrev, hasNext, goPrev, goNext, goBack, modal: prevNextModal } = useLoanPrevNext({
     loanModel: "DailyLoan",
     id: id,
     mode: "edit",
@@ -161,7 +161,7 @@ const EditDailyLoanPage = () => {
                 hasNext={hasNext}
                 goPrev={goPrev}
                 goNext={goNext}
-                onBack={() => router.push(returnTo)}
+                onBack={() => goBack(returnTo)}
               />
 
               {loading ? (
@@ -185,7 +185,7 @@ const EditDailyLoanPage = () => {
                     initialData={loanData}
                     onSubmit={handleSubmit}
                     formStateRef={formStateRef}
-                    onCancel={() => router.push("/admin/daily-loans")}
+                    onCancel={() => goBack(returnTo)}
                     submitting={submitting}
                   />
 

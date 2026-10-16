@@ -30,7 +30,7 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
   const { showToast } = useToast();
   const formStateRef = useRef(null);
   const saveOkRef = useRef(false);
-  const { hasPrev, hasNext, goPrev, goNext, modal: prevNextModal } = useLoanPrevNext({
+  const { hasPrev, hasNext, goPrev, goNext, goBack, modal: prevNextModal } = useLoanPrevNext({
     loanModel: "WeeklyLoan",
     id: params.id,
     mode: "edit",
@@ -169,7 +169,7 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
                 hasNext={hasNext}
                 goPrev={goPrev}
                 goNext={goNext}
-                onBack={() => router.push(returnTo)}
+                onBack={() => goBack(returnTo)}
               />
 
               {loading ? (
@@ -193,7 +193,7 @@ const EditWeeklyLoanPage = ({ params: paramsPromise }) => {
                     initialData={loanData}
                     onSubmit={handleSubmit}
                     formStateRef={formStateRef}
-                    onCancel={() => router.push("/admin/weekly-loans")}
+                    onCancel={() => goBack(returnTo)}
                     submitting={submitting}
                   />
 

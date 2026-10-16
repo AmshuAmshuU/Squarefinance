@@ -12,6 +12,7 @@ import Pagination from "../../../components/Pagination";
 import ContactActionMenu from "../../../components/ContactActionMenu";
 import { useUI } from "../../../context/UIContext";
 import ListPhoto from "../../../components/ListPhoto";
+import { readSnapshot, useListMemory } from "../../../utils/backNavigation";
 
 const LoansPage = () => {
   const router = useRouter();
@@ -24,9 +25,11 @@ const LoansPage = () => {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  // Search / filters / page as the user left them - only when coming back via a loan's Back button
+  const [saved] = useState(() => readSnapshot("/admin/loans"));
+  const [searchQuery, setSearchQuery] = useState(saved?.searchQuery ?? "");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(saved?.filters ?? {
     loanNumber: "",
     customerName: "",
     mobileNumber: "",
@@ -52,10 +55,11 @@ const LoansPage = () => {
   };
 
   // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(saved?.currentPage ?? 1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [limit] = useState(25);
+  useListMemory("/admin/loans", { searchQuery, filters, currentPage }, !loading);
 
   useEffect(() => {
     const timer = setTimeout(() => {

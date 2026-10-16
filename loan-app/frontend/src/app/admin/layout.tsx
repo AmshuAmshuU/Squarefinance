@@ -1,7 +1,8 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { UIProvider } from "../../context/UIContext";
 import { NotificationProvider } from "../../context/NotificationContext";
 import { LocationAlertProvider } from "../../context/LocationAlertContext";
+import NavTracker from "../../components/NavTracker";
 
 export default function AdminLayout({
   children,
@@ -12,6 +13,9 @@ export default function AdminLayout({
     <UIProvider>
       <NotificationProvider>
         <LocationAlertProvider>
+          <Suspense fallback={null}>
+            <NavTracker />
+          </Suspense>
           <div className="flex-1 animate-fade-in w-full max-w-[800px] mx-auto sm:max-w-none sm:px-0">
             {children}
           </div>

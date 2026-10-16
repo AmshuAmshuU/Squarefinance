@@ -19,6 +19,7 @@ import ConfirmationModal from "../../../components/ConfirmationModal";
 import SeizingNoticePopup from "../../../components/SeizingNoticePopup";
 import { useUI } from "../../../context/UIContext";
 import { getTodayIST } from "../../../utils/dateUtils";
+import { readSnapshot, useListMemory } from "../../../utils/backNavigation";
 import CallRecordControl, { useCallRecordEvents } from "../../../components/CallRecordControl";
 
 const FollowupPaymentsPage = () => {
@@ -27,7 +28,10 @@ const FollowupPaymentsPage = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  // Search / page as the user left them - only when coming back via a loan's Back button
+  // (the filters already survive on their own, see "monthlyFollowupFilters" below)
+  const [saved] = useState(() => readSnapshot("/admin/followup-payments"));
+  const [searchQuery, setSearchQuery] = useState(saved?.searchQuery ?? "");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -54,10 +58,11 @@ const FollowupPaymentsPage = () => {
     nextFollowUpDate: "",
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(saved?.currentPage ?? 1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [limit] = useState(25);
+  useListMemory("/admin/followup-payments", { searchQuery, currentPage }, !loading);
   const { showToast } = useToast();
   const [selectedRowId, setSelectedRowId] = useState(null);
 

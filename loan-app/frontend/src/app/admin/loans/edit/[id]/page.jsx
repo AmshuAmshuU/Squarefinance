@@ -35,7 +35,7 @@ const EditLoanPage = () => {
   const { showToast } = useToast();
   const formStateRef = useRef(null);
   const saveOkRef = useRef(false);
-  const { hasPrev, hasNext, goPrev, goNext, modal: prevNextModal } = useLoanPrevNext({
+  const { hasPrev, hasNext, goPrev, goNext, goBack, modal: prevNextModal } = useLoanPrevNext({
     loanModel: "Loan",
     id,
     mode: "edit",
@@ -267,7 +267,7 @@ const EditLoanPage = () => {
                 hasNext={hasNext}
                 goPrev={goPrev}
                 goNext={goNext}
-                onBack={() => router.push(returnTo)}
+                onBack={() => goBack(returnTo)}
               />
 
               {loan && (
@@ -385,7 +385,7 @@ const EditLoanPage = () => {
                     initialData={loan}
                     onSubmit={handleSubmit}
                     formStateRef={formStateRef}
-                    onCancel={() => router.push(returnTo)}
+                    onCancel={() => goBack(returnTo)}
                     submitting={submitting}
                     emis={emis}
                     renderExtraActions={() => null}

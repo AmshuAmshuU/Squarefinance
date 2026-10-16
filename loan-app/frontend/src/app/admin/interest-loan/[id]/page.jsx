@@ -22,7 +22,7 @@ const ViewInterestLoanPage = () => {
   const [loan, setLoan] = useState(null);
   const [emis, setEmis] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { hasPrev, hasNext, goPrev, goNext } = useLoanPrevNext({ loanModel: "InterestLoan", id: id, mode: "view" });
+  const { hasPrev, hasNext, goPrev, goNext, goBack } = useLoanPrevNext({ loanModel: "InterestLoan", id: id, mode: "view" });
 
   const fetchLoanData = async () => {
     try {
@@ -98,7 +98,7 @@ const ViewInterestLoanPage = () => {
                     hasNext={hasNext}
                     goPrev={goPrev}
                     goNext={goNext}
-                    onBack={() => router.push(returnTo)}
+                    onBack={() => goBack(returnTo)}
                   />
 
                   <InterestLoanDetails loan={loan} emis={emis} onRefresh={fetchLoanData} />

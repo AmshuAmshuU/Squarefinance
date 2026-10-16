@@ -33,7 +33,7 @@ const ViewLoanPage = () => {
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
   const { showToast } = useToast();
-  const { hasPrev, hasNext, goPrev, goNext } = useLoanPrevNext({ loanModel: "Loan", id: id, mode: "view" });
+  const { hasPrev, hasNext, goPrev, goNext, goBack } = useLoanPrevNext({ loanModel: "Loan", id: id, mode: "view" });
 
   useEffect(() => {
     const fetchLoanData = async () => {
@@ -201,7 +201,7 @@ const ViewLoanPage = () => {
                 hasNext={hasNext}
                 goPrev={goPrev}
                 goNext={goNext}
-                onBack={() => router.push(returnTo)}
+                onBack={() => goBack(returnTo)}
               />
 
               {loan && (
@@ -318,7 +318,7 @@ const ViewLoanPage = () => {
                   <LoanForm
                     initialData={loan}
                     isViewOnly={true}
-                    onCancel={() => router.push("/admin/loans")}
+                    onCancel={() => goBack(returnTo)}
                     emis={emis}
                   />
 

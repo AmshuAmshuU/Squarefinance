@@ -12,10 +12,13 @@ import { Trash2, Eye, Edit } from "lucide-react";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "@/utils/auth";
 import { useUI } from "@/context/UIContext";
+import { readSnapshot, useListMemory } from "@/utils/backNavigation";
 
 const InterestLoansList = ({ type, title }) => {
   const router = useRouter();
   const { isDarkMode } = useUI();
+  // Search / filters / page as the user left them - only when coming back via a loan's Back button
+  const [saved] = useState(() => readSnapshot("/admin/interest-loan"));
   const { showToast } = useToast();
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [activeContactMenu, setActiveContactMenu] = useState(null);
@@ -27,19 +30,21 @@ const InterestLoansList = ({ type, title }) => {
 
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(saved?.searchQuery ?? "");
   const [totalRecords, setTotalRecords] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(saved?.currentPage ?? 1);
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(25);
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(saved?.filters ?? {
     loanNumber: "",
     customerName: "",
     mobileNumber: "",
     status: "",
   });
+  useListMemory("/admin/interest-loan", { searchQuery, filters, currentPage }, !loading);
+
 
   const toggleHighlight = (e, id) => {
     if (e.target.closest("button") || e.target.closest("a")) return;

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getLoanNeighbors } from "../services/loanNeighbor.service";
 import { useUI } from "../context/UIContext";
+import { prepareBack } from "../utils/backNavigation";
 
 // PREV / NEXT between loans: PREV goes to the next-older loan, NEXT to the
 // next-newer loan (the backend decides which loan that is).
@@ -95,6 +96,8 @@ export const useLoanPrevNext = ({ loanModel, id, mode, formStateRef, saveSucceed
   const router = useRouter();
   const [neighbors, setNeighbors] = useState({ forId: null, prevId: null, nextId: null });
   const [pendingId, setPendingId] = useState(null);
+  // Set when Back/Cancel was pressed with unsaved changes (the page to go to)
+  const [pendingBackUrl, setPendingBackUrl] = useState(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -132,8 +135,36 @@ export const useLoanPrevNext = ({ loanModel, id, mode, formStateRef, saveSucceed
     [mode, formStateRef, navigateTo],
   );
 
+  // Back / Cancel: go to the page the user came from (or `fallback`, the loan
+  // type's main list), asking about unsaved changes first on modify pages.
+  const leaveTo = useCallback(
+    (fallback) => {
+      router.push(prepareBack(fallback));
+    },
+    [router],
+  );
+
+  const goBack = useCallback(
+    (fallback) => {
+      if (mode === "edit" && formStateRef?.current?.isDirty()) {
+        setPendingBackUrl(fallback);
+        return;
+      }
+      leaveTo(fallback);
+    },
+    [mode, formStateRef, leaveTo],
+  );
+
+  const pending = pendingId ? { loanId: pendingId } : pendingBackUrl ? { back: pendingBackUrl } : null;
+  const clearPending = () => {
+    setPendingId(null);
+    setPendingBackUrl(null);
+  };
+  const proceed = (p) => (p.loanId ? navigateTo(p.loanId) : leaveTo(p.back));
+
   const saveAndGo = async () => {
-    if (!formStateRef?.current) return;
+    if (!formStateRef?.current || !pending) return;
+    const target = pending;
     setSaving(true);
     if (saveSucceededRef) saveSucceededRef.current = false;
     try {
@@ -142,23 +173,22 @@ export const useLoanPrevNext = ({ loanModel, id, mode, formStateRef, saveSucceed
       // the page already shows its own error message
     }
     setSaving(false);
-    const target = pendingId;
-    setPendingId(null);
+    clearPending();
     // Only move on if the save really went through (not on a validation or
     // server error) so nothing is lost.
-    if (saveSucceededRef?.current) navigateTo(target);
+    if (saveSucceededRef?.current) proceed(target);
   };
 
-  const modal = pendingId ? (
+  const modal = pending ? (
     <UnsavedModal
       saving={saving}
       onSave={saveAndGo}
       onDiscard={() => {
-        const target = pendingId;
-        setPendingId(null);
-        navigateTo(target);
+        const target = pending;
+        clearPending();
+        proceed(target);
       }}
-      onStay={() => setPendingId(null)}
+      onStay={clearPending}
     />
   ) : null;
 
@@ -170,6 +200,7 @@ export const useLoanPrevNext = ({ loanModel, id, mode, formStateRef, saveSucceed
     hasNext: !!current.nextId,
     goPrev: () => go(current.prevId),
     goNext: () => go(current.nextId),
+    goBack,
     modal,
   };
 };

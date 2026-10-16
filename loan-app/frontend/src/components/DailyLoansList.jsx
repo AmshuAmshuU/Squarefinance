@@ -12,16 +12,19 @@ import { Trash2 } from "lucide-react";
 import ContactActionMenu from "./ContactActionMenu";
 import { getUserFromToken } from "../utils/auth";
 import { useUI } from "../context/UIContext";
+import { readSnapshot, useListMemory } from "../utils/backNavigation";
 
 const DailyLoansList = ({ type, title }) => {
   const router = useRouter();
   const { isDarkMode } = useUI();
+  // Search / filters / page as the user left them - only when coming back via a loan's Back button
+  const [saved] = useState(() => readSnapshot("/admin/daily-loans"));
   const { showToast } = useToast();
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [activeContactMenu, setActiveContactMenu] = useState(null); // { number, name, type, x, y }
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(saved?.filters ?? {
     loanNumber: "",
     customerName: "",
     mobileNumber: "",
@@ -47,11 +50,12 @@ const DailyLoansList = ({ type, title }) => {
   const canEdit = isSuperAdmin || user?.permissions?.dailyLoans?.edit;
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(saved?.searchQuery ?? "");
   const [totalRecords, setTotalRecords] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(saved?.currentPage ?? 1);
   const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(25);
+  useListMemory("/admin/daily-loans", { searchQuery, filters, currentPage }, !loading);
 
   const fetchLoans = async () => {
     setLoading(true);

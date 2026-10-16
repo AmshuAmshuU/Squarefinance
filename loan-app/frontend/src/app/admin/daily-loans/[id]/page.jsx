@@ -28,7 +28,7 @@ const ViewDailyLoanPage = ({ params: paramsPromise }) => {
   const returnTo = useSearchParams().get("returnTo") || "/admin/daily-loans";
   const { isDarkMode } = useUI();
   const { showToast } = useToast();
-  const { hasPrev, hasNext, goPrev, goNext } = useLoanPrevNext({ loanModel: "DailyLoan", id: params.id, mode: "view" });
+  const { hasPrev, hasNext, goPrev, goNext, goBack } = useLoanPrevNext({ loanModel: "DailyLoan", id: params.id, mode: "view" });
   const [loanData, setLoanData] = useState(null);
   const [emis, setEmis] = useState([]);
   const [history, setHistory] = useState([]);
@@ -116,7 +116,7 @@ const ViewDailyLoanPage = ({ params: paramsPromise }) => {
                 hasNext={hasNext}
                 goPrev={goPrev}
                 goNext={goNext}
-                onBack={() => router.push(returnTo)}
+                onBack={() => goBack(returnTo)}
               />
 
               {loading ? (
@@ -139,7 +139,7 @@ const ViewDailyLoanPage = ({ params: paramsPromise }) => {
                   <DailyLoanForm
                     initialData={loanData}
                     isViewOnly={true}
-                    onCancel={() => router.push("/admin/daily-loans")}
+                    onCancel={() => goBack(returnTo)}
                   />
 
                   <div className="mt-12">
