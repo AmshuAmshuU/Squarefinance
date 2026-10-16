@@ -81,7 +81,7 @@ const sendDailyConsolidatedReport = asyncHandler(async (req, res, next) => {
     </div>
   `;
 
-  await sendReportEmail(
+  const sent = await sendReportEmail(
     recipients,
     `Square Finance — Daily Report (${today})`,
     htmlBody,
@@ -89,8 +89,10 @@ const sendDailyConsolidatedReport = asyncHandler(async (req, res, next) => {
     fileName
   );
 
-  sendResponse(res, 200, "success", `Report sent to ${recipients.length} recipient(s)`, null, {
-    recipients,
+  sendResponse(res, 200, "success", `Report sent to ${sent.recipients.length} recipient(s)`, null, {
+    recipients: sent.recipients,
+    // "personal" = sent from the report's own Gmail account, "company" = from the company mailbox
+    sentVia: sent.sentVia,
     ...summaryCounts,
   });
 });

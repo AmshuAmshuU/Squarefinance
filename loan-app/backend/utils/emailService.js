@@ -19,6 +19,25 @@ oauth2Client.setCredentials({
 // Pre-initialize Gmail API instance
 const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
+// The daily report can be sent from a DIFFERENT Gmail account than the company
+// one (same Google OAuth app, a refresh token obtained by signing in as that
+// account). Sending from the company mailbox leaves a copy in its Sent folder
+// that office staff can read - so the report uses its own sender when
+// REPORT_GMAIL_USER + REPORT_GMAIL_REFRESH_TOKEN are set. (Plain SMTP is not an
+// option: Render's free tier blocks outbound SMTP ports.)
+const REPORT_GMAIL_USER = process.env.REPORT_GMAIL_USER;
+const REPORT_REFRESH_TOKEN = process.env.REPORT_GMAIL_REFRESH_TOKEN;
+let reportGmail = null;
+if (CLIENT_ID && CLIENT_SECRET && REPORT_GMAIL_USER && REPORT_REFRESH_TOKEN) {
+  const reportOAuth = new google.auth.OAuth2(
+    CLIENT_ID,
+    CLIENT_SECRET,
+    "https://developers.google.com/oauthplayground",
+  );
+  reportOAuth.setCredentials({ refresh_token: REPORT_REFRESH_TOKEN });
+  reportGmail = google.gmail({ version: "v1", auth: reportOAuth });
+}
+
 const sendOTP = async (email, otp) => {
   if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !GMAIL_USER) {
     console.error(
@@ -203,12 +222,22 @@ const sendInquiryEmail = async (inquiryData) => {
 };
 
 const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, attachmentFilename) => {
-  if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !GMAIL_USER) {
+  // Personal sender when configured. If it is configured but fails, this does
+  // NOT fall back to the company mailbox (that would put the report back in a
+  // mailbox office staff can read) - the failure is reported instead.
+  const usePersonalSender = !!reportGmail;
+  if (!usePersonalSender && (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !GMAIL_USER)) {
     throw new Error("Email configuration missing");
   }
 
-  const from = GMAIL_USER;
-  const to = recipients.join(", ");
+  const sender = usePersonalSender ? reportGmail : gmail;
+  const from = usePersonalSender ? REPORT_GMAIL_USER : GMAIL_USER;
+  // One email to everyone, each address listed once (case-insensitive)
+  const seen = new Set();
+  const unique = recipients
+    .map((r) => r.trim())
+    .filter((r) => r && !seen.has(r.toLowerCase()) && seen.add(r.toLowerCase()));
+  const to = unique.join(", ");
   const boundary = "square_finance_report_boundary";
 
   // Defensive: Buffer.from() on an already-real Buffer is a safe
@@ -241,13 +270,13 @@ const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, 
     .replace(/\//g, "_")
     .replace(/=+$/, "");
 
-  const result = await gmail.users.messages.send({
+  const result = await sender.users.messages.send({
     userId: "me",
     requestBody: { raw: encodedMessage },
   });
 
-  console.log(`Report email sent to ${to}:`, result.data.id);
-  return result.data;
+  console.log(`Report email sent from ${from} (${usePersonalSender ? "personal sender" : "company mailbox"}) to ${to}:`, result.data.id);
+  return { ...result.data, sentVia: usePersonalSender ? "personal" : "company", recipients: unique };
 };
 
 module.exports = { sendOTP, sendInquiryEmail, sendReportEmail };
