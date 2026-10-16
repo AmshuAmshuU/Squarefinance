@@ -91,29 +91,65 @@ export const useListMemory = (key, snapshot, ready) => {
     } catch {}
   }, [key, serialized]);
 
-  // Scroll position: remembered while scrolling (not while a restore is pending).
+  // Scroll position.
+  // Leaving a list always starts with a click/tap, so the exact position is saved at that moment. The page
+  // change itself then makes the browser clamp the scroll position (the next page is shorter) and fire
+  // scroll events - those must NOT overwrite it, so saving is paused after a click until the user scrolls again.
+  const frozen = useRef(false);
+  const userMoved = useRef(false);
+  const restoreTimers = useRef([]);
   useEffect(() => {
     let frame = 0;
+    const timers = restoreTimers.current;
+    const saveNow = () => {
+      try {
+        sessionStorage.setItem(scrollKey(key), String(window.scrollY));
+      } catch {}
+    };
     const onScroll = () => {
-      if (pendingScroll.current !== null || frame) return;
+      if (pendingScroll.current !== null || frozen.current || frame) return;
       frame = requestAnimationFrame(() => {
         frame = 0;
-        try {
-          sessionStorage.setItem(scrollKey(key), String(window.scrollY));
-        } catch {}
+        if (!frozen.current) saveNow();
       });
     };
+    const onClick = () => {
+      if (pendingScroll.current === null && !frozen.current) saveNow();
+      frozen.current = true;
+    };
+    const onUserScroll = () => {
+      userMoved.current = true;
+      frozen.current = false;
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", onClick, true);
+    ["wheel", "touchmove", "keydown"].forEach((ev) => window.addEventListener(ev, onUserScroll, { passive: true }));
     return () => {
       window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onClick, true);
+      ["wheel", "touchmove", "keydown"].forEach((ev) => window.removeEventListener(ev, onUserScroll));
       if (frame) cancelAnimationFrame(frame);
+      timers.forEach(clearTimeout);
     };
   }, [key]);
 
+  // Put the page back where it was once the list has loaded. The page may still be growing (rows, photos) or
+  // the browser may reset the scroll right after the page opens, so it is re-applied a few times - unless the
+  // user starts scrolling themselves.
   useEffect(() => {
     if (!ready || pendingScroll.current === null) return;
     const y = pendingScroll.current;
     pendingScroll.current = null;
-    requestAnimationFrame(() => window.scrollTo(0, y));
+    frozen.current = true;
+    userMoved.current = false;
+    const timers = restoreTimers.current;
+    const apply = () => {
+      if (userMoved.current) return;
+      const reachable = document.documentElement.scrollHeight - window.innerHeight >= y - 4;
+      if (reachable && Math.abs(window.scrollY - y) > 4) window.scrollTo({ top: y, left: 0, behavior: "instant" });
+    };
+    requestAnimationFrame(apply);
+    [120, 350, 800, 1500].forEach((ms) => timers.push(setTimeout(apply, ms)));
+    timers.push(setTimeout(() => (frozen.current = false), 1700));
   }, [ready]);
 };
