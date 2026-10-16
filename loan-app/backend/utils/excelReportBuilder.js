@@ -1,9 +1,9 @@
 const ExcelJS = require("exceljs");
 
-// Mirrors the "Consolidated Report" built client-side in
-// frontend/src/app/admin/analytics/page.jsx (handleExport) — same sheets,
-// same headers, same column order — so the automated daily email produces
-// byte-for-byte the same report shape as the manual Export button.
+// The one and only builder of the "Consolidated Report" workbook: the nightly
+// email AND the Export button on the Analytics page (reportController.js
+// exportConsolidatedExcel) both use it, so they always produce the same file
+// (registry sheets + the whole Analytics page in the "Analytics Summary" sheet).
 
 const formatHeader = (worksheet, headers, title) => {
   const titleRow = worksheet.addRow([title]);
@@ -58,9 +58,8 @@ const PROFIT_INTERVAL_COLS = [
 
 // Mirrors the Analytics page's stat cards (everything except graphs) as a
 // permanent tabular sheet, so a plain Excel file carries the same numbers
-// the dashboard shows on screen. Reused identically by the manual Export
-// button (frontend/src/app/admin/analytics/page.jsx handleExport).
-const addAnalyticsSummarySheet = (workbook, summary = {}) => {
+// the dashboard shows on screen.
+const addAnalyticsSummarySheet = (workbook, summary = {}, extras = null) => {
   const sheet = workbook.addWorksheet("Analytics Summary");
   const c = summary.cards || {};
   const WIDE = 1 + PROFIT_INTERVAL_COLS.length; // widest table
@@ -85,6 +84,7 @@ const addAnalyticsSummarySheet = (workbook, summary = {}) => {
   const dataRow = (cols, { bold = false } = {}) => {
     const row = sheet.addRow(cols);
     if (bold) row.font = { bold: true };
+    return row;
   };
 
   const blank = () => sheet.addRow([]);
@@ -174,6 +174,158 @@ const addAnalyticsSummarySheet = (workbook, summary = {}) => {
   dataRow(["Interest", money(summary.expectedNextMonth?.breakdown?.interest)]);
   dataRow(["Total", money(summary.expectedNextMonth?.total)], { bold: true });
   dataRow(["* Weekly and Daily loans excluded - profit is realized only at disbursement"]);
+
+  // ---- The rest of the Analytics page (emailed daily report only) ----
+  if (extras) {
+    const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const monthLabel = (key) => {
+      const [y, m] = String(key).split("-");
+      return m && MONTHS[Number(m) - 1] ? `${MONTHS[Number(m) - 1].slice(0, 3)} ${y}` : String(key);
+    };
+    const pct = (fraction) => (fraction === null || fraction === undefined || Number.isNaN(fraction) ? "N/A" : fraction);
+    const withPercentFormat = (row, fromColumn) => {
+      row.eachCell((cell, col) => {
+        if (col >= fromColumn && typeof cell.value === "number") cell.numFmt = "0.00%";
+      });
+    };
+    const unavailable = (name) => {
+      blank();
+      sectionTitle(name);
+      dataRow(["Could not be loaded for this report - check the Analytics page."]);
+    };
+
+    // Vehicle Status Overview
+    blank();
+    sectionTitle("VEHICLE STATUS OVERVIEW");
+    tableHeader(["Status", "Vehicles"]);
+    (summary.vehicleStats || []).forEach((v) => dataRow([v.name, v.value || 0]));
+
+    // Collection Efficiency (this month and last month)
+    if (extras.collectionEfficiency) {
+      [["current", "THIS MONTH"], ["previous", "LAST MONTH"]].forEach(([k, label]) => {
+        const m = extras.collectionEfficiency[k];
+        if (!m) return;
+        blank();
+        sectionTitle(`COLLECTION EFFICIENCY - ${label} (${MONTHS[(m.month || 1) - 1]} ${m.year})`);
+        tableHeader(["Type", "Expected", "Collected", "Short", "Efficiency"]);
+        const eff = (x) => (x?.expected > 0 ? (x.collected || 0) / x.expected : 0);
+        [["Vehicle", m.vehicle], ["Weekly", m.weekly], ["Daily", m.daily], ["Interest", m.interest]].forEach(([name, x]) =>
+          withPercentFormat(dataRow([name, money(x?.expected), money(x?.collected), money(x?.short), eff(x)]), 5),
+        );
+        withPercentFormat(dataRow(["Total", money(m.total?.expected), money(m.total?.collected), money(m.total?.short), eff(m.total)], { bold: true }), 5);
+      });
+    } else unavailable("COLLECTION EFFICIENCY");
+
+    // Disbursement vs Collection / cumulative growth, month by month
+    if (Array.isArray(extras.trend)) {
+      blank();
+      sectionTitle("DISBURSEMENT VS COLLECTION BY MONTH (WITH CUMULATIVE GROWTH)");
+      tableHeader(["Month", "Disbursed", "Collected", "Cumulative Disbursed", "Cumulative Collected"]);
+      extras.trend.forEach((p) =>
+        dataRow([monthLabel(p.date), money(p.disbursement), money(p.collection), money(p.cumulativeDisbursement), money(p.cumulativeCollection)]),
+      );
+    } else unavailable("DISBURSEMENT VS COLLECTION BY MONTH");
+
+    // Expenses by month
+    if (extras.expenseTrend?.points) {
+      blank();
+      sectionTitle("EXPENSES BY MONTH");
+      tableHeader(["Month", "Expenses"]);
+      extras.expenseTrend.points.forEach((p) => dataRow([monthLabel(p.key), money(p.amount)]));
+      dataRow(["Total", money(extras.expenseTrend.total)], { bold: true });
+    } else unavailable("EXPENSES BY MONTH");
+
+    // Simple Stats
+    if (extras.simpleStats) {
+      blank();
+      sectionTitle("SIMPLE STATS - FEES AND CHARGES BY PERIOD");
+      tableHeader(["Item", ...PROFIT_INTERVAL_COLS.map((i) => i.label)]);
+      [
+        ["Processing Fees", "totalProcessingFees"],
+        ["Overdue (OD) Collected", "totalOdAmount"],
+        ["Foreclosure Charges", "totalForeclosureCharges"],
+        ["Miscellaneous", "totalMiscAmount"],
+      ].forEach(([label, key]) => dataRow([label, ...PROFIT_INTERVAL_COLS.map((i) => money(extras.simpleStats[i.key]?.[key]))]));
+      dataRow(["* Foreclosure charges before 24 Jul 2026 were collected but never recorded, so older periods read as 0"]);
+    } else unavailable("SIMPLE STATS");
+
+    // Return on Investment
+    if (extras.roi) {
+      const r = extras.roi;
+      blank();
+      sectionTitle("RETURN ON INVESTMENT");
+      tableHeader(["", "Realistic XIRR", "Liquidation XIRR", "Return So Far", "Return Incl. Outstanding"]);
+      const roiRow = (label, x, bold) =>
+        withPercentFormat(
+          dataRow(
+            [label, pct(x?.realisticXirr), pct(x?.liquidationXirr), x?.absoluteReturnSoFar == null ? "N/A" : x.absoluteReturnSoFar / 100, x?.absoluteReturnInclOutstanding == null ? "N/A" : x.absoluteReturnInclOutstanding / 100],
+            { bold },
+          ),
+          2,
+        );
+      roiRow("Whole Business", r, true);
+      [["Vehicle", "vehicle"], ["Weekly", "weekly"], ["Daily", "daily"], ["Interest", "interest"]].forEach(([label, k]) => roiRow(label, r.byType?.[k], false));
+      dataRow(["Total Disbursed", money(r.disbursed)]);
+      dataRow(["Collected So Far", money(r.collectedSoFar)]);
+      dataRow(["Outstanding (full face value)", money(r.outstanding)]);
+      dataRow([`* As of ${fmtDate(r.asOfDate)}; unpaid EMIs already past due are treated as paid today. No risk / no NPAs assumed.`]);
+    } else unavailable("RETURN ON INVESTMENT");
+
+    // Company Valuation
+    if (extras.valuation) {
+      const v = extras.valuation;
+      blank();
+      sectionTitle("COMPANY VALUATION");
+      tableHeader(["Item", "Amount"]);
+      dataRow(["Company Valuation", money(v.companyValuation)], { bold: true });
+      dataRow(["Outstanding Loan Book", money(v.outstandingLoanBook)]);
+      dataRow(["Cash on Hand", money(v.cashOnHand)]);
+      dataRow([`Our Investment (frozen as of ${v.ourInvestmentFrozenDate})`, money(v.ourInvestment)]);
+      const gm = dataRow(["Growth Multiple", v.growthMultiple == null ? "N/A" : Math.round(v.growthMultiple * 100) / 100]);
+      if (typeof gm.getCell(2).value === "number") gm.getCell(2).numFmt = '0.00"x"';
+      dataRow(["Total Disbursed", money(v.totalDisbursed)]);
+      dataRow(["Total Collected", money(v.totalCollected)]);
+      dataRow(["Total Expenses", money(v.totalExpenses)]);
+    } else unavailable("COMPANY VALUATION");
+
+    // Partners
+    if (extras.partners) {
+      const pr = extras.partners;
+      blank();
+      sectionTitle("PARTNERS");
+      tableHeader(["Partner", "Share", "Invested", "Current Value", "Gain", "Gain %"]);
+      (pr.partners || []).forEach((p) => {
+        const row = dataRow([p.name, (p.percent || 0) / 100, money(p.investedAmount), money(p.currentValue), money(p.gainAmount), p.gainPercent == null ? "N/A" : p.gainPercent / 100]);
+        row.getCell(2).numFmt = "0.00%";
+        if (typeof row.getCell(6).value === "number") row.getCell(6).numFmt = "0.00%";
+      });
+      if (pr.sharesEffectiveFrom) dataRow([`* Shares effective from ${fmtDate(pr.sharesEffectiveFrom)}${pr.sharesReason ? ` - ${pr.sharesReason}` : ""}`]);
+    } else unavailable("PARTNERS");
+
+    // Book Growth (all time, loan-type split)
+    if (extras.bookGrowth?.buckets) {
+      const bg = extras.bookGrowth;
+      const typeCols = [["Vehicle", "vehicle"], ["Weekly", "weekly"], ["Daily", "daily"], ["Interest", "interest"]];
+      const addBook = (title, field) => {
+        blank();
+        sectionTitle(title);
+        tableHeader(["Period", ...typeCols.map(([l]) => l), "Total"]);
+        bg.buckets.forEach((b) => {
+          const vals = typeCols.map(([, k]) => b[field]?.[k] || 0);
+          dataRow([b.label, ...vals, vals.reduce((a, x) => a + x, 0)]);
+        });
+      };
+      addBook(`BOOK GROWTH - MONEY LENT (${bg.startDate} to ${bg.endDate}, by ${bg.granularity})`, "lent");
+      addBook("BOOK GROWTH - MONEY COLLECTED", "collected");
+      addBook("BOOK GROWTH - PRINCIPAL RECOVERED", "principal");
+    } else unavailable("BOOK GROWTH");
+
+    if (extras.errors?.length) {
+      blank();
+      sectionTitle("NOTE");
+      dataRow([`${extras.errors.length} section(s) could not be loaded for this report: ${extras.errors.join(", ")}`]);
+    }
+  }
 
   sheet.columns.forEach((column, idx) => {
     column.width = idx === 0 ? 32 : 18;
@@ -265,7 +417,7 @@ const addInterestEmiScheduleSheet = (workbook, emis, userNameById) => {
   });
 };
 
-const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weeklyLoans, interestLoans, expenses, analyticsSummary, vehicleEmis, weeklyEmis, dailyEmis, interestEmis, userNameById }) => {
+const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weeklyLoans, interestLoans, expenses, analyticsSummary, vehicleEmis, weeklyEmis, dailyEmis, interestEmis, userNameById }, analyticsExtras = null) => {
   const workbook = new ExcelJS.Workbook();
 
   // 1. Monthly Loans
@@ -353,7 +505,7 @@ const buildConsolidatedReportWorkbook = async ({ monthlyLoans, dailyLoans, weekl
   autoFit(expenseSheet);
 
   // 6. Analytics Summary
-  addAnalyticsSummarySheet(workbook, analyticsSummary);
+  addAnalyticsSummarySheet(workbook, analyticsSummary, analyticsExtras);
 
   // 7. EMI Schedules - one sheet per loan type, filterable by Loan No
   addEmiScheduleSheet(workbook, "Vehicle EMI Schedule", vehicleEmis || [], userNameById || {});

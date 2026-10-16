@@ -759,6 +759,7 @@ const getConsolidatedReportData = async () => {
 
   const analyticsSummary = {
     cards: cardsData.cards,
+    vehicleStats: cardsData.vehicleStats || [],
     profitByInterval,
     expectedNextMonth: profitByInterval.all.expectedNextMonth,
   };
@@ -776,6 +777,59 @@ const getConsolidatedReportData = async () => {
     interestEmis: allInterestEmis,
     userNameById,
   };
+};
+
+// The rest of what the Analytics page shows (Vehicle Status, Collection
+// Efficiency, growth trend, expenses by month, Simple Stats, Return on
+// Investment, Company Valuation, Book Growth, Partners), gathered for the
+// "Analytics Summary" sheet of the emailed daily report ONLY (the manual Export
+// button does not use it). Each piece reuses the card's own handler, so the
+// numbers can never drift from what the page shows. Every piece is isolated:
+// if one fails it is listed in `errors` and the rest (and the backup email
+// itself) still go out.
+const getAnalyticsSnapshotExtras = async () => {
+  const extras = { errors: [] };
+  const run = async (key, fn) => {
+    try {
+      extras[key] = await fn();
+    } catch (err) {
+      console.error(`Analytics snapshot: "${key}" failed:`, err.message);
+      extras.errors.push(key);
+      extras[key] = null;
+    }
+  };
+
+  const intervals = ["all", "weekly", "monthly", "3months", "6months", "yearly"];
+  const [cy, cm] = getTodayIST().split("-").map(Number);
+  const prevMonth = cm === 1 ? { year: cy - 1, month: 12 } : { year: cy, month: cm - 1 };
+
+  // Light pieces together
+  await Promise.all([
+    run("simpleStats", async () => {
+      const rows = await Promise.all(intervals.map((interval) => invokeInternal(getSimpleStats, { query: { interval } })));
+      const byInterval = {};
+      intervals.forEach((interval, i) => (byInterval[interval] = rows[i]));
+      return byInterval;
+    }),
+    run("collectionEfficiency", async () => {
+      const [current, previous] = await Promise.all([
+        invokeInternal(getMonthlyCollectionSummary, { query: { year: cy, month: cm } }),
+        invokeInternal(getMonthlyCollectionSummary, { query: prevMonth }),
+      ]);
+      return { current, previous };
+    }),
+    run("trend", () => invokeInternal(getTrendStats, { query: { interval: "all" } })),
+    run("expenseTrend", () => invokeInternal(getExpenseTrend, { query: { interval: "all" } })),
+  ]);
+
+  // Heavy pieces (each walks every loan) one after another, so the free-tier
+  // server never holds several full copies of the loan book in memory at once
+  await run("roi", () => invokeInternal(getBusinessROI, { query: {} }));
+  await run("valuation", () => invokeInternal(getCompanyValuation, { query: {} }));
+  await run("partners", () => invokeInternal(getPartners, { query: {} }));
+  await run("bookGrowth", () => invokeInternal(getBookGrowth, { query: { interval: "all" } }));
+
+  return extras;
 };
 
 const exportAllData = asyncHandler(async (req, res, next) => {
@@ -1972,6 +2026,7 @@ module.exports = {
   getProfitStats,
   getSimpleStats,
   getConsolidatedReportData,
+  getAnalyticsSnapshotExtras,
   getCompanyValuation,
   getPartners,
   getBusinessROI,

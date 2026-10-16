@@ -4,8 +4,10 @@ export const getAnalyticsStats = async () => {
   return await apiHandler("/api/analytics/stats");
 };
 
-export const getExportData = async () => {
-  return await apiHandler("/api/analytics/export-data");
+// The finished consolidated Excel report (same file as the nightly email),
+// as { fileName, base64 }. Super Admin / Admin only.
+export const getConsolidatedReportFile = async () => {
+  return await apiHandler("/api/analytics/export-excel");
 };
 
 export const getTrendStats = async (range, interval, startDate, endDate) => {

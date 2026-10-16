@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const analyticsController = require("../controllers/analyticsController");
+const { exportConsolidatedExcel } = require("../controllers/reportController");
 const { isAuthenticated, authorizeRoles } = require("../middlewares/auth");
 const ErrorHandler = require("../utils/ErrorHandler");
 
@@ -42,12 +43,21 @@ router.get(
   analyticsController.getExpenseTrend
 );
 
+// Export is for whoever may see the second half of the Analytics page
+// (SUPER_ADMIN / ADMIN) - never an EMPLOYEE, whatever their analytics.view
+// toggle says, because the report carries the profit/valuation/partner data.
 router.get(
   "/export-data",
   isAuthenticated,
-  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
-  requireAnalyticsViewPermission,
+  authorizeRoles("SUPER_ADMIN", "ADMIN"),
   analyticsController.exportAllData
+);
+
+router.get(
+  "/export-excel",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN"),
+  exportConsolidatedExcel
 );
 
 // Kept open to EMPLOYEE (with the same analytics.view permission check as
