@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { getFollowupDashboardSummary } from "../../services/loan.service";
 import { PhoneCall, AlertTriangle, Loader2, ChevronDown, Pencil } from "lucide-react";
@@ -7,6 +7,7 @@ import ContactActionMenu from "../ContactActionMenu";
 import FollowupEditModal from "../FollowupEditModal";
 import CallRecordControl, { useCallRecordEvents, LOAN_MODEL_BY_TYPE } from "../CallRecordControl";
 import ListPhoto from "../ListPhoto";
+import { readSnapshot, useListMemory } from "../../utils/backNavigation";
 
 // Loan number links open the loan directly in modify mode - staff coming
 // from a follow-up call almost always need to edit something (log the
@@ -22,10 +23,38 @@ const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Never";
 
 const FollowupAccountabilityCard = () => {
+  // Which list was open and how far down the page was - restored only when coming back via a loan's Back button
+  const [saved] = useState(() => readSnapshot("/admin/dashboard"));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState({ today: { count: 0, items: [] }, stale: { count: 0, items: [] } });
-  const [activeTab, setActiveTab] = useState(null); // null | "today" | "stale"
+  const [activeTab, setActiveTab] = useState(saved?.activeTab ?? null); // null | "today" | "stale"
+  useListMemory("/admin/dashboard", { activeTab }, !loading);
+
+  // The open list scrolls inside its own box - remember how far down it was
+  const listBoxRef = useRef(null);
+  const innerScrollRef = useRef(null);
+  if (innerScrollRef.current === null) {
+    let top = 0;
+    try {
+      if (saved) top = Number(sessionStorage.getItem("sf_dash_inner_scroll")) || 0;
+    } catch {}
+    innerScrollRef.current = top; // 0 = nothing to restore
+  }
+  const onListScroll = (e) => {
+    if (innerScrollRef.current > 0) return; // still waiting to restore
+    try {
+      sessionStorage.setItem("sf_dash_inner_scroll", String(Math.round(e.currentTarget.scrollTop)));
+    } catch {}
+  };
+  useEffect(() => {
+    if (loading || !activeTab || !listBoxRef.current || innerScrollRef.current <= 0) return;
+    const top = innerScrollRef.current;
+    innerScrollRef.current = 0;
+    requestAnimationFrame(() => {
+      if (listBoxRef.current) listBoxRef.current.scrollTop = top;
+    });
+  }, [loading, activeTab]);
   const [activeContactMenu, setActiveContactMenu] = useState(null); // { number, name, type, x, y }
   const [editingLoan, setEditingLoan] = useState(null);
 
@@ -64,6 +93,10 @@ const FollowupAccountabilityCard = () => {
   useCallRecordEvents(patchCallRecord);
 
   const toggleTab = (tab) => {
+    // a different list starts at the top
+    try {
+      sessionStorage.setItem("sf_dash_inner_scroll", "0");
+    } catch {}
     setActiveTab((prev) => (prev === tab ? null : tab));
   };
 
@@ -130,7 +163,7 @@ const FollowupAccountabilityCard = () => {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto max-h-80 overflow-y-auto">
+                <div ref={listBoxRef} onScroll={onListScroll} className="overflow-x-auto max-h-80 overflow-y-auto">
                   <table className="w-full text-left">
                     <thead className="sticky top-0 bg-white">
                       <tr className="border-b border-slate-100">
