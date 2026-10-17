@@ -61,6 +61,11 @@ export const getMonthlyCollection = async (year, month) => {
   return await apiHandler(`/api/analytics/monthly-collection?year=${year}&month=${month}`);
 };
 
+// Every month in the range ("3" | "6" | "12" | "all") in one call - the Collection Efficiency graph
+export const getMonthlyCollectionTrend = async (months) => {
+  return await apiHandler(`/api/analytics/monthly-collection-trend?months=${months}`);
+};
+
 export const getBookGrowth = async (interval, startDate, endDate) => {
   let url = `/api/analytics/book-growth?interval=${interval}`;
   if (startDate) url += `&startDate=${startDate}`;

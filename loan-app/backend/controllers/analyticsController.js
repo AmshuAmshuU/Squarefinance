@@ -1828,6 +1828,118 @@ const getBookGrowth = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Collection Efficiency graph: the same monthly "due vs paid" figures as
+// getMonthlyCollectionSummary above (identical rules - same closed-loan
+// handling), for every month in a range at once, so the card's graph needs one
+// request instead of one per bar. ?months=3|6|12|all (default 6); the range
+// always ends with the current month. "all" starts at the first month that has
+// an EMI due.
+const getMonthlyCollectionTrend = asyncHandler(async (req, res, next) => {
+  const InterestEMI = require("../models/InterestEMI");
+  const pad = (n) => String(n).padStart(2, "0");
+  const monthKeyIST = (d) => new Date(d).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7);
+  const [cy, cm] = getTodayIST().split("-").map(Number);
+  const asIndex = (y, m) => y * 12 + (m - 1);
+  const fromIndex = (i) => ({ year: Math.floor(i / 12), month: (i % 12) + 1 });
+  const endIdx = asIndex(cy, cm);
+
+  const wanted = String(req.query.months || "6");
+  let startIdx;
+  if (wanted === "all") {
+    // Nothing before 2024 (the card's own year box starts there too) - this also keeps
+    // a stray EMI with a nonsense due date from stretching the graph back decades.
+    const floor = { dueDate: { $gte: new Date("2024-01-01T00:00:00+05:30") } };
+    const [firstEmi, firstInterest] = await Promise.all([
+      EMI.findOne(floor).sort({ dueDate: 1 }).select("dueDate").lean(),
+      InterestEMI.findOne(floor).sort({ dueDate: 1 }).select("dueDate").lean(),
+    ]);
+    const firsts = [firstEmi, firstInterest].filter(Boolean).map((e) => monthKeyIST(e.dueDate));
+    if (!firsts.length) {
+      return sendResponse(res, 200, "success", "Monthly collection trend fetched", null, { months: [] });
+    }
+    const [fy, fm] = firsts.sort()[0].split("-").map(Number);
+    startIdx = asIndex(fy, fm);
+  } else {
+    const n = Math.min(120, Math.max(1, parseInt(wanted, 10) || 6));
+    startIdx = endIdx - (n - 1);
+  }
+  startIdx = Math.min(startIdx, endIdx);
+
+  const first = fromIndex(startIdx);
+  const after = fromIndex(endIdx + 1);
+  const range = {
+    $gte: new Date(`${first.year}-${pad(first.month)}-01T00:00:00+05:30`),
+    $lt: new Date(`${after.year}-${pad(after.month)}-01T00:00:00+05:30`),
+  };
+
+  const [emis, interestEmis, closedV, closedW, closedD, closedI] = await Promise.all([
+    EMI.find({ dueDate: range }).select("loanId loanModel emiAmount amountPaid status closedWithoutPayment dueDate").lean(),
+    InterestEMI.find({ dueDate: range }).select("interestLoanId interestAmount amountPaid status dueDate").lean(),
+    Loan.find({ status: "Closed" }).select("foreclosureDate soldDetails.soldDate").lean(),
+    WeeklyLoan.find({ status: "Closed" }).select("foreclosureDate").lean(),
+    DailyLoan.find({ status: "Closed" }).select("foreclosureDate").lean(),
+    InterestLoan.find({ status: "Closed" }).select("_id").lean(),
+  ]);
+
+  // Same closed-loan rule as the single-month card (see getMonthlyCollectionSummary)
+  const settledOn = new Map();
+  closedV.forEach((l) => settledOn.set(String(l._id), l.foreclosureDate || l.soldDetails?.soldDate || null));
+  closedW.forEach((l) => settledOn.set(String(l._id), l.foreclosureDate || null));
+  closedD.forEach((l) => settledOn.set(String(l._id), l.foreclosureDate || null));
+  closedI.forEach((l) => settledOn.set(String(l._id), null));
+  const isCounted = (e, loanId) => {
+    if (!settledOn.has(loanId)) return true;
+    if (e.status !== "Paid" || e.closedWithoutPayment) return false;
+    const on = settledOn.get(loanId);
+    return !(on && new Date(e.dueDate) > new Date(on));
+  };
+
+  const byMonth = {};
+  for (let i = startIdx; i <= endIdx; i++) {
+    const { year, month } = fromIndex(i);
+    byMonth[`${year}-${pad(month)}`] = {
+      vehicle: { expected: 0, collected: 0 },
+      weekly: { expected: 0, collected: 0 },
+      daily: { expected: 0, collected: 0 },
+      interest: { expected: 0, collected: 0 },
+    };
+  }
+  const modelToType = { Loan: "vehicle", WeeklyLoan: "weekly", DailyLoan: "daily" };
+  for (const e of emis) {
+    const acc = byMonth[monthKeyIST(e.dueDate)];
+    const type = modelToType[e.loanModel || "Loan"];
+    if (!acc || !type || !isCounted(e, String(e.loanId))) continue;
+    acc[type].expected += e.emiAmount || 0;
+    acc[type].collected += e.amountPaid || 0;
+  }
+  for (const e of interestEmis) {
+    const acc = byMonth[monthKeyIST(e.dueDate)];
+    if (!acc || !isCounted(e, String(e.interestLoanId))) continue;
+    acc.interest.expected += e.interestAmount || 0;
+    acc.interest.collected += e.amountPaid || 0;
+  }
+
+  const finish = (a) => ({ expected: a.expected, collected: a.collected, short: Math.max(0, a.expected - a.collected) });
+  let months = Object.keys(byMonth).sort().map((key) => {
+    const [year, month] = key.split("-").map(Number);
+    const a = byMonth[key];
+    const vehicle = finish(a.vehicle), weekly = finish(a.weekly), daily = finish(a.daily), interest = finish(a.interest);
+    const total = {
+      expected: vehicle.expected + weekly.expected + daily.expected + interest.expected,
+      collected: vehicle.collected + weekly.collected + daily.collected + interest.collected,
+      short: vehicle.short + weekly.short + daily.short + interest.short,
+    };
+    return { year, month, vehicle, weekly, daily, interest, total };
+  });
+  // "All time" should not begin with empty months before the first EMI due
+  if (wanted === "all") {
+    const firstWithDue = months.findIndex((m) => m.total.expected > 0);
+    months = firstWithDue === -1 ? [] : months.slice(firstWithDue);
+  }
+
+  sendResponse(res, 200, "success", "Monthly collection trend fetched", null, { months });
+});
+
 // Expenses card bar graph: expenses per day (short ranges) or per month
 // (longer ranges), over the same interval options as the Profit card.
 // Every period in the range is returned, including zero-expense ones, so the
@@ -2019,6 +2131,7 @@ module.exports = {
   SNAPSHOT_START_MONTH,
   getExpenseTrend,
   getMonthlyCollectionSummary,
+  getMonthlyCollectionTrend,
   getBookGrowth,
   getAnalyticsStats,
   exportAllData,

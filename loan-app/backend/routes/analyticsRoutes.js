@@ -86,6 +86,16 @@ router.get(
   analyticsController.getMonthlyCollectionSummary
 );
 
+// Collection Efficiency graph - every month in the chosen range in one call,
+// same access as the card itself.
+router.get(
+  "/monthly-collection-trend",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  requireAnalyticsViewPermission,
+  analyticsController.getMonthlyCollectionTrend
+);
+
 // Book growth card - very bottom of the page, admin-only section.
 router.get(
   "/book-growth",
