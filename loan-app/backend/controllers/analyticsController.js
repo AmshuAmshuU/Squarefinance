@@ -916,6 +916,31 @@ const getTrendStats = asyncHandler(async (req, res, next) => {
       collectionMap[key] = (collectionMap[key] || 0) + (e.totalAmount || 0);
     });
 
+    // 1b. Processing fees. The "Total Collected" card counts every loan's
+    // processing fee as collected, but the collection events above (same source
+    // as the Collections page) deliberately leave it out - so the green line used
+    // to end exactly the fees' total short of the card (Rs 8,29,050 on 2026-10-17).
+    // Each fee is counted here on the loan's own disbursement date (the same date
+    // fields, and so the same bucket, as that loan's disbursement below) so the
+    // graph ends at the card's figure. Interest loans carry no processing fee.
+    const addFees = async (Model, dateFields) => {
+      const rows = await Model.find({ processingFee: { $gt: 0 } })
+        .select("processingFee createdAt " + dateFields.join(" "))
+        .lean();
+      rows.forEach((row) => {
+        const when = dateFields.map((f) => row[f]).find(Boolean) || row.createdAt;
+        const d = new Date(when);
+        if (!when || isNaN(d) || d < startDate || d > endDate) return;
+        const key = formatDateUTC(d, groupFormat);
+        collectionMap[key] = (collectionMap[key] || 0) + (row.processingFee || 0);
+      });
+    };
+    await Promise.all([
+      addFees(Loan, ["dateLoanDisbursed", "emiStartDate"]),
+      addFees(WeeklyLoan, ["dateLoanDisbursed", "startDate"]),
+      addFees(DailyLoan, ["dateLoanDisbursed", "startDate"]),
+    ]);
+
     // 2. Disbursements
     const aggregateModelDisbursements = async (Model, amountField, dateFields) => {
       return Model.aggregate([
