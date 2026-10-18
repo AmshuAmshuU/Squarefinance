@@ -27,6 +27,7 @@ const whatsappWebhookRoutes = require("./routes/whatsappWebhookRoutes");
 const pushRoutes = require("./routes/pushRoutes");
 const { checkLoanNumberUniqueness } = require("./controllers/loanController");
 const compression = require("compression");
+const { clearShortCache } = require("./utils/shortCache");
 
 const app = express();
 
@@ -37,6 +38,17 @@ app.use((req, res, next) => {
     const duration = (performance.now() - start).toFixed(2);
     console.log(`[PERF] ${req.method} ${req.originalUrl} - ${duration}ms`);
   });
+  next();
+});
+
+// 1b. Any request that changes data wipes the 45-second Analytics memory cache
+// (utils/shortCache.js) - at the start AND when the request finishes - so a
+// payment/edit/approval made through the app is never hidden behind it.
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
+    clearShortCache();
+    res.on("finish", clearShortCache);
+  }
   next();
 });
 

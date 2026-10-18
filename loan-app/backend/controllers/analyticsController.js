@@ -388,46 +388,65 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // 5. Payment Mode Stats (Granular)
-  const [collectionModes] = await Promise.all([
-    Payment.aggregate([
-      { $group: { _id: { $cond: [{ $eq: ["$mode", "Cash"] }, "cash", "account"] }, total: { $sum: "$totalAmount" } } }
-    ])
-  ]);
+  // 5. Payment Mode Stats (Granular) - the Payment Mode Analysis card now loads
+  // on its own "Check" click (GET /api/analytics/payment-mode), so the page's
+  // main call no longer pays for it (it re-reads every loan). Anything that
+  // needs it inside this call (the Excel report) asks with ?paymentMode=1.
+  let paymentModeStats;
+  if (req.query?.paymentMode === "1") {
+    const [collectionModes] = await Promise.all([
+      Payment.aggregate([
+        { $group: { _id: { $cond: [{ $eq: ["$mode", "Cash"] }, "cash", "account"] }, total: { $sum: "$totalAmount" } } }
+      ])
+    ]);
 
-  const [dMonthly, dDaily, dWeekly, dInterest] = await Promise.all([
-    Loan.find({}, "disbursement paymentMode principalAmount"),
-    DailyLoan.find({}, "disbursement paymentMode disbursementAmount"),
-    WeeklyLoan.find({}, "disbursement paymentMode disbursementAmount"),
-    InterestLoan.find({}, "disbursement paymentMode initialPrincipalAmount"),
-  ]);
+    const [dMonthly, dDaily, dWeekly, dInterest] = await Promise.all([
+      Loan.find({}, "disbursement paymentMode principalAmount"),
+      DailyLoan.find({}, "disbursement paymentMode disbursementAmount"),
+      WeeklyLoan.find({}, "disbursement paymentMode disbursementAmount"),
+      InterestLoan.find({}, "disbursement paymentMode initialPrincipalAmount"),
+    ]);
 
-  const calcD = (loans, amtField) => {
-    let c = 0; let a = 0;
-    loans.forEach(l => {
-      if (l.disbursement?.length > 0) {
-        l.disbursement.forEach(d => {
-          if (d.mode === "Cash") c += (d.amount || 0);
-          else a += (d.amount || 0);
-        });
-      } else {
-        if (l.paymentMode === "Cash") c += (l[amtField] || 0);
-        else a += (l[amtField] || 0);
-      }
+    const calcD = (loans, amtField) => {
+      let c = 0; let a = 0;
+      loans.forEach(l => {
+        if (l.disbursement?.length > 0) {
+          l.disbursement.forEach(d => {
+            if (d.mode === "Cash") c += (d.amount || 0);
+            else a += (d.amount || 0);
+          });
+        } else {
+          if (l.paymentMode === "Cash") c += (l[amtField] || 0);
+          else a += (l[amtField] || 0);
+        }
+      });
+      return { c, a };
+    };
+
+    const mD = calcD(dMonthly, "principalAmount");
+    const dD = calcD(dDaily, "disbursementAmount");
+    const wD = calcD(dWeekly, "disbursementAmount");
+    const iD = calcD(dInterest, "initialPrincipalAmount");
+
+    const collByMode = { cash: 0, account: 0 };
+    collectionModes.forEach(m => {
+      if (m._id === "account") collByMode.account = Math.round(m.total);
+      else collByMode.cash += Math.round(m.total);
     });
-    return { c, a };
-  };
 
-  const mD = calcD(dMonthly, "principalAmount");
-  const dD = calcD(dDaily, "disbursementAmount");
-  const wD = calcD(dWeekly, "disbursementAmount");
-  const iD = calcD(dInterest, "initialPrincipalAmount");
-
-  const collByMode = { cash: 0, account: 0 };
-  collectionModes.forEach(m => {
-    if (m._id === "account") collByMode.account = Math.round(m.total);
-    else collByMode.cash += Math.round(m.total);
-  });
+    paymentModeStats = {
+      disbursement: {
+        cash: Math.round(mD.c + dD.c + wD.c + iD.c),
+        account: Math.round(mD.a + dD.a + wD.a + iD.a),
+        total: totalLoanAmount
+      },
+      collection: {
+        cash: Math.max(0, totalCollectedAmount - collByMode.account),
+        account: collByMode.account,
+        total: totalCollectedAmount
+      }
+    };
+  }
 
   // Pending breakdown per type
   const [vPend, wPend, dPend, iPend] = pendingMetricsArr || [[], [], [], []];
@@ -505,18 +524,7 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
         weekly: weeklyCollected,
         interest: interestCollected
       },
-      paymentModeStats: {
-        disbursement: {
-          cash: Math.round(mD.c + dD.c + wD.c + iD.c),
-          account: Math.round(mD.a + dD.a + wD.a + iD.a),
-          total: totalLoanAmount 
-        },
-        collection: {
-          cash: Math.max(0, totalCollectedAmount - collByMode.account),
-          account: collByMode.account,
-          total: totalCollectedAmount 
-        }
-      },
+      ...(paymentModeStats ? { paymentModeStats } : {}),
       pendingLoansCount: totalPendingLoans,
       pendingEmisCount: totalPendingEmis,
       totalPendingAmount,
@@ -572,6 +580,14 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
   };
 
   sendResponse(res, 200, "success", "Analytics stats fetched successfully", null, statsResponse);
+});
+
+// Payment Mode Analysis card ("Check" button). Runs the very same stats
+// calculation as the page's main call with the payment-mode part switched on,
+// so the numbers can never differ from what the Excel report shows.
+const getPaymentModeStats = asyncHandler(async (req, res, next) => {
+  const data = await invokeInternal(getAnalyticsStats, { query: { paymentMode: "1" } });
+  sendResponse(res, 200, "success", "Payment mode stats fetched successfully", null, data.cards.paymentModeStats);
 });
 
 // Shared data-gathering logic for the "Consolidated Report" — used by both
@@ -640,8 +656,11 @@ const getConsolidatedReportData = async () => {
   const genuinePaidCount = (emis) => emis.filter((e) => e.status === "Paid" && !e.closedWithoutPayment).length;
 
   // Enhance monthly loans with computed fields from EMI records
-  const enhancedMonthly = await Promise.all(monthlyLoans.map(async (loan) => {
-    const emis = await EMI.find({ loanId: loan._id, loanModel: "Loan" }).lean();
+  // (All EMIs are already loaded above, so group them in memory instead of
+  // running one database query per loan.)
+  const vehicleEmisByLoan = groupByLoanId(vehicleEmis);
+  const enhancedMonthly = monthlyLoans.map((loan) => {
+    const emis = vehicleEmisByLoan[String(loan._id)] || [];
     const paidEmis = genuinePaidCount(emis);
     const unpaidEmis = emis.filter(e => e.status !== "Paid");
     const remainingTenure = unpaidEmis.length;
@@ -696,7 +715,7 @@ const getConsolidatedReportData = async () => {
       clientResponse,
       remainingPrincipalAmount,
     };
-  }));
+  });
 
   // Enhance weekly/daily loans with client response field + the same
   // genuine (non-cosmetic) paid EMI count as monthly loans above.
@@ -713,8 +732,13 @@ const getConsolidatedReportData = async () => {
   }));
 
   // Enhance interest loans with total collected
-  const enhancedInterest = await Promise.all(interestLoans.map(async (loan) => {
-    const emis = await InterestEMI.find({ interestLoanId: loan._id }).lean();
+  const interestEmisByLoan = {};
+  allInterestEmis.forEach((e) => {
+    const k = String(e.interestLoanId);
+    (interestEmisByLoan[k] = interestEmisByLoan[k] || []).push(e);
+  });
+  const enhancedInterest = interestLoans.map((loan) => {
+    const emis = interestEmisByLoan[String(loan._id)] || [];
     const interestPaid = emis.reduce((s, e) => {
       return s + (e.paymentHistory || []).reduce((ps, p) => ps + (p.amount || 0), 0);
     }, 0);
@@ -724,14 +748,14 @@ const getConsolidatedReportData = async () => {
     const totalCollected = interestPaid + principalPaid + (loan.processingFee || 0);
     const clientResponse = loan.status?.clientResponse || loan.clientResponse || "";
     return { ...loan, totalCollected, clientResponse };
-  }));
+  });
 
   // Analytics Summary — mirrors the Analytics page's cards (minus graphs) for
   // the exported report, reusing getAnalyticsStats/getProfitStats directly so
   // this can never drift from what the Analytics page itself shows.
   const profitIntervals = ["all", "weekly", "monthly", "3months", "6months", "yearly"];
   const [cardsData, ...profitResults] = await Promise.all([
-    invokeInternal(getAnalyticsStats, { query: {} }),
+    invokeInternal(getAnalyticsStats, { query: { paymentMode: "1" } }),
     ...profitIntervals.map((interval) => invokeInternal(getProfitStats, { query: { interval } })),
   ]);
   const profitByInterval = {};
@@ -1262,7 +1286,7 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
 // across all 4 types and builds the combined cash-flow ledger as of a
 // given date. Heavy (touches every loan/EMI), so both callers are
 // on-demand-only endpoints, never part of the main stats calls.
-const buildAllLoanFlows = async (asOfDate) => {
+const buildAllLoanFlowsFresh = async (asOfDate) => {
   const { vehicleLoanFlows, weeklyDailyLoanFlows, interestLoanFlows } = require("../utils/loanROI");
 
   const allHist = [];
@@ -1325,12 +1349,20 @@ const buildAllLoanFlows = async (asOfDate) => {
   return { allHist, allFuture, allPending, earliestDate, byType };
 };
 
+// Kept for 45 seconds per "as of" day (see utils/shortCache.js) so ROI,
+// Company Valuation and Partners - which all need this same ledger - don't each
+// re-read the whole loan book. `cacheKey` is "now" for the live (today) view or
+// the chosen end date for a historical ROI. The result is shared, so callers
+// must only read it (computeROI does).
+const buildAllLoanFlows = (asOfDate, cacheKey) =>
+  require("../utils/shortCache").remember(`loanFlows:${cacheKey}`, () => buildAllLoanFlowsFresh(asOfDate));
+
 const getBusinessROI = asyncHandler(async (req, res, next) => {
   const { endDate } = req.query;
   const asOfDate = endDate ? new Date(`${endDate}T23:59:59.999+05:30`) : new Date();
 
   const { computeROI } = require("../utils/loanROI");
-  const { allHist, allFuture, allPending, earliestDate, byType } = await buildAllLoanFlows(asOfDate);
+  const { allHist, allFuture, allPending, earliestDate, byType } = await buildAllLoanFlows(asOfDate, endDate || "now");
   const roi = computeROI(allHist, allFuture, allPending, asOfDate);
 
   // Same four percentages as the combined figures, per loan type - shown as
@@ -1403,7 +1435,7 @@ const computeCompanyValuation = async () => {
 
   const { computeROI } = require("../utils/loanROI");
   const [{ allHist, allFuture, allPending }, expenseAgg] = await Promise.all([
-    buildAllLoanFlows(asOfDate),
+    buildAllLoanFlows(asOfDate, "now"),
     Expense.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
   ]);
 
@@ -2019,6 +2051,7 @@ module.exports = {
   getMonthlyCollectionTrend,
   getBookGrowth,
   getAnalyticsStats,
+  getPaymentModeStats,
   exportAllData,
   getTrendStats,
   getProfitStats,

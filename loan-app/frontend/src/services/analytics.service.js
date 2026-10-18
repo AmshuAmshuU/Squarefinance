@@ -4,6 +4,11 @@ export const getAnalyticsStats = async () => {
   return await apiHandler("/api/analytics/stats");
 };
 
+// Payment Mode Analysis card - fetched only when "Check" is pressed
+export const getPaymentModeStats = async () => {
+  return await apiHandler("/api/analytics/payment-mode");
+};
+
 // The finished consolidated Excel report (same file as the nightly email),
 // as { fileName, base64 }. Super Admin / Admin only.
 export const getConsolidatedReportFile = async () => {

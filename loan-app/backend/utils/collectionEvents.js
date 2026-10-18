@@ -24,6 +24,7 @@ const InterestLoan = require("../models/InterestLoan");
 const EMI = require("../models/EMI");
 const InterestEMI = require("../models/InterestEMI");
 const User = require("../models/User");
+const { remember } = require("./shortCache");
 
 const extractId = (val) => {
   if (!val) return null;
@@ -44,7 +45,7 @@ const extractId = (val) => {
 //   - Interest loan principal repayments
 // Processing fees are intentionally excluded - Collections has never shown
 // them (Simple Stats / Analytics cover those separately).
-async function getAllCollectionEvents({ startDate, endDate } = {}) {
+async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
   const [
     vehicleLoans, vehicleEmis,
     weeklyLoans, weeklyEmis,
@@ -244,6 +245,15 @@ async function getAllCollectionEvents({ startDate, endDate } = {}) {
   // per-request without needing an explicit tiebreaker.
   filtered.sort((a, b) => new Date(b.sortAt || b.date) - new Date(a.sortAt || a.date));
   return filtered;
+}
+
+// The unfiltered list (what the growth charts, Book Growth and the Excel
+// report all ask for) is kept for 45 seconds - see utils/shortCache.js. Calls
+// with a date range always read fresh.
+function getAllCollectionEvents(options = {}) {
+  const { startDate, endDate } = options || {};
+  if (startDate || endDate) return getAllCollectionEventsFresh(options);
+  return remember("collectionEvents:all", () => getAllCollectionEventsFresh({}));
 }
 
 module.exports = { getAllCollectionEvents };

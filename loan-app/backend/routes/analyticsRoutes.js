@@ -33,6 +33,16 @@ router.get(
   analyticsController.getAnalyticsStats
 );
 
+// Payment Mode Analysis card - loads when someone presses "Check"; same access
+// as /stats since the card sits in the all-roles part of the page.
+router.get(
+  "/payment-mode",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  requireAnalyticsViewPermission,
+  analyticsController.getPaymentModeStats
+);
+
 // Bar graph inside the Total Expenses card - same access as /stats, since the
 // card itself sits in the all-roles part of the page.
 router.get(

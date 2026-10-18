@@ -488,7 +488,7 @@ const AnalyticsPage = () => {
                   two pie charts now sits beside the type names in the first
                   two cards) */}
               <div className="mt-10">
-                <PaymentModeTable data={stats?.cards?.paymentModeStats || {}} />
+                <PaymentModeTable />
               </div>
 
               {/* Collection Efficiency - last card visible to every role that

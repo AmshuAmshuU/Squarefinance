@@ -1,8 +1,30 @@
-import React from "react";
-import { Wallet, Landmark, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+"use client";
+import React, { useState } from "react";
+import { Wallet, Landmark, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from "lucide-react";
+import { getPaymentModeStats } from "../../services/analytics.service";
 
-const PaymentModeTable = ({ data = {} }) => {
-  const { disbursement = {}, collection = {} } = data;
+// Closed until someone presses "Check" - the figures are only worked out
+// (and the card only opens) on that click, since it is rarely looked at.
+const PaymentModeTable = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleCheck = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getPaymentModeStats();
+      setData(res.data || {});
+    } catch (err) {
+      console.error("Failed to load payment mode analysis:", err);
+      setError(err.message || "Failed to load payment mode analysis");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const { disbursement = {}, collection = {} } = data || {};
 
   const formatCurrency = (value) => 
     new Intl.NumberFormat("en-IN", {
@@ -37,16 +59,32 @@ const PaymentModeTable = ({ data = {} }) => {
 
   return (
     <div className="bg-white p-6 md:p-10 rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-100/50 flex flex-col h-full overflow-hidden">
-      <div className="mb-8">
-        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-           <span className="w-2 h-6 bg-slate-900 rounded-full" />
-           PAYMENT MODE ANALYSIS
-        </h3>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-4">
-          Cash vs Bank transaction summary
-        </p>
+      <div className={`flex items-center justify-between gap-3 ${data ? "mb-8" : ""}`}>
+        <div>
+          <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+             <span className="w-2 h-6 bg-slate-900 rounded-full" />
+             PAYMENT MODE ANALYSIS
+          </h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-4">
+            Cash vs Bank transaction summary
+          </p>
+        </div>
+        <button
+          onClick={handleCheck}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all disabled:opacity-50 shrink-0"
+        >
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+          {data ? "Refresh" : "Check"}
+        </button>
       </div>
 
+      {error && (
+        <p className="text-[9px] text-red-500 mt-3 font-bold uppercase tracking-tight">{error}</p>
+      )}
+
+      {data && (
+      <>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
@@ -103,6 +141,8 @@ const PaymentModeTable = ({ data = {} }) => {
              </p>
           </div>
       </div>
+      </>
+      )}
     </div>
   );
 };
