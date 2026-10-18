@@ -221,7 +221,50 @@ const sendInquiryEmail = async (inquiryData) => {
   }
 };
 
-const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, attachmentFilename) => {
+// Gmail's simple send call (what is used here) refuses requests over about 5 MB.
+// The message is base64'd twice (attachments, then the whole message), so the
+// request is ~1.8x the attachments' size. Over this, the caller drops the extra
+// (database backup) attachment instead of risking the whole nightly email.
+const MAX_REPORT_REQUEST_BYTES = 4.5 * 1024 * 1024;
+
+// Builds the raw email text. The Excel report is always the first attachment;
+// `extraAttachments` ([{buffer, filename, contentType}]) follow it.
+const buildReportMime = ({ from, to, subject, htmlBody, attachmentBuffer, attachmentFilename, extraAttachments = [] }) => {
+  const boundary = "square_finance_report_boundary";
+  const attachmentParts = [
+    { buffer: attachmentBuffer, filename: attachmentFilename, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    ...extraAttachments,
+  ].map(({ buffer, filename, contentType }) => {
+    // Defensive: Buffer.from() on an already-real Buffer is a safe
+    // no-op-equivalent, so this is always correct regardless of exactly
+    // what type the caller passed in.
+    const base64 = Buffer.from(buffer).toString("base64");
+    // MIME requires base64 attachment content wrapped at 76 chars per line
+    const wrapped = base64.match(/.{1,76}/g).join("\r\n");
+    return [
+      `--${boundary}\n`,
+      `Content-Type: ${contentType}; name="${filename}"\n`,
+      `Content-Disposition: attachment; filename="${filename}"\n`,
+      "Content-Transfer-Encoding: base64\n\n",
+      `${wrapped}\n\n`,
+    ].join("");
+  });
+
+  return [
+    `Content-Type: multipart/mixed; boundary="${boundary}"\n`,
+    "MIME-Version: 1.0\n",
+    `to: ${to}\n`,
+    `from: ${from}\n`,
+    `subject: ${subject}\n\n`,
+    `--${boundary}\n`,
+    'Content-Type: text/html; charset="UTF-8"\n\n',
+    `${htmlBody}\n\n`,
+    ...attachmentParts,
+    `--${boundary}--`,
+  ].join("");
+};
+
+const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, attachmentFilename, extraAttachments = []) => {
   // Personal sender when configured. If it is configured but fails, this does
   // NOT fall back to the company mailbox (that would put the report back in a
   // mailbox office staff can read) - the failure is reported instead.
@@ -238,31 +281,12 @@ const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, 
     .map((r) => r.trim())
     .filter((r) => r && !seen.has(r.toLowerCase()) && seen.add(r.toLowerCase()));
   const to = unique.join(", ");
-  const boundary = "square_finance_report_boundary";
-
-  // Defensive: Buffer.from() on an already-real Buffer is a safe
-  // no-op-equivalent, so this is always correct regardless of exactly
-  // what type the caller passed in.
-  const attachmentBase64 = Buffer.from(attachmentBuffer).toString("base64");
-  // MIME requires base64 attachment content wrapped at 76 chars per line
-  const wrappedAttachment = attachmentBase64.match(/.{1,76}/g).join("\r\n");
-
-  const str = [
-    `Content-Type: multipart/mixed; boundary="${boundary}"\n`,
-    "MIME-Version: 1.0\n",
-    `to: ${to}\n`,
-    `from: ${from}\n`,
-    `subject: ${subject}\n\n`,
-    `--${boundary}\n`,
-    'Content-Type: text/html; charset="UTF-8"\n\n',
-    `${htmlBody}\n\n`,
-    `--${boundary}\n`,
-    `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; name="${attachmentFilename}"\n`,
-    `Content-Disposition: attachment; filename="${attachmentFilename}"\n`,
-    "Content-Transfer-Encoding: base64\n\n",
-    `${wrappedAttachment}\n\n`,
-    `--${boundary}--`,
-  ].join("");
+  const str = buildReportMime({ from, to, subject, htmlBody, attachmentBuffer, attachmentFilename, extraAttachments });
+  if (Math.ceil(Buffer.byteLength(str) * 4 / 3) > MAX_REPORT_REQUEST_BYTES) {
+    const err = new Error("Report email is too large for Gmail's simple send call");
+    err.code = "REPORT_TOO_LARGE";
+    throw err;
+  }
 
   const encodedMessage = Buffer.from(str)
     .toString("base64")
@@ -279,4 +303,4 @@ const sendReportEmail = async (recipients, subject, htmlBody, attachmentBuffer, 
   return { ...result.data, sentVia: usePersonalSender ? "personal" : "company", recipients: unique };
 };
 
-module.exports = { sendOTP, sendInquiryEmail, sendReportEmail };
+module.exports = { sendOTP, sendInquiryEmail, sendReportEmail, buildReportMime, MAX_REPORT_REQUEST_BYTES };
