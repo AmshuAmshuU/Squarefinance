@@ -67,10 +67,12 @@ const FollowupPaymentsPage = () => {
   const [selectedRowId, setSelectedRowId] = useState(null);
 
   // Patches one loan's call record (own change or another employee's live call).
-  const patchCallRecord = useCallback(({ loanId, loanModel, record }) => {
+  const patchCallRecord = useCallback(({ loanId, loanModel, record, count }) => {
     setData((prev) =>
       prev.map((i) =>
-        String(i.loanId) === String(loanId) && i.loanModel === loanModel ? { ...i, callRecord: record } : i,
+        String(i.loanId) === String(loanId) && i.loanModel === loanModel
+          ? { ...i, callRecord: record, ...(count !== undefined && { callCount: count }) }
+          : i,
       ),
     );
   }, []);
@@ -516,8 +518,9 @@ const FollowupPaymentsPage = () => {
                                 loanId={item.loanId}
                                 loanModel={item.loanModel}
                                 record={item.callRecord}
-                                onChange={(record) =>
-                                  patchCallRecord({ loanId: item.loanId, loanModel: item.loanModel, record })
+                                count={item.callCount}
+                                onChange={(record, count) =>
+                                  patchCallRecord({ loanId: item.loanId, loanModel: item.loanModel, record, count })
                                 }
                               />
                             </td>

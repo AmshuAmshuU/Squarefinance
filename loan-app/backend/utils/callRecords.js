@@ -1,4 +1,5 @@
 const CallRecord = require("../models/CallRecord");
+const CallAttempt = require("../models/CallAttempt");
 
 const TYPE_TO_MODEL = {
   Vehicle: "Loan",
@@ -18,6 +19,9 @@ const startOfTodayIST = () => {
   return new Date(`${istDate}T00:00:00+05:30`);
 };
 
+// Today's date in IST as "YYYY-MM-DD" (the key of a day's call-attempt count).
+const todayIST = () => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+
 const toPublic = (r) => ({
   response: r.response,
   calledByName: r.calledByName,
@@ -30,13 +34,19 @@ const toPublic = (r) => ({
 const attachCallRecords = async (items) => {
   if (!items || items.length === 0) return items;
 
-  const records = await CallRecord.find({
-    loanId: { $in: items.map(idOf) },
-    calledAt: { $gte: startOfTodayIST() },
-  }).lean();
+  const ids = items.map(idOf);
+  const [records, attempts] = await Promise.all([
+    CallRecord.find({ loanId: { $in: ids }, calledAt: { $gte: startOfTodayIST() } }).lean(),
+    CallAttempt.find({ loanId: { $in: ids }, day: todayIST() }).lean(),
+  ]);
 
   const byKey = new Map(records.map((r) => [`${r.loanModel}:${r.loanId}`, toPublic(r)]));
-  return items.map((i) => ({ ...i, callRecord: byKey.get(`${modelOf(i)}:${idOf(i)}`) || null }));
+  const countByKey = new Map(attempts.map((a) => [`${a.loanModel}:${a.loanId}`, a.count]));
+  return items.map((i) => {
+    const key = `${modelOf(i)}:${idOf(i)}`;
+    // callCount = how many calls were logged on this loan today (survives a Clear)
+    return { ...i, callRecord: byKey.get(key) || null, callCount: countByKey.get(key) || 0 };
+  });
 };
 
-module.exports = { attachCallRecords, startOfTodayIST, toPublic };
+module.exports = { attachCallRecords, startOfTodayIST, todayIST, toPublic };

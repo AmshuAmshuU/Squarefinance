@@ -78,11 +78,11 @@ const FollowupAccountabilityCard = () => {
 
   // Patches one loan's call record in both lists (own change or a live
   // update from another employee's call).
-  const patchCallRecord = useCallback(({ loanId, loanModel, record }) => {
+  const patchCallRecord = useCallback(({ loanId, loanModel, record, count }) => {
     const patch = (items) =>
       items.map((i) =>
         String(i._id) === String(loanId) && LOAN_MODEL_BY_TYPE[i.loanType] === loanModel
-          ? { ...i, callRecord: record }
+          ? { ...i, callRecord: record, ...(count !== undefined && { callCount: count }) }
           : i,
       );
     setData((prev) => ({
@@ -215,13 +215,15 @@ const FollowupAccountabilityCard = () => {
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-2.5">
+                          {/* py-1 (not py-2.5): the extra "Calls - N" line must not make the row taller than the photo tile sets it */}
+                          <td className="px-3 py-1">
                             <CallRecordControl
                               loanId={item._id}
                               loanModel={LOAN_MODEL_BY_TYPE[item.loanType]}
                               record={item.callRecord}
-                              onChange={(record) =>
-                                patchCallRecord({ loanId: item._id, loanModel: LOAN_MODEL_BY_TYPE[item.loanType], record })
+                              count={item.callCount}
+                              onChange={(record, count) =>
+                                patchCallRecord({ loanId: item._id, loanModel: LOAN_MODEL_BY_TYPE[item.loanType], record, count })
                               }
                             />
                           </td>

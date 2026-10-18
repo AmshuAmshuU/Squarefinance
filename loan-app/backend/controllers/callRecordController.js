@@ -7,7 +7,8 @@ const asyncHandler = require("../utils/asyncHandler");
 const ErrorHandler = require("../utils/ErrorHandler");
 const sendResponse = require("../utils/response");
 const socketUtils = require("../utils/socket");
-const { toPublic } = require("../utils/callRecords");
+const CallAttempt = require("../models/CallAttempt");
+const { toPublic, todayIST } = require("../utils/callRecords");
 
 const MODELS = { Loan, WeeklyLoan, DailyLoan, InterestLoan };
 const VALID_RESPONSES = ["NP", "EOD", "SWO", "1HR", "2HR", "3HR", "4HR", "5HR", "6HR", "CLEAR"];
@@ -15,9 +16,9 @@ const VALID_RESPONSES = ["NP", "EOD", "SWO", "1HR", "2HR", "3HR", "4HR", "5HR", 
 // Tells every connected user's follow-up list to update this loan's call
 // record live, so a second employee sees the first one's call without
 // refreshing. Best-effort - the lists also load the latest on open.
-const broadcast = (loanId, loanModel, record) => {
+const broadcast = (loanId, loanModel, record, count) => {
   try {
-    socketUtils.getIO().emit("call_record_updated", { loanId: String(loanId), loanModel, record });
+    socketUtils.getIO().emit("call_record_updated", { loanId: String(loanId), loanModel, record, count });
   } catch (err) {
     // Socket not running (e.g. scripts) - nothing to update live.
   }
@@ -39,10 +40,13 @@ const setCallRecord = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Loan not found", 404));
   }
 
+  // Clear removes the note but is not a call attempt: today's count stays as it is.
   if (response === "CLEAR") {
     await CallRecord.deleteOne({ loanId, loanModel });
-    broadcast(loanId, loanModel, null);
-    return sendResponse(res, 200, "success", "Call record cleared", null, { record: null });
+    const attempts = await CallAttempt.findOne({ loanId, loanModel, day: todayIST() }).lean();
+    const count = attempts?.count || 0;
+    broadcast(loanId, loanModel, null, count);
+    return sendResponse(res, 200, "success", "Call record cleared", null, { record: null, count });
   }
 
   const saved = await CallRecord.findOneAndUpdate(
@@ -50,9 +54,15 @@ const setCallRecord = asyncHandler(async (req, res, next) => {
     { response, calledBy: req.user._id, calledByName: req.user.name, calledAt: new Date() },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
+  // Every log (a new outcome, or the same one again) is one more attempt today
+  const attempts = await CallAttempt.findOneAndUpdate(
+    { loanId, loanModel, day: todayIST() },
+    { $inc: { count: 1 } },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
   const record = toPublic(saved);
-  broadcast(loanId, loanModel, record);
-  sendResponse(res, 200, "success", "Call record saved", null, { record });
+  broadcast(loanId, loanModel, record, attempts.count);
+  sendResponse(res, 200, "success", "Call record saved", null, { record, count: attempts.count });
 });
 
 // Last call on a loan, whenever it was made (used on the loan details page).

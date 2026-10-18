@@ -64,8 +64,10 @@ const pillText = (response) => (isHourResponse(response) ? `${response[0]} hr` :
 // One loan's last-call note with the NP / EOD / SWO / 1-6 hr / Clear dropdown. Used in both
 // follow-up lists and on the loan details page, so the note reads the same
 // everywhere. `record` is { response, calledByName, calledAt } or null;
-// `onChange(record)` receives the new record (null after Clear).
-const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = false }) => {
+// `onChange(record, count)` receives the new record (null after Clear) and today's call count.
+// `count` = how many calls were logged on this loan today (Clear does not add to it); when it is
+// above 0 a small "Calls - N" line shows under the note, and it stays after a Clear.
+const CallRecordControl = ({ loanId, loanModel, record, count = 0, onChange, showDate = false }) => {
   const { showToast } = useToast();
   const { isDarkMode } = useUI();
   const [menu, setMenu] = useState(null); // { x, y } | null
@@ -87,7 +89,7 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
     setSaving(true);
     try {
       const res = await setCallRecord(loanId, loanModel, value);
-      onChange?.(res.data?.record || null);
+      onChange?.(res.data?.record || null, res.data?.count);
     } catch (err) {
       showToast(err.message || "Couldn't save the call record", "error");
     } finally {
@@ -135,10 +137,18 @@ const CallRecordControl = ({ loanId, loanModel, record, onChange, showDate = fal
             <span className="text-[10px] font-bold text-slate-500 leading-tight whitespace-nowrap">
               {record.calledByName.slice(0, 4)} · {when}
             </span>
+            {count > 0 && (
+              <span className="text-[10px] font-bold text-slate-400 leading-tight whitespace-nowrap">Calls - {count}</span>
+            )}
           </span>
         ) : (
-          <span className="px-1.5 py-0.5 rounded-md border border-dashed border-slate-300 text-[10px] font-bold text-slate-400 whitespace-nowrap">
-            + Log
+          <span className="flex flex-col items-start gap-0.5">
+            <span className="px-1.5 py-0.5 rounded-md border border-dashed border-slate-300 text-[10px] font-bold text-slate-400 whitespace-nowrap">
+              + Log
+            </span>
+            {count > 0 && (
+              <span className="text-[10px] font-bold text-slate-400 leading-tight whitespace-nowrap">Calls - {count}</span>
+            )}
           </span>
         )}
       </button>
