@@ -35,7 +35,6 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
     expenseStats,
     userStats,
     pendingMetricsArr,
-    partialMetrics,
     totalLoanCounts,
     monthlyEmiExpected,
     activeDisbursements,
@@ -51,11 +50,6 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
           sold: [{ $group: { _id: null, total: { $sum: { $ifNull: ["$soldDetails.totalAmount", "$soldDetails.sellAmount", 0] } } } }],
           active: [{ $match: { status: { $ne: "Closed" }, seizedStatus: { $ne: "Sold" } } }, { $count: "count" }],
           closed: [{ $match: { status: "Closed" } }, { $count: "count" }],
-          // Match on isSeized OR an explicit Seized/Sold status — isSeized can drift
-          // independently (e.g. via an unrelated loan edit) after a vehicle is sold,
-          // but seizedStatus "Sold" can never revert once set, so it's the
-          // authoritative signal and must count on its own.
-          vehicleStatus: [{ $match: { $or: [{ isSeized: true }, { seizedStatus: { $in: ["Seized", "Sold"] } }] } }, { $group: { _id: { $switch: { branches: [{ case: { $eq: ["$seizedStatus", "Seized"] }, then: "Seized" }, { case: { $eq: ["$seizedStatus", "Sold"] }, then: "Sold" }], default: "For Seizing" } }, count: { $sum: 1 } } }],
         }
       }
     ]),
@@ -157,9 +151,6 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
       ]),
     ]),
     
-    // 8. Partial Counts
-    EMI.aggregate([{ $match: { status: "Partially Paid", loanModel: "Loan" } }, { $group: { _id: "$loanId" } }, { $count: "count" }]),
-
     // 9. Total loans given (all types, all statuses)
     Promise.all([
       Loan.countDocuments({}),
@@ -389,14 +380,7 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
 
   const totalExpenses = Math.round(getAggSum(expenseResultsArr));
 
-  // 4. Vehicle & User Stats
-  const vehicleData = { "For Seizing": 0, Seized: 0, Sold: 0 };
-  if (loanMetrics[0]?.vehicleStatus) {
-    loanMetrics[0].vehicleStatus.forEach(s => { 
-      if (s._id) vehicleData[s._id] = s.count || 0; 
-    });
-  }
-
+  // 4. User Stats
   const userData = { SUPER_ADMIN: 0, ADMIN: 0, EMPLOYEE: 0 };
   if (userStats) {
     userStats.forEach(s => { 
@@ -537,7 +521,6 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
       pendingEmisCount: totalPendingEmis,
       totalPendingAmount,
       pendingBreakdown,
-      partialLoansCount: partialMetrics[0]?.count || 0,
       activeLoansCount,
       closedLoansCount,
       totalLoansGiven,
@@ -585,7 +568,6 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
       totalExpenses,
       userCounts: userData,
     },
-    vehicleStats: Object.keys(vehicleData).map(key => ({ name: key, value: vehicleData[key] })),
     performance: { totalTime: `${duration}ms` },
   };
 
@@ -759,7 +741,6 @@ const getConsolidatedReportData = async () => {
 
   const analyticsSummary = {
     cards: cardsData.cards,
-    vehicleStats: cardsData.vehicleStats || [],
     profitByInterval,
     expectedNextMonth: profitByInterval.all.expectedNextMonth,
   };
@@ -799,18 +780,11 @@ const getAnalyticsSnapshotExtras = async () => {
     }
   };
 
-  const intervals = ["all", "weekly", "monthly", "3months", "6months", "yearly"];
   const [cy, cm] = getTodayIST().split("-").map(Number);
   const prevMonth = cm === 1 ? { year: cy - 1, month: 12 } : { year: cy, month: cm - 1 };
 
   // Light pieces together
   await Promise.all([
-    run("simpleStats", async () => {
-      const rows = await Promise.all(intervals.map((interval) => invokeInternal(getSimpleStats, { query: { interval } })));
-      const byInterval = {};
-      intervals.forEach((interval, i) => (byInterval[interval] = rows[i]));
-      return byInterval;
-    }),
     run("collectionEfficiency", async () => {
       const [current, previous] = await Promise.all([
         invokeInternal(getMonthlyCollectionSummary, { query: { year: cy, month: cm } }),
@@ -1273,120 +1247,6 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
     breakdown,
     expectedNextMonth,
     trend,
-  });
-});
-
-// "Simple Stats" - processing fees, OD collected, foreclosure charges, and
-// misc amount, filterable by the same interval/date-range options as the
-// Profit Overview card. These are separate from profit (which only counts
-// interest/EMI-derived income) - this card is closer to a raw fee ledger.
-const getSimpleStats = asyncHandler(async (req, res, next) => {
-  const { interval = "all", startDate: customStart, endDate: customEnd } = req.query;
-  const { startDate, endDate } = getProfitDateRange(interval, customStart, customEnd);
-
-  const [
-    vehicleProcessingFee,
-    interestProcessingFee,
-    vehicleEmiOverdue,
-    vehicleForeclosureOd,
-    weeklyEmiOverdue,
-    dailyEmiOverdue,
-    interestEmiOverdue,
-    vehicleForeclosureCharge,
-    vehicleMiscFee,
-    weeklyForeclosureCharge,
-    weeklyMiscFee,
-    dailyForeclosureCharge,
-    dailyMiscFee,
-  ] = await Promise.all([
-    Loan.aggregate([
-      { $match: { dateLoanDisbursed: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
-    ]),
-    // Processing fee total for this card is Vehicle + Interest only
-    // (deliberately excludes Weekly/Daily, per Karthik's explicit ask -
-    // different scope than the Profit Overview card, which excludes
-    // Interest instead since Interest loans' processingFee field is never
-    // used for profit purposes).
-    InterestLoan.aggregate([
-      { $match: { startDate: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$processingFee", 0] } } } },
-    ]),
-    EMI.aggregate([
-      { $match: { loanModel: "Loan" } },
-      { $unwind: "$overdue" },
-      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
-    ]),
-    Loan.aggregate([
-      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$odAmount", 0] } } } },
-    ]),
-    EMI.aggregate([
-      { $match: { loanModel: "WeeklyLoan" } },
-      { $unwind: "$overdue" },
-      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
-    ]),
-    EMI.aggregate([
-      { $match: { loanModel: "DailyLoan" } },
-      { $unwind: "$overdue" },
-      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
-    ]),
-    InterestEMI.aggregate([
-      { $unwind: "$overdue" },
-      { $match: { "overdue.date": { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: "$overdue.amount" } } },
-    ]),
-    Loan.aggregate([
-      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureChargeAmount", 0] } } } },
-    ]),
-    Loan.aggregate([
-      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$miscellaneousFee", 0] } } } },
-    ]),
-    WeeklyLoan.aggregate([
-      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureChargeAmount", 0] } } } },
-    ]),
-    WeeklyLoan.aggregate([
-      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$miscellaneousFee", 0] } } } },
-    ]),
-    DailyLoan.aggregate([
-      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$foreclosureChargeAmount", 0] } } } },
-    ]),
-    DailyLoan.aggregate([
-      { $match: { foreclosureDate: { $gte: startDate, $lte: endDate } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ["$miscellaneousFee", 0] } } } },
-    ]),
-  ]);
-
-  const totalProcessingFees = Math.round(
-    sumTotal(vehicleProcessingFee) + sumTotal(interestProcessingFee),
-  );
-  const totalOdAmount = Math.round(
-    sumTotal(vehicleEmiOverdue) +
-      sumTotal(vehicleForeclosureOd) +
-      sumTotal(weeklyEmiOverdue) +
-      sumTotal(dailyEmiOverdue) +
-      sumTotal(interestEmiOverdue),
-  );
-  const totalForeclosureCharges = Math.round(
-    sumTotal(vehicleForeclosureCharge) + sumTotal(weeklyForeclosureCharge) + sumTotal(dailyForeclosureCharge),
-  );
-  const totalMiscAmount = Math.round(
-    sumTotal(vehicleMiscFee) + sumTotal(weeklyMiscFee) + sumTotal(dailyMiscFee),
-  );
-
-  sendResponse(res, 200, "success", "Simple stats fetched successfully", null, {
-    totalProcessingFees,
-    totalOdAmount,
-    totalForeclosureCharges,
-    totalMiscAmount,
   });
 });
 
@@ -2162,7 +2022,6 @@ module.exports = {
   exportAllData,
   getTrendStats,
   getProfitStats,
-  getSimpleStats,
   getConsolidatedReportData,
   getAnalyticsSnapshotExtras,
   getCompanyValuation,

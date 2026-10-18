@@ -5,11 +5,9 @@ import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatsCard from "../../../components/analytics/StatsCard";
-import VehicleStatsChart from "../../../components/analytics/VehicleStatsChart";
 import {
   TrendingUp,
   IndianRupee,
-  Clock,
   CheckCircle,
   BarChart2,
   AlertCircle,
@@ -24,7 +22,6 @@ import CollectionTrendChart from "../../../components/analytics/CollectionTrendC
 import PaymentModeTable from "../../../components/analytics/PaymentModeTable";
 import ProfitOverview from "../../../components/analytics/ProfitOverview";
 import ExpensesCard from "../../../components/analytics/ExpensesCard";
-import SimpleStats from "../../../components/analytics/SimpleStats";
 import BusinessROI from "../../../components/analytics/BusinessROI";
 import CompanyValuation from "../../../components/analytics/CompanyValuation";
 import PartnersCard from "../../../components/analytics/PartnersCard";
@@ -414,12 +411,6 @@ const AnalyticsPage = () => {
                     </tfoot>
                   </table>
                 </div>
-                <StatsCard
-                  title="Partial Payments"
-                  value={stats?.cards?.partialLoansCount || "0"}
-                  icon={<Clock className="w-6 h-6" />}
-                  color="warning"
-                />
                 {/* Loan Portfolio Mini Table */}
                 <div className="bg-white p-5 md:p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-3 mb-4">
@@ -489,13 +480,8 @@ const AnalyticsPage = () => {
               </div>
 
               {/* Chart Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-                <div className="lg:col-span-2">
-                  <VehicleStatsChart data={stats?.vehicleStats || []} />
-                </div>
-                <div className="lg:col-span-3">
-                  <CollectionTrendChart isCumulative={false} initialInterval="monthly" />
-                </div>
+              <div>
+                <CollectionTrendChart isCumulative={false} initialInterval="monthly" />
               </div>
 
               {/* Financial Breakdown & Audit (the loan-type split that used to be
@@ -512,7 +498,7 @@ const AnalyticsPage = () => {
               {/* Everything from here down (Total Growth Trend onward) is
                   SUPER_ADMIN/ADMIN only, not EMPLOYEE - Karthik's explicit
                   2026-08-05 instruction. Matching backend route restrictions
-                  live in analyticsRoutes.js for /profit, /simple-stats,
+                  live in analyticsRoutes.js for /profit,
                   /roi, /valuation - /trend-stats itself stays open since
                   the "Disbursement vs Collection" chart above (visible to
                   everyone) shares that same endpoint. */}
@@ -525,9 +511,6 @@ const AnalyticsPage = () => {
 
                   {/* Profit Overview */}
                   <ProfitOverview />
-
-                  {/* Simple Stats */}
-                  <SimpleStats />
 
                   {/* Return on Investment - on-demand only */}
                   <BusinessROI />

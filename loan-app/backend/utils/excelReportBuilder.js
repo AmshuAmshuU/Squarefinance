@@ -124,11 +124,6 @@ const addAnalyticsSummarySheet = (workbook, summary = {}, extras = null) => {
   dataRow(["Total", c.pendingLoansCount || 0, c.pendingEmisCount || 0, money(c.totalPendingAmount)], { bold: true });
   blank();
 
-  // 5. Partial Payments
-  sectionTitle("PARTIAL PAYMENTS");
-  dataRow(["Partial Payments (Loans)", c.partialLoansCount || 0], { bold: true });
-  blank();
-
   // 6. Loan Portfolio
   sectionTitle("LOAN PORTFOLIO");
   tableHeader(["Type", "Total", "Active", "Closed"]);
@@ -194,12 +189,6 @@ const addAnalyticsSummarySheet = (workbook, summary = {}, extras = null) => {
       dataRow(["Could not be loaded for this report - check the Analytics page."]);
     };
 
-    // Vehicle Status Overview
-    blank();
-    sectionTitle("VEHICLE STATUS OVERVIEW");
-    tableHeader(["Status", "Vehicles"]);
-    (summary.vehicleStats || []).forEach((v) => dataRow([v.name, v.value || 0]));
-
     // Collection Efficiency (this month and last month)
     if (extras.collectionEfficiency) {
       [["current", "THIS MONTH"], ["previous", "LAST MONTH"]].forEach(([k, label]) => {
@@ -234,20 +223,6 @@ const addAnalyticsSummarySheet = (workbook, summary = {}, extras = null) => {
       extras.expenseTrend.points.forEach((p) => dataRow([monthLabel(p.key), money(p.amount)]));
       dataRow(["Total", money(extras.expenseTrend.total)], { bold: true });
     } else unavailable("EXPENSES BY MONTH");
-
-    // Simple Stats
-    if (extras.simpleStats) {
-      blank();
-      sectionTitle("SIMPLE STATS - FEES AND CHARGES BY PERIOD");
-      tableHeader(["Item", ...PROFIT_INTERVAL_COLS.map((i) => i.label)]);
-      [
-        ["Processing Fees", "totalProcessingFees"],
-        ["Overdue (OD) Collected", "totalOdAmount"],
-        ["Foreclosure Charges", "totalForeclosureCharges"],
-        ["Miscellaneous", "totalMiscAmount"],
-      ].forEach(([label, key]) => dataRow([label, ...PROFIT_INTERVAL_COLS.map((i) => money(extras.simpleStats[i.key]?.[key]))]));
-      dataRow(["* Foreclosure charges before 24 Jul 2026 were collected but never recorded, so older periods read as 0"]);
-    } else unavailable("SIMPLE STATS");
 
     // Return on Investment
     if (extras.roi) {

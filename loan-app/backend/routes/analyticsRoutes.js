@@ -115,13 +115,6 @@ router.get(
 );
 
 router.get(
-  "/simple-stats",
-  isAuthenticated,
-  authorizeRoles("SUPER_ADMIN", "ADMIN"),
-  analyticsController.getSimpleStats
-);
-
-router.get(
   "/roi",
   isAuthenticated,
   authorizeRoles("SUPER_ADMIN", "ADMIN"),
