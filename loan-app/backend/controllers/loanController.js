@@ -2115,8 +2115,11 @@ const getFollowupLoans = asyncHandler(async (req, res, next) => {
 });
 
 // Dashboard "Followup Accountability" card. Two buckets, across all 4 loan
-// types (status === "Active" only - excludes Closed, Seized, Pending, and
-// Waiting for Approval):
+// types (status "Active" or "For Seizing" - excludes Closed, Seized, Pending,
+// and Waiting for Approval). "For Seizing" (2026-10-19, Karthik) only means the
+// vehicle is being looked for on the streets - the customer still has to be
+// followed up. Once it is actually Seized the vehicle is with us and no more
+// follow-up is needed, so Seized stays out:
 //   today - nextFollowUpDate falls on today's calendar date
 //   stale - loan currently has a genuinely due/unpaid EMI (same definition
 //           getPendingPayments uses) AND nextFollowUpDate is missing or in
@@ -2203,7 +2206,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
       };
 
       const pipeline = [
-        { $match: { status: "Active" } },
+        { $match: { status: { $in: ["Active", "For Seizing"] } } },
         {
           $lookup: {
             from: emiCollection,
