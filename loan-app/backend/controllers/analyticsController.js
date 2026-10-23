@@ -161,9 +161,11 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
 
     // 10. Monthly EMI expected from active loans (all 4 types)
     Promise.all([
-      // Vehicle loans: sum of monthlyEMI for Active loans only (excludes Seized, Closed, Pending, Waiting for Approval)
+      // Vehicle loans: sum of monthlyEMI for Active and For Seizing loans (excludes Seized, Closed, Pending, Waiting for Approval).
+      // "For Seizing" (2026-10-23, Karthik) = the vehicle is only being looked for on the
+      // street, the customer still owes the EMIs; "Seized" = vehicle is with us, so stays out.
       Loan.aggregate([
-        { $match: { status: "Active" } },
+        { $match: { status: { $in: ["Active", "For Seizing"] } } },
         { $group: { _id: null, total: { $sum: { $ifNull: ["$monthlyEMI", 0] } } } }
       ]),
       // Weekly loans: sum of emiAmount for active loans
@@ -1213,9 +1215,10 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
       { $group: { _id: { $dateToString: { format: groupFormat, date: "$paymentDate" } }, total: { $sum: "$interestAmount" } } },
     ]),
 
-    // Expected profit next month - Vehicle: interest portion of every Active loan's EMI
+    // Expected profit next month - Vehicle: interest portion of every Active or For Seizing loan's EMI
+    // (For Seizing counted since 2026-10-23, Karthik: the customer still owes; Seized is excluded)
     Loan.aggregate([
-      { $match: { status: "Active" } },
+      { $match: { status: { $in: ["Active", "For Seizing"] } } },
       { $group: { _id: null, total: { $sum: { $multiply: ["$principalAmount", { $divide: [{ $ifNull: ["$annualInterestRate", 0] }, 100] }] } } } },
     ]),
     // Expected profit next month - Interest: earliest unpaid EMI per active interest loan
