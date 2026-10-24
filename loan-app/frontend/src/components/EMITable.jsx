@@ -352,18 +352,6 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
            .emi-table-dark-mode so nothing here can affect any other page.
            (The Edit Payment popup has its own separate .emi-modal-dark-mode
            styling below, only injected while the popup is open.) */
-        /* Header row stays in view while the schedule scrolls (all loan types) */
-        .emi-sticky-head th {
-          position: sticky;
-          top: 0;
-          z-index: 20;
-          background-color: #f8fafc;
-          box-shadow: 0 1px 0 #e2e8f0;
-        }
-        .emi-table-dark-mode .emi-sticky-head th {
-          background-color: #334155 !important;
-          box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
-        }
         .emi-table-dark-mode .bg-white {
           background-color: #1e293b !important;
         }
@@ -477,9 +465,9 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
           color-scheme: dark;
         }
       `}</style>
-      <div className="overflow-auto max-h-[75vh] bg-white rounded-3xl border border-slate-200 shadow-sm">
+      <div className="overflow-x-auto bg-white rounded-3xl border border-slate-200 shadow-sm">
         <table className="w-full text-left border-collapse">
-          <thead className="emi-sticky-head bg-slate-50 border-b border-slate-200">
+          <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap min-w-[60px]">
                 No.
