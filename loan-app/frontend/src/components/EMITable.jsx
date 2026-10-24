@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { updateEMI } from "../services/customer";
 import interestLoanService from "../services/interestLoanService";
 import { useToast } from "../context/ToastContext";
 import { useUI } from "../context/UIContext";
 import PaymentModeSelector from "./PaymentModeSelector";
 import { getTodayIST } from "../utils/dateUtils";
+import { computeXod, isXodGrowing } from "../utils/xod";
 
-const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "standard" }) => {
+const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "standard", showXod = false }) => {
   const [editingEmi, setEditingEmi] = useState(null);
   const [editData, setEditData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -15,6 +16,35 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
   const { isDarkMode } = useUI();
   const [dateGroups, setDateGroups] = useState([]);
   const [selectedRowId, setSelectedRowId] = useState(null);
+
+  // XOD (expected overdue) - vehicle loans only, display-only. 3% or 4% per month,
+  // remembered in this browser.
+  const [xodRate, setXodRate] = useState(3);
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem("sf_xod_rate"));
+      if (saved === 3 || saved === 4) setXodRate(saved);
+    } catch {}
+  }, []);
+  const changeXodRate = (value) => {
+    const rate = Number(value) === 4 ? 4 : 3;
+    setXodRate(rate);
+    try {
+      localStorage.setItem("sf_xod_rate", String(rate));
+    } catch {}
+  };
+  const todayIST = getTodayIST();
+  const odOf = (emi) =>
+    Array.isArray(emi.overdue) ? emi.overdue.reduce((acc, curr) => acc + (curr.amount || 0), 0) : emi.overdue || 0;
+  const xodTotals = showXod
+    ? emis.reduce(
+        (acc, emi) => ({
+          od: acc.od + odOf(emi),
+          xod: acc.xod + (computeXod(emi, xodRate, todayIST) || 0),
+        }),
+        { od: 0, xod: 0 },
+      )
+    : null;
 
   const toggleHighlight = (e, id) => {
     // Don't toggle if clicking a button or internal interactive element
@@ -322,6 +352,18 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
            .emi-table-dark-mode so nothing here can affect any other page.
            (The Edit Payment popup has its own separate .emi-modal-dark-mode
            styling below, only injected while the popup is open.) */
+        /* Header row stays in view while the schedule scrolls (all loan types) */
+        .emi-sticky-head th {
+          position: sticky;
+          top: 0;
+          z-index: 20;
+          background-color: #f8fafc;
+          box-shadow: 0 1px 0 #e2e8f0;
+        }
+        .emi-table-dark-mode .emi-sticky-head th {
+          background-color: #334155 !important;
+          box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
         .emi-table-dark-mode .bg-white {
           background-color: #1e293b !important;
         }
@@ -435,9 +477,9 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
           color-scheme: dark;
         }
       `}</style>
-      <div className="overflow-x-auto bg-white rounded-3xl border border-slate-200 shadow-sm">
+      <div className="overflow-auto max-h-[75vh] bg-white rounded-3xl border border-slate-200 shadow-sm">
         <table className="w-full text-left border-collapse">
-          <thead className="bg-slate-50 border-b border-slate-200">
+          <thead className="emi-sticky-head bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap min-w-[60px]">
                 No.
@@ -460,6 +502,21 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap text-center min-w-[100px]">
                 Overdue
               </th>
+              {showXod && (
+                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap text-center min-w-[90px]">
+                  XOD
+                  <select
+                    value={xodRate}
+                    onChange={(e) => changeXodRate(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label="XOD rate per month"
+                    className="block mx-auto mt-1 bg-transparent text-[8px] font-bold tracking-wider text-slate-400 border border-slate-200 rounded-md px-1 py-0 cursor-pointer focus:outline-none"
+                  >
+                    <option value={3}>3%</option>
+                    <option value={4}>4%</option>
+                  </select>
+                </th>
+              )}
               <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap text-center min-w-[120px]">
                 Payment
               </th>
@@ -483,7 +540,7 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
             {emis.length === 0 ? (
               <tr>
                 <td
-                  colSpan={isEditMode ? 11 : 10}
+                  colSpan={(isEditMode ? 11 : 10) + (showXod ? 1 : 0)}
                   className="px-6 py-12 text-center text-sm font-bold text-slate-400 italic"
                 >
                   No payment records found. The schedule will be initialized
@@ -541,6 +598,17 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
                 <td className="px-6 py-4 text-xs font-medium text-red-600 text-center">
                   ₹{Array.isArray(emi.overdue) ? emi.overdue.reduce((acc, curr) => acc + (curr.amount || 0), 0) : (emi.overdue || 0)}
                 </td>
+                {showXod && (() => {
+                  const xod = computeXod(emi, xodRate, todayIST);
+                  // amber while the EMI is still unpaid (still growing), grey once settled
+                  const growing = isXodGrowing(emi);
+                  const color = growing ? (isDarkMode ? "#fbbf24" : "#d97706") : (isDarkMode ? "#94a3b8" : "#64748b");
+                  return (
+                    <td className="px-6 py-4 text-xs font-medium text-center whitespace-nowrap" style={{ color }}>
+                      {xod === null ? "-" : `₹${Math.round(xod)}`}
+                    </td>
+                  );
+                })()}
                 <td className="px-6 py-4 text-center whitespace-nowrap">
                   {emi.status === "Pending" &&
                   new Date() < new Date(emi.dueDate) ? (
@@ -639,6 +707,22 @@ const EMITable = ({ emis, isEditMode = false, onUpdateSuccess, loanType = "stand
               ))
             )}
           </tbody>
+          {showXod && emis.length > 0 && (
+            <tfoot>
+              <tr className="border-t border-dashed border-slate-300">
+                <td colSpan={6} className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Total
+                </td>
+                <td className="px-6 py-3 text-[11px] font-semibold text-center whitespace-nowrap" style={{ color: isDarkMode ? "#f87171" : "#ef4444" }}>
+                  ₹{Math.round(xodTotals.od)}
+                </td>
+                <td className="px-6 py-3 text-[11px] font-semibold text-center whitespace-nowrap" style={{ color: isDarkMode ? "#94a3b8" : "#64748b" }}>
+                  ₹{Math.round(xodTotals.xod)}
+                </td>
+                <td colSpan={isEditMode ? 5 : 4} />
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

@@ -401,6 +401,7 @@ const EditLoanPage = () => {
                           ? emis.filter((emi) => (emi.amountPaid || 0) > 0)
                           : emis
                       }
+                      showXod
                       isEditMode={true}
                       onUpdateSuccess={handleEMIUpdate}
                     />
