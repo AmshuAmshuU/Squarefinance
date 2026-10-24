@@ -1649,7 +1649,7 @@ const getBookGrowth = asyncHandler(async (req, res, next) => {
     Loan.find({}).select("dateLoanDisbursed createdAt principalAmount tenureMonths monthlyEMI processingFee").lean(),
     WeeklyLoan.find({}).select("dateLoanDisbursed startDate disbursementAmount processingFee").lean(),
     DailyLoan.find({}).select("dateLoanDisbursed startDate disbursementAmount processingFee").lean(),
-    InterestLoan.find({}).select("dateLoanDisbursed createdAt initialPrincipalAmount").lean(),
+    InterestLoan.find({}).select("dateLoanDisbursed startDate createdAt initialPrincipalAmount").lean(),
     getAllCollectionEvents(),
   ]);
 
@@ -1658,7 +1658,7 @@ const getBookGrowth = asyncHandler(async (req, res, next) => {
   vLoans.forEach((l) => pushLent("vehicle", l.dateLoanDisbursed || l.createdAt, l.principalAmount));
   wLoans.forEach((l) => pushLent("weekly", l.dateLoanDisbursed || l.startDate, l.disbursementAmount));
   dLoans.forEach((l) => pushLent("daily", l.dateLoanDisbursed || l.startDate, l.disbursementAmount));
-  iLoans.forEach((l) => pushLent("interest", l.dateLoanDisbursed || l.createdAt, l.initialPrincipalAmount));
+  iLoans.forEach((l) => pushLent("interest", l.dateLoanDisbursed || l.startDate || l.createdAt, l.initialPrincipalAmount));
 
   const loanInfo = new Map();
   vLoans.forEach((l) => {

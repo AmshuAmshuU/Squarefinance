@@ -244,7 +244,10 @@ const getLoansGivenSummary = asyncHandler(async (req, res, next) => {
     },
   ];
 
-  // Interest Loans pipeline
+  // Interest Loans pipeline - an Interest loan has no dateLoanDisbursed field:
+  // the form's "Date Loan Disbursed" is saved as startDate. Using createdAt here
+  // put a back-dated loan (e.g. M9, disbursed 11 Jul but entered later) on the
+  // day it was typed in instead of its real disbursement day.
   const interestLoanPipeline = [
     {
       $match:
@@ -255,7 +258,7 @@ const getLoansGivenSummary = asyncHandler(async (req, res, next) => {
                 {
                   $and: [
                     { dateLoanDisbursed: { $exists: false } },
-                    { createdAt: matchDate },
+                    { startDate: matchDate },
                   ],
                 },
               ],
@@ -269,7 +272,12 @@ const getLoansGivenSummary = asyncHandler(async (req, res, next) => {
         customerName: 1,
         mobileNumbers: 1,
         amount: "$initialPrincipalAmount",
-        date: { $ifNull: ["$dateLoanDisbursed", "$createdAt"] },
+        date: {
+          $ifNull: [
+            "$dateLoanDisbursed",
+            { $ifNull: ["$startDate", "$createdAt"] },
+          ],
+        },
         createdAt: 1,
         createdBy: 1,
         type: { $literal: "Interest" },
@@ -362,7 +370,7 @@ const getLoansGivenBreakdown = asyncHandler(async (req, res, next) => {
     Loan.aggregate([{ $match: buildMatch("createdAt") }, ...sumStage("principalAmount")]),
     WeeklyLoan.aggregate([{ $match: buildMatch("startDate") }, ...sumStage("disbursementAmount")]),
     DailyLoan.aggregate([{ $match: buildMatch("startDate") }, ...sumStage("disbursementAmount")]),
-    InterestLoan.aggregate([{ $match: buildMatch("createdAt") }, ...sumStage("initialPrincipalAmount")]),
+    InterestLoan.aggregate([{ $match: buildMatch("startDate") }, ...sumStage("initialPrincipalAmount")]),
   ]);
 
   const categories = {
