@@ -7,10 +7,12 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { IndianRupee, TrendingUp, Filter, Calendar, Loader2 } from "lucide-react";
 import { getProfitStats } from "../../services/analytics.service";
 import { getTodayIST, getISTDateNDaysAgo } from "../../utils/dateUtils";
+import { useUI } from "../../context/UIContext";
 
 const TYPE_ROWS = [
   { label: "Vehicle", key: "monthly", color: "bg-purple-400" },
@@ -31,6 +33,17 @@ const intervalOptions = [
 
 const formatCurrency = (value) =>
   `₹${Math.round(value || 0).toLocaleString("en-IN")}`;
+
+// Each loan type's share of the period's profit, as "82%" - shown in small
+// brackets beside the type name, same style as the first card on the page.
+const typeShare = (breakdown, key) => {
+  const total = TYPE_ROWS.reduce((sum, row) => sum + (breakdown?.[row.key] || 0), 0);
+  if (!total) return null;
+  const value = breakdown?.[key] || 0;
+  if (value <= 0) return "0%";
+  const pct = Math.round((value / total) * 100);
+  return pct < 1 ? "<1%" : `${pct}%`;
+};
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -75,6 +88,7 @@ const CumulativeTooltip = ({ active, payload, label }) => {
 };
 
 const ProfitOverview = () => {
+  const { isDarkMode } = useUI();
   const [interval, setIntervalValue] = useState("all");
   const [customDates, setCustomDates] = useState({
     start: getISTDateNDaysAgo(30),
@@ -197,11 +211,15 @@ const ProfitOverview = () => {
             <tbody className="divide-y divide-slate-50">
               {TYPE_ROWS.map((row) => {
                 const value = data?.breakdown?.[row.key] || 0;
+                const share = typeShare(data?.breakdown, row.key);
                 return (
                   <tr key={row.key} className={value > 0 ? "" : "opacity-40"}>
                     <td className="py-1.5 flex items-center gap-1.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${row.color}`}></span>
-                      <span className="font-bold text-slate-600">{row.label}</span>
+                      <span className="font-bold text-slate-600">
+                        {row.label}
+                        {share && <span className="ml-1 text-[9px] font-semibold text-slate-400">({share})</span>}
+                      </span>
                     </td>
                     <td className="py-1.5 text-right font-black text-emerald-600">
                       {formatCurrency(value)}
@@ -368,6 +386,13 @@ const ProfitOverview = () => {
                       fill="#10b981"
                       fillOpacity={0.1}
                       isAnimationActive={false}
+                    />
+                    {/* Subtle dashed average of exactly the points plotted above */}
+                    <ReferenceLine
+                      y={data.trend.reduce((sum, point) => sum + (point.profit || 0), 0) / data.trend.length}
+                      stroke={isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(71,85,105,0.5)"}
+                      strokeWidth={1.25}
+                      strokeDasharray="5 4"
                     />
                   </AreaChart>
                 </ResponsiveContainer>

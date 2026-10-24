@@ -11,12 +11,15 @@ import {
   ResponsiveContainer,
   Area,
   AreaChart,
+  ReferenceLine,
 } from "recharts";
 import { getTrendStats } from "../../services/analytics.service";
 import { Calendar, Filter, Loader2 } from "lucide-react";
 import { getTodayIST, getISTDateNDaysAgo } from "../../utils/dateUtils";
+import { useUI } from "../../context/UIContext";
 
 const CollectionTrendChart = ({ initialInterval = "all", isCumulative = false }) => {
+  const { isDarkMode } = useUI();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -64,6 +67,10 @@ const CollectionTrendChart = ({ initialInterval = "all", isCumulative = false })
     { label: "Yearly (1 Year)", value: "yearly" },
     { label: "Custom Range", value: "custom" },
   ];
+
+  // Average of the plotted points for one series (what the dashed lines show)
+  const average = (key) =>
+    data.length ? data.reduce((sum, point) => sum + (point[key] || 0), 0) / data.length : 0;
 
   const formatCurrency = (value) => 
     new Intl.NumberFormat("en-IN", {
@@ -181,10 +188,7 @@ const CollectionTrendChart = ({ initialInterval = "all", isCumulative = false })
           </div>
         ) : (
           <div className="w-full h-full flex flex-col items-center">
-             <div className="w-full flex justify-between px-4 mb-4">
-                <span className="text-[7px] font-black text-slate-200">
-                   DEBUG: {data[0] ? Object.keys(data[0]).join(", ") : "NO DATA"}
-                </span>
+             <div className="w-full flex justify-end px-4 mb-4">
                 <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md">
                    {data.length} Tracked Points
                 </span>
@@ -228,6 +232,27 @@ const CollectionTrendChart = ({ initialInterval = "all", isCumulative = false })
                     fillOpacity={0.1}
                     isAnimationActive={false}
                   />
+                  {isCumulative ? (
+                    // Thin, unnamed profit line (white in dark mode, soft grey in light mode)
+                    <Area
+                      type="monotone"
+                      dataKey="cumulativeProfit"
+                      name="Profit"
+                      stroke={isDarkMode ? "rgba(255,255,255,0.6)" : "rgba(71,85,105,0.55)"}
+                      strokeWidth={1.5}
+                      fill="none"
+                      dot={false}
+                      activeDot={false}
+                      legendType="none"
+                      isAnimationActive={false}
+                    />
+                  ) : (
+                    // Dull dashed average lines - the average of exactly the points plotted above
+                    <>
+                      <ReferenceLine y={average("disbursement")} stroke="#3b82f6" strokeOpacity={0.45} strokeWidth={1.5} strokeDasharray="5 4" />
+                      <ReferenceLine y={average("collection")} stroke="#10b981" strokeOpacity={0.45} strokeWidth={1.5} strokeDasharray="5 4" />
+                    </>
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
