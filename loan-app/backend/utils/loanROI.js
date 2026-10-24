@@ -268,4 +268,26 @@ function interestLoanFlows(loan, emis, asOfDate = new Date()) {
   return { hist, future, pending };
 }
 
-module.exports = { xirr, computeROI, vehicleLoanFlows, weeklyDailyLoanFlows, interestLoanFlows };
+// The XIRR a Vehicle/Weekly/Daily loan had on its first day: money out (and the
+// processing fee in) on the disbursement date, then EVERY EMI of the schedule paid
+// exactly on its due date. EMIs bulk-closed by a foreclosure/sale are part of that
+// original schedule, so they are included. It uses the loan's current saved EMI
+// schedule (the first-day schedule itself is not stored). Returns null when it
+// can't be solved (e.g. no schedule). Display-only - feeds no other number.
+function originalXirr(loan, emis, amountField) {
+  const disbDate = loan.dateLoanDisbursed ? new Date(loan.dateLoanDisbursed) : null;
+  if (!disbDate || !Array.isArray(emis) || emis.length === 0) return null;
+  const flows = [];
+  if (Array.isArray(loan.disbursement) && loan.disbursement.length > 0) {
+    loan.disbursement.forEach((d) => flows.push({ date: new Date(d.date), amount: -(d.amount || 0) }));
+  } else {
+    flows.push({ date: disbDate, amount: -(loan[amountField] || 0) });
+  }
+  if (loan.processingFee) flows.push({ date: disbDate, amount: loan.processingFee });
+  emis.forEach((e) => {
+    if (e.dueDate) flows.push({ date: new Date(e.dueDate), amount: e.emiAmount || 0 });
+  });
+  return xirr(flows);
+}
+
+module.exports = { xirr, computeROI, vehicleLoanFlows, weeklyDailyLoanFlows, interestLoanFlows, originalXirr };

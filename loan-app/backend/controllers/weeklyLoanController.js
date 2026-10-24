@@ -452,9 +452,10 @@ exports.getWeeklyLoanROI = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Weekly loan not found", 404));
   }
   const emis = await EMI.find({ loanId: loan._id, loanModel: "WeeklyLoan" }).lean();
-  const { weeklyDailyLoanFlows, computeROI } = require("../utils/loanROI");
+  const { weeklyDailyLoanFlows, computeROI, originalXirr } = require("../utils/loanROI");
   const { hist, future, pending } = weeklyDailyLoanFlows(loan, emis);
   const roi = computeROI(hist, future, pending);
+  roi.originalXirr = originalXirr(loan, emis, "disbursementAmount"); // shown in brackets beside the Realistic XIRR
 
   sendResponse(res, 200, "success", "Weekly loan ROI calculated", null, roi);
 });

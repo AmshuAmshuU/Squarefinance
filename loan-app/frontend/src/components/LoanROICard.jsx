@@ -62,7 +62,12 @@ const LoanROICard = ({ fetchFn, loanId }) => {
             <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
               Realistic XIRR
             </p>
-            <p className="text-sm font-black text-slate-600">{fmtPct(roi?.realisticXirr)}</p>
+            <p className="text-sm font-black text-slate-600">
+              {fmtPct(roi?.realisticXirr)}
+              {roi?.originalXirr !== null && roi?.originalXirr !== undefined && (
+                <span className="ml-1 text-[9px] font-semibold text-slate-400">({fmtPct(roi.originalXirr)})</span>
+              )}
+            </p>
             <p className="text-[8px] text-slate-300 mt-0.5 leading-tight">Annualized, future money on real due dates</p>
           </div>
           <div className="bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">

@@ -879,9 +879,10 @@ const getLoanROI = asyncHandler(async (req, res, next) => {
     return next(new ErrorHandler("Loan not found", 404));
   }
   const emis = await EMI.find({ loanId: loan._id, loanModel: "Loan" }).lean();
-  const { vehicleLoanFlows, computeROI } = require("../utils/loanROI");
+  const { vehicleLoanFlows, computeROI, originalXirr } = require("../utils/loanROI");
   const { hist, future, pending } = vehicleLoanFlows(loan, emis);
   const roi = computeROI(hist, future, pending);
+  roi.originalXirr = originalXirr(loan, emis, "principalAmount"); // shown in brackets beside the Realistic XIRR
 
   sendResponse(res, 200, "success", "Loan ROI calculated", null, roi);
 });
