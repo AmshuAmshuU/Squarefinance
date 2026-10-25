@@ -3,6 +3,10 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
+  Cell,
+  LabelList,
   XAxis,
   YAxis,
   Tooltip,
@@ -43,6 +47,37 @@ const typeShare = (breakdown, key) => {
   if (value <= 0) return "0%";
   const pct = Math.round((value / total) * 100);
   return pct < 1 ? "<1%" : `${pct}%`;
+};
+
+// Profit Trend bars: every bar is green unless it is lower than the bar before it
+// (the previous month/day plotted). The bigger the fall, the further the colour moves
+// from green: yellow-green, then amber, then orange. No red - a dip is not a failure.
+const DIP_STOPS = [
+  [0, [16, 185, 129]],
+  [0.15, [140, 195, 74]],
+  [0.35, [232, 183, 58]],
+  [0.6, [232, 128, 58]],
+];
+
+const dipColor = (drop) => {
+  if (!(drop > 0)) return `rgb(${DIP_STOPS[0][1].join(",")})`;
+  for (let i = 0; i < DIP_STOPS.length - 1; i++) {
+    const [lo, loRgb] = DIP_STOPS[i];
+    const [hi, hiRgb] = DIP_STOPS[i + 1];
+    if (drop <= hi) {
+      const t = (drop - lo) / (hi - lo);
+      return `rgb(${loRgb.map((c, k) => Math.round(c + (hiRgb[k] - c) * t)).join(",")})`;
+    }
+  }
+  return `rgb(${DIP_STOPS[DIP_STOPS.length - 1][1].join(",")})`;
+};
+
+// Value written on top of a bar: 4.8L for lakhs, 15.9K below that
+const shortAmount = (value) => {
+  const v = Math.abs(value || 0);
+  if (v >= 100000) return `${(value / 100000).toFixed(1)}L`;
+  if (v >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  return `${Math.round(value || 0)}`;
 };
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -121,6 +156,16 @@ const ProfitOverview = () => {
   useEffect(() => {
     fetchProfit();
   }, [fetchProfit]);
+
+  // Each bar's colour comes from how it compares with the bar plotted just before it
+  const profitBars = useMemo(() => {
+    if (!data?.trend) return [];
+    return data.trend.map((point, i) => {
+      const prev = i > 0 ? data.trend[i - 1].profit : 0;
+      const drop = prev > 0 ? 1 - point.profit / prev : 0;
+      return { ...point, fill: dipColor(drop) };
+    });
+  }, [data]);
 
   const cumulativeTrend = useMemo(() => {
     if (!data?.trend) return [];
@@ -357,9 +402,10 @@ const ProfitOverview = () => {
             !loading && (
               <div className="w-full" style={{ height: "320px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={data.trend}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  <BarChart
+                    data={profitBars}
+                    margin={{ top: 18, right: 10, left: -20, bottom: 0 }}
+                    barCategoryGap="14%"
                   >
                     <XAxis
                       dataKey="date"
@@ -376,25 +422,39 @@ const ProfitOverview = () => {
                         `${value >= 100000 ? (value / 100000).toFixed(1) + "L" : (value / 1000).toFixed(0) + "K"}`
                       }
                     />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area
-                      type="monotone"
+                    <Tooltip
+                      content={<CustomTooltip />}
+                      cursor={{ fill: isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(100,116,139,0.08)" }}
+                    />
+                    <Bar
                       dataKey="profit"
                       name="Profit"
-                      stroke="#10b981"
-                      strokeWidth={4}
-                      fill="#10b981"
-                      fillOpacity={0.1}
+                      maxBarSize={40}
+                      radius={[3, 3, 0, 0]}
+                      fillOpacity={0.88}
                       isAnimationActive={false}
-                    />
-                    {/* Subtle dashed average of exactly the points plotted above */}
+                    >
+                      {profitBars.map((bar) => (
+                        <Cell key={bar.date} fill={bar.fill} />
+                      ))}
+                      {/* Values on top of the bars only while there are few enough to read */}
+                      {profitBars.length <= 12 && (
+                        <LabelList
+                          dataKey="profit"
+                          position="top"
+                          formatter={shortAmount}
+                          style={{ fontSize: 10, fontWeight: 700, fill: isDarkMode ? "#cbd5e1" : "#64748b" }}
+                        />
+                      )}
+                    </Bar>
+                    {/* Subtle dashed average of exactly the bars plotted above */}
                     <ReferenceLine
                       y={data.trend.reduce((sum, point) => sum + (point.profit || 0), 0) / data.trend.length}
                       stroke={isDarkMode ? "rgba(255,255,255,0.5)" : "rgba(71,85,105,0.5)"}
                       strokeWidth={1.25}
                       strokeDasharray="5 4"
                     />
-                  </AreaChart>
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             )
