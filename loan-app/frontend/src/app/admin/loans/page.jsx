@@ -12,6 +12,7 @@ import Pagination from "../../../components/Pagination";
 import ContactActionMenu from "../../../components/ContactActionMenu";
 import { useUI } from "../../../context/UIContext";
 import ListPhoto from "../../../components/ListPhoto";
+import TenureOverMark from "../../../components/TenureOverMark";
 import { readSnapshot, useListMemory } from "../../../utils/backNavigation";
 
 // First column of the list - identical on phones and wider screens: loan number, status
@@ -30,12 +31,15 @@ const LoanNoCell = ({ loan }) => {
         : "text-red-600";
   return (
     <>
-      <Link
-        href={`/admin/loans/edit/${loan._id || loan.id || loan.status?.id}`}
-        className="block font-bold text-slate-900 tracking-tight text-base hover:text-primary hover:underline transition-all"
-      >
-        {loan.loanTerms?.loanNumber}
-      </Link>
+      <div className="flex items-center gap-1.5">
+        <Link
+          href={`/admin/loans/edit/${loan._id || loan.id || loan.status?.id}`}
+          className="block font-bold text-slate-900 tracking-tight text-base hover:text-primary hover:underline transition-all"
+        >
+          {loan.loanTerms?.loanNumber}
+        </Link>
+        <TenureOverMark show={loan.tenureOver} />
+      </div>
       <span
         className={`mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter border ${
           isClosed

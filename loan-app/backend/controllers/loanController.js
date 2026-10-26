@@ -17,7 +17,7 @@ const { attachCallRecords } = require("../utils/callRecords");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { normalizeHouseLocation } = require("../utils/houseLocation");
 const { buildSeizingNotice, applyForSeizing } = require("../utils/seizingNotice");
-const { tenureOverExpr } = require("../utils/tenureOver");
+const { tenureOverExpr, VEHICLE_STATUSES, istTodayStart } = require("../utils/tenureOver");
 const { notifyAdmins } = require("./notificationController");
 const LoanDraft = require("../models/LoanDraft");
 const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
@@ -464,10 +464,25 @@ const getAllLoans = asyncHandler(async (req, res, next) => {
 
   // 2. Performance: Serialization & Formatting
   const serStart = performance.now();
+  // Red circled T: tenure over but EMIs still unpaid. Vehicle loans have no remaining-EMIs
+  // counter, so check the EMI records - only for this page's loans whose last EMI date has passed.
+  const tenureCandidates = loans.filter(
+    (l) => VEHICLE_STATUSES.includes(l.status) && l.emiEndDate && new Date(l.emiEndDate) < istTodayStart(),
+  );
+  const tenureOverIds = new Set();
+  if (tenureCandidates.length > 0) {
+    const unpaid = await EMI.aggregate([
+      { $match: { loanId: { $in: tenureCandidates.map((l) => l._id) }, status: { $ne: "Paid" } } },
+      { $group: { _id: "$loanId" } },
+    ]);
+    unpaid.forEach((u) => tenureOverIds.add(String(u._id)));
+  }
+
   const formattedLoans = loans.map((loan) => {
     // RESTORE NESTED STRUCTURE: Frontend expects these specific paths
     return {
       _id: loan._id,
+      tenureOver: tenureOverIds.has(String(loan._id)),
       customerDetails: {
         customerName: loan.customerName,
         address: loan.address,
@@ -1571,10 +1586,13 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
             ],
           },
           unpaidMonths: { $size: "$pendingEmisList" },
-          // Weekly/Daily only: tenure finished but EMIs still unpaid (red circled T)
-          tenureOver: ["WeeklyLoan", "DailyLoan"].includes(modelName)
-            ? tenureOverExpr({ $size: "$pendingEmisList" })
-            : { $literal: false },
+          // Weekly/Daily/Vehicle only: tenure finished but EMIs still unpaid (red circled T)
+          tenureOver:
+            modelName === "Loan"
+              ? tenureOverExpr({ $size: "$pendingEmisList" }, VEHICLE_STATUSES)
+              : ["WeeklyLoan", "DailyLoan"].includes(modelName)
+                ? tenureOverExpr({ $size: "$pendingEmisList" })
+                : { $literal: false },
           // The loan's regular EMI: monthlyEMI (Vehicle), emiAmount (Weekly/
           // Daily), else the earliest pending EMI's own amount / interest (Interest
           // loans have no fixed EMI on the loan itself).
@@ -2213,11 +2231,14 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
         },
       };
 
-      // Red circled T - Weekly/Daily loans whose tenure is over but still have unpaid EMIs
+      // Red circled T - Weekly/Daily/Vehicle loans whose tenure is over but still have unpaid EMIs
+      const unpaidEmiCount = { $size: { $filter: { input: "$emis", as: "e", cond: { $ne: ["$$e.status", "Paid"] } } } };
       const tenureOverField =
-        loanType === "Weekly" || loanType === "Daily"
-          ? tenureOverExpr({ $size: { $filter: { input: "$emis", as: "e", cond: { $ne: ["$$e.status", "Paid"] } } } })
-          : { $literal: false };
+        loanType === "Vehicle"
+          ? tenureOverExpr(unpaidEmiCount, VEHICLE_STATUSES)
+          : loanType === "Weekly" || loanType === "Daily"
+            ? tenureOverExpr(unpaidEmiCount)
+            : { $literal: false };
 
       const pipeline = [
         { $match: { status: { $in: ["Active", "For Seizing"] } } },
@@ -2898,6 +2919,7 @@ const getSeizedVehicles = asyncHandler(async (req, res, next) => {
         seizedStatus: 1,
         hpEntry: 1,
         modelYear: 1,
+        tenureOver: tenureOverExpr({ $size: "$pendingEmisList" }, VEHICLE_STATUSES),
         // Since when the loan has been "For Seizing" (null for loans flagged
         // before this was recorded, or not currently For Seizing)
         forSeizingDate: {

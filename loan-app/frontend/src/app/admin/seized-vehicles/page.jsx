@@ -10,6 +10,7 @@ import {
 import Pagination from "../../../components/Pagination";
 import Link from "next/link";
 import { Check, X } from "lucide-react";
+import TenureOverMark from "../../../components/TenureOverMark";
 import SoldVehicleModal from "../../../components/SoldVehicleModal";
 import SuccessModal from "../../../components/SuccessModal";
 import ContactActionMenu from "../../../components/ContactActionMenu";
@@ -392,13 +393,16 @@ const SeizedVehiclesPage = () => {
                                     : "bg-white group-hover:bg-slate-50"
                                 }`}
                               >
-                                <Link
-                                  href={`/admin/loans/${loan._id}`}
-                                  className="text-xs font-bold text-blue-500 hover:underline uppercase transition-all"
-                                >
-                                  {loan.loanTerms?.loanNumber ||
-                                    loan.loanNumber}
-                                </Link>
+                                <div className="flex items-center gap-1.5">
+                                  <Link
+                                    href={`/admin/loans/${loan._id}`}
+                                    className="text-xs font-bold text-blue-500 hover:underline uppercase transition-all"
+                                  >
+                                    {loan.loanTerms?.loanNumber ||
+                                      loan.loanNumber}
+                                  </Link>
+                                  <TenureOverMark show={loan.tenureOver} />
+                                </div>
                                 {/* HP entry status (display only): green tick = Finished,
                                     yellow "Applied", red cross = Not done */}
                                 {(() => {
