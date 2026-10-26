@@ -9,6 +9,7 @@ import {
 } from "../../../services/loan.service";
 import Pagination from "../../../components/Pagination";
 import Link from "next/link";
+import { Check, X } from "lucide-react";
 import SoldVehicleModal from "../../../components/SoldVehicleModal";
 import SuccessModal from "../../../components/SuccessModal";
 import ContactActionMenu from "../../../components/ContactActionMenu";
@@ -301,7 +302,7 @@ const SeizedVehiclesPage = () => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100">
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                        <th className="pl-3 pr-2 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
                           Loan Number
                         </th>
                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -385,7 +386,7 @@ const SeizedVehiclesPage = () => {
                             >
                               {/* 1. Loan Number */}
                               <td
-                                className={`px-6 py-5 sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
+                                className={`pl-3 pr-2 py-5 sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                                   selectedRowId === loan._id
                                     ? "bg-blue-50/80"
                                     : "bg-white group-hover:bg-slate-50"
@@ -393,11 +394,37 @@ const SeizedVehiclesPage = () => {
                               >
                                 <Link
                                   href={`/admin/loans/${loan._id}`}
-                                  className="text-[10px] font-bold text-primary hover:underline uppercase transition-all"
+                                  className="text-xs font-bold text-blue-500 hover:underline uppercase transition-all"
                                 >
                                   {loan.loanTerms?.loanNumber ||
                                     loan.loanNumber}
                                 </Link>
+                                {/* HP entry status (display only): green tick = Finished,
+                                    yellow "Applied", red cross = Not done */}
+                                {(() => {
+                                  const hp = loan.hpEntry || "Not done";
+                                  const tone =
+                                    hp === "Finished"
+                                      ? "text-emerald-600"
+                                      : hp === "Applied"
+                                        ? "text-amber-600"
+                                        : "text-red-600";
+                                  return (
+                                    <div
+                                      className={`mt-1 flex items-center gap-0.5 text-[10px] font-bold whitespace-nowrap leading-none ${tone}`}
+                                      aria-label={`HP entry: ${hp}`}
+                                    >
+                                      HPA
+                                      {hp === "Finished" ? (
+                                        <Check size={12} strokeWidth={3} />
+                                      ) : hp === "Applied" ? (
+                                        <span className="ml-0.5">Applied</span>
+                                      ) : (
+                                        <X size={12} strokeWidth={3} />
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </td>
 
                               {/* 2. Name */}
