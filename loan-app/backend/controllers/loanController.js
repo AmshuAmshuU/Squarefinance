@@ -2852,6 +2852,16 @@ const getSeizedVehicles = asyncHandler(async (req, res, next) => {
       },
     },
     {
+      // The Seized Vehicles record: its seizedDate is stamped the moment the
+      // loan is flagged For Seizing (until it later moves on to Seized).
+      $lookup: {
+        from: "seizedvehicles",
+        localField: "_id",
+        foreignField: "loanId",
+        as: "seizedRecords",
+      },
+    },
+    {
       $addFields: {
         pendingEmisList: {
           $filter: {
@@ -2870,6 +2880,15 @@ const getSeizedVehicles = asyncHandler(async (req, res, next) => {
         vehicleNumber: 1,
         seizedDate: 1,
         seizedStatus: 1,
+        // Since when the loan has been "For Seizing" (null for loans flagged
+        // before this was recorded, or not currently For Seizing)
+        forSeizingDate: {
+          $cond: [
+            { $eq: ["$seizedStatus", "For Seizing"] },
+            { $max: "$seizedRecords.seizedDate" },
+            null,
+          ],
+        },
         updatedAt: 1,
         createdAt: 1,
         unpaidMonths: { $size: "$pendingEmisList" },

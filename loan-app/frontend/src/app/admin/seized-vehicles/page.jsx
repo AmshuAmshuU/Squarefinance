@@ -313,17 +313,11 @@ const SeizedVehiclesPage = () => {
                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                           Vehicle Number
                         </th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                          Months
-                        </th>
                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                          Amount
+                          Amount / Months
                         </th>
                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                          Days
-                        </th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                          Status
+                          Days / Status
                         </th>
                       </tr>
                     </thead>
@@ -331,7 +325,7 @@ const SeizedVehiclesPage = () => {
                       {loading ? (
                         <tr>
                           <td
-                            colSpan="8"
+                            colSpan="6"
                             className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase"
                           >
                             Loading inventory...
@@ -340,7 +334,7 @@ const SeizedVehiclesPage = () => {
                       ) : seizedLoans.length === 0 ? (
                         <tr>
                           <td
-                            colSpan="8"
+                            colSpan="6"
                             className="px-6 py-12 text-center text-slate-300 font-bold text-xs uppercase"
                           >
                             No seized vehicles found
@@ -350,9 +344,16 @@ const SeizedVehiclesPage = () => {
                         seizedLoans.map((loan) => {
                           // Countdown Logic (kept for Days Calculation if needed, but UI column removed)
                           const isSeized = loan.seizedStatus === "Seized";
+                          const isForSeizing =
+                            (loan.seizedStatus || "For Seizing") ===
+                            "For Seizing";
+                          // Seized: days since seized. For Seizing: days since it
+                          // was flagged For Seizing (when that date is known).
                           const seizedDateRaw = isSeized
                             ? loan.seizedDate
-                            : null;
+                            : isForSeizing
+                              ? loan.forSeizingDate
+                              : null;
                           const seizedDate = seizedDateRaw
                             ? new Date(seizedDateRaw)
                             : null;
@@ -448,30 +449,32 @@ const SeizedVehiclesPage = () => {
                                 </span>
                               </td>
 
-                              {/* 5. Months */}
-                              <td className="px-6 py-5 text-center">
-                                <span className="text-xs font-bold text-slate-600">
-                                  {loan.unpaidMonths || 0}
-                                </span>
-                              </td>
-
-                              {/* 6. Amount */}
+                              {/* 5. Amount (top) + Months (below) */}
                               <td className="px-6 py-5 text-right">
-                                <span className="text-xs font-black text-slate-900">
-                                  ₹
-                                  {loan.totalDueAmount?.toLocaleString() || "0"}
-                                </span>
+                                <div className="flex flex-col items-end gap-1">
+                                  <span className="text-xs font-black text-slate-900">
+                                    ₹
+                                    {loan.totalDueAmount?.toLocaleString() ||
+                                      "0"}
+                                  </span>
+                                  <span className="text-xs font-bold text-slate-600">
+                                    {loan.unpaidMonths || 0}
+                                  </span>
+                                </div>
                               </td>
 
-                              {/* 7. Days (Since Seized) */}
-                              <td className="px-6 py-5 text-center whitespace-nowrap">
-                                <span className="text-[10px] font-bold text-slate-500">
+                              {/* 6. Days since seized (top) + Status dropdown (below) */}
+                              <td className="px-6 py-5 text-center">
+                                <div className="flex flex-col items-center gap-1.5">
+                                <span
+                                  className={`text-[10px] font-bold whitespace-nowrap ${
+                                    isForSeizing
+                                      ? "text-amber-600"
+                                      : "text-slate-500"
+                                  }`}
+                                >
                                   {isDateValid ? `${diffDays} Days` : "-"}
                                 </span>
-                              </td>
-
-                              {/* 8. Status Dropdown */}
-                              <td className="px-6 py-5 text-center">
                                 <select
                                   value={loan.seizedStatus || "For Seizing"}
                                   disabled={loan.seizedStatus === "Sold"}
@@ -501,6 +504,7 @@ const SeizedVehiclesPage = () => {
                                     Re-activate
                                   </option>
                                 </select>
+                                </div>
                               </td>
                             </tr>
                           );
