@@ -9,6 +9,7 @@ const Payment = require("../models/Payment");
 const SeizedVehicle = require("../models/SeizedVehicle");
 const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
 const { withListPhoto } = require("../utils/cloudinaryPhotos");
+const { tenureOverExpr, isTenureOver } = require("../utils/tenureOver");
 const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
@@ -415,7 +416,9 @@ exports.getAllWeeklyLoans = asyncHandler(async (req, res, next) => {
   } else {
     weeklyLoans = await WeeklyLoan.aggregate(aggregatePipeline);
   }
-  weeklyLoans = weeklyLoans.map(withListPhoto);
+  weeklyLoans = weeklyLoans
+    .map(withListPhoto)
+    .map((l) => ({ ...l, tenureOver: isTenureOver(l, l.remainingEmis ?? l.remainingTenure) }));
 
   sendResponse(res, 200, "success", "Weekly loans fetched successfully", null, {
     weeklyLoans,
@@ -1084,6 +1087,7 @@ exports.getWeeklyPendingPayments = asyncHandler(async (req, res, next) => {
         customerName: 1,
         mobileNumbers: 1,
         status: 1,
+        tenureOver: tenureOverExpr({ $size: "$pendingEmisList" }),
         unpaidWeeks: { $size: "$pendingEmisList" },
         totalDueAmount: {
           $reduce: {

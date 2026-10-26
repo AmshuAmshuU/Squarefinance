@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import ListPhoto from "./ListPhoto";
 import Link from "next/link";
+import TenureOverMark from "./TenureOverMark";
 import { useRouter } from "next/navigation";
 import {
   getWeeklyLoans,
@@ -337,12 +338,15 @@ const WeeklyLoansList = ({ type, title }) => {
                               : "bg-white group-hover:bg-slate-50"
                         }`}
                       >
-                        <Link
-                          href={`/admin/weekly-loans/edit/${loan._id}`}
-                          className="text-[10px] font-black text-primary uppercase tracking-tighter bg-blue-50 px-2 py-1 rounded-md"
-                        >
-                          {loan.loanNumber}
-                        </Link>
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/admin/weekly-loans/edit/${loan._id}`}
+                            className="text-[10px] font-black text-primary uppercase tracking-tighter bg-blue-50 px-2 py-1 rounded-md"
+                          >
+                            {loan.loanNumber}
+                          </Link>
+                          <TenureOverMark show={loan.tenureOver} />
+                        </div>
                         <div className="mt-1">
                           <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${
@@ -567,12 +571,15 @@ const WeeklyLoansList = ({ type, title }) => {
                             : "bg-white group-hover:bg-slate-50"
                       }`}
                     >
-                      <Link
-                        href={`/admin/weekly-loans/edit/${loan._id}`}
-                        className="text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
-                      >
-                        {loan.loanNumber}
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/admin/weekly-loans/edit/${loan._id}`}
+                          className="text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
+                        >
+                          {loan.loanNumber}
+                        </Link>
+                        <TenureOverMark show={loan.tenureOver} />
+                      </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <span className="font-extrabold text-slate-800 text-xs uppercase tracking-tight">

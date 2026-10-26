@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import TenureOverMark from "../TenureOverMark";
 import { getFollowupDashboardSummary } from "../../services/loan.service";
 import { PhoneCall, AlertTriangle, Loader2, ChevronDown, Pencil } from "lucide-react";
 import ContactActionMenu from "../ContactActionMenu";
@@ -179,12 +180,15 @@ const FollowupAccountabilityCard = () => {
                       {activeItems.map((item) => (
                         <tr key={item._id} className="hover:bg-slate-50 transition-colors group">
                           <td className="px-3 py-2.5">
-                            <Link
-                              href={`${LOAN_TYPE_ROUTES[item.loanType] || "/admin/loans/edit"}/${item._id}`}
-                              className="text-xs font-black text-primary group-hover:underline"
-                            >
-                              {item.loanNumber}
-                            </Link>
+                            <div className="flex items-center gap-1.5">
+                              <Link
+                                href={`${LOAN_TYPE_ROUTES[item.loanType] || "/admin/loans/edit"}/${item._id}`}
+                                className="text-xs font-black text-primary group-hover:underline"
+                              >
+                                {item.loanNumber}
+                              </Link>
+                              <TenureOverMark show={item.tenureOver} />
+                            </div>
                             <p className="text-[10px] font-bold text-slate-500 mt-0.5 max-w-[110px] truncate">
                               {item.customerName || "-"}
                             </p>

@@ -17,6 +17,7 @@ const { attachCallRecords } = require("../utils/callRecords");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { normalizeHouseLocation } = require("../utils/houseLocation");
 const { buildSeizingNotice, applyForSeizing } = require("../utils/seizingNotice");
+const { tenureOverExpr } = require("../utils/tenureOver");
 const { notifyAdmins } = require("./notificationController");
 const LoanDraft = require("../models/LoanDraft");
 const { adoptTempPhoto, removeLoanPhoto } = require("./photoController");
@@ -1570,6 +1571,10 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
             ],
           },
           unpaidMonths: { $size: "$pendingEmisList" },
+          // Weekly/Daily only: tenure finished but EMIs still unpaid (red circled T)
+          tenureOver: ["WeeklyLoan", "DailyLoan"].includes(modelName)
+            ? tenureOverExpr({ $size: "$pendingEmisList" })
+            : { $literal: false },
           // The loan's regular EMI: monthlyEMI (Vehicle), emiAmount (Weekly/
           // Daily), else the earliest pending EMI's own amount / interest (Interest
           // loans have no fixed EMI on the loan itself).
@@ -2208,6 +2213,12 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
         },
       };
 
+      // Red circled T - Weekly/Daily loans whose tenure is over but still have unpaid EMIs
+      const tenureOverField =
+        loanType === "Weekly" || loanType === "Daily"
+          ? tenureOverExpr({ $size: { $filter: { input: "$emis", as: "e", cond: { $ne: ["$$e.status", "Paid"] } } } })
+          : { $literal: false };
+
       const pipeline = [
         { $match: { status: { $in: ["Active", "For Seizing"] } } },
         {
@@ -2274,6 +2285,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
             },
             pendingEmis: pendingEmisExpr,
             dueTodayEmis: dueTodayEmisExpr,
+            tenureOver: tenureOverField,
           },
         },
         {
@@ -2290,6 +2302,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   clientResponse: 1,
                   pendingEmis: 1,
                   dueTodayEmis: 1,
+                  tenureOver: 1,
                   customerPhoto: 1,
                 },
               },
@@ -2305,6 +2318,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   nextFollowUpDate: 1,
                   clientResponse: 1,
                   pendingEmis: 1,
+                  tenureOver: 1,
                   customerPhoto: 1,
                 },
               },

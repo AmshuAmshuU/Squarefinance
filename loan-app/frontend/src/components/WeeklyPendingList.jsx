@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import TenureOverMark from "./TenureOverMark";
 import { format, differenceInDays } from "date-fns";
 import { getWeeklyPendingPayments, deleteWeeklyLoan } from "../services/weeklyLoan.service";
 import Pagination from "./Pagination";
@@ -282,12 +283,15 @@ const WeeklyPendingList = () => {
                     className="hover:bg-slate-50 transition-colors group"
                   >
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <Link
-                        href={`/admin/weekly-loans/edit/${item.loanId}`}
-                        className="text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
-                      >
-                        {item.loanNumber}
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/admin/weekly-loans/edit/${item.loanId}`}
+                          className="text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
+                        >
+                          {item.loanNumber}
+                        </Link>
+                        <TenureOverMark show={item.tenureOver} />
+                      </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap font-black text-slate-900 text-xs uppercase tracking-tight">
                       {item.customerName}

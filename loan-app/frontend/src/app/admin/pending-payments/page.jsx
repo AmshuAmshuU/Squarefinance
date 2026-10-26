@@ -15,6 +15,7 @@ import ClientResponseSection from "../../../components/ClientResponseSection";
 import Pagination from "../../../components/Pagination";
 import { useToast } from "../../../context/ToastContext";
 import Link from "next/link";
+import TenureOverMark from "../../../components/TenureOverMark";
 import TableActionMenu from "../../../components/TableActionMenu";
 import ConfirmationModal from "../../../components/ConfirmationModal";
 import SeizingNoticePopup from "../../../components/SeizingNoticePopup";
@@ -449,12 +450,15 @@ const PendingPaymentsPage = () => {
                             className={`cursor-pointer transition-colors group ${rowClass}`}
                           >
                             <td style={COL_LOAN} className="pl-3 pr-1 py-3 overflow-hidden">
-                              <Link
-                                href={`/admin/pending-payments/view/${item.earliestEmiId}`}
-                                className="block text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
-                              >
-                                {item.loanNumber}
-                              </Link>
+                              <div className="flex items-center gap-1.5">
+                                <Link
+                                  href={`/admin/pending-payments/view/${item.earliestEmiId}`}
+                                  className="block text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
+                                >
+                                  {item.loanNumber}
+                                </Link>
+                                <TenureOverMark show={item.tenureOver} />
+                              </div>
                               <span className="line-clamp-2 mt-0.5 font-black text-slate-900 text-xs uppercase tracking-tight leading-tight break-words">
                                 {item.customerName}
                               </span>
