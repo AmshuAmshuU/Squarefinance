@@ -7,12 +7,80 @@ import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import { getUserFromToken } from "../../../utils/auth";
 import { getLoans, searchLoan, deleteLoan } from "../../../services/loan.service";
-import { Trash2 } from "lucide-react";
+import { Trash2, MapPin, Check, X } from "lucide-react";
 import Pagination from "../../../components/Pagination";
 import ContactActionMenu from "../../../components/ContactActionMenu";
 import { useUI } from "../../../context/UIContext";
 import ListPhoto from "../../../components/ListPhoto";
 import { readSnapshot, useListMemory } from "../../../utils/backNavigation";
+
+// First column of the list - identical on phones and wider screens: loan number, status
+// pill, then (not for Closed loans) a pin for whether the customer's HOUSE location is
+// saved (green = saved, red = not) and the HP entry status next to it.
+const LoanNoCell = ({ loan }) => {
+  const statusText = loan.status?.status?.toLowerCase();
+  const isClosed = statusText === "closed";
+  const hasHouse = !!loan.customerDetails?.hasHouseLocation;
+  const hp = loan.vehicleInformation?.hpEntry || "Not done";
+  const hpTone =
+    hp === "Finished"
+      ? "text-emerald-600"
+      : hp === "Applied"
+        ? "text-amber-600"
+        : "text-red-600";
+  return (
+    <>
+      <Link
+        href={`/admin/loans/edit/${loan._id || loan.id || loan.status?.id}`}
+        className="block font-bold text-slate-900 tracking-tight text-base hover:text-primary hover:underline transition-all"
+      >
+        {loan.loanTerms?.loanNumber}
+      </Link>
+      <span
+        className={`mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter border ${
+          isClosed
+            ? "bg-slate-100 text-slate-500 border-slate-200"
+            : statusText === "for seizing"
+              ? "bg-amber-50 text-amber-600 border-amber-100"
+              : loan.status?.isSeized || statusText === "seized"
+                ? "bg-red-50 text-red-500 border-red-100"
+                : "bg-emerald-50 text-emerald-600 border-emerald-100"
+        }`}
+      >
+        {isClosed
+          ? "Closed"
+          : statusText === "for seizing"
+            ? "For Seizing"
+            : loan.status?.isSeized || statusText === "seized"
+              ? "Seized"
+              : "Active"}
+      </span>
+      {!isClosed && (
+        <div className="mt-1 flex items-center gap-1.5 leading-none">
+          <MapPin
+            size={14}
+            strokeWidth={2.5}
+            className={hasHouse ? "text-emerald-600" : "text-red-600"}
+            aria-label={hasHouse ? "House location saved" : "House location not saved"}
+          />
+          <span
+            className={`flex items-center gap-0.5 text-[10px] font-bold whitespace-nowrap ${hpTone}`}
+            aria-label={`HP entry: ${hp}`}
+          >
+            HPA
+            {hp === "Finished" ? (
+              <Check size={12} strokeWidth={3} />
+            ) : hp === "Applied" ? (
+              <span className="ml-0.5">Applied</span>
+            ) : (
+              <X size={12} strokeWidth={3} />
+            )}
+          </span>
+        </div>
+      )}
+    </>
+  );
+};
 
 const LoansPage = () => {
   const router = useRouter();
@@ -310,7 +378,7 @@ const LoansPage = () => {
                     <table className="w-full text-left border-collapse min-w-[808px]">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-100 uppercase">
-                          <th className="w-[80px] min-w-[80px] max-w-[80px] pl-1.5 pr-0 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                          <th className="w-[92px] min-w-[92px] max-w-[92px] pl-1.5 pr-0 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
                             LOAN NO
                           </th>
                            <th className="px-4 py-4 text-[9px] font-bold text-slate-400 tracking-[0.1em] whitespace-nowrap">
@@ -370,7 +438,7 @@ const LoansPage = () => {
                               }`}
                             >
                               <td
-                                className={`w-[80px] min-w-[80px] max-w-[80px] pl-1.5 pr-0 pt-1.5 pb-1 align-top whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
+                                className={`w-[92px] min-w-[92px] max-w-[92px] pl-1.5 pr-0 pt-1.5 pb-1 align-top whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                                   selectedRowId === loan._id
                                     ? "bg-blue-50/80"
                                     : loan.status?.status?.toLowerCase() === "closed"
@@ -378,33 +446,7 @@ const LoansPage = () => {
                                       : "bg-white group-active:bg-slate-50"
                                 }`}
                               >
-                                <Link
-                                  href={`/admin/loans/edit/${loan._id || loan.id || loan.status?.id}`}
-                                  className="block font-bold text-slate-900 tracking-tight text-base hover:text-primary hover:underline transition-all"
-                                >
-                                  {loan.loanTerms?.loanNumber}
-                                </Link>
-                                <span
-                                  className={`mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter border ${
-                                    loan.status.status?.toLowerCase() === "closed"
-                                      ? "bg-slate-100 text-slate-500 border-slate-200"
-                                      : loan.status.status?.toLowerCase() === "for seizing"
-                                        ? "bg-amber-50 text-amber-600 border-amber-100"
-                                        : loan.status.isSeized ||
-                                            loan.status.status?.toLowerCase() === "seized"
-                                          ? "bg-red-50 text-red-500 border-red-100"
-                                          : "bg-emerald-50 text-emerald-600 border-emerald-100"
-                                  }`}
-                                >
-                                  {loan.status.status?.toLowerCase() === "closed"
-                                    ? "Closed"
-                                    : loan.status.status?.toLowerCase() === "for seizing"
-                                      ? "For Seizing"
-                                      : loan.status.isSeized ||
-                                          loan.status.status?.toLowerCase() === "seized"
-                                        ? "Seized"
-                                        : "Active"}
-                                </span>
+                                <LoanNoCell loan={loan} />
                               </td>
                                <td className="px-4 py-6">
                                 <span className="font-bold text-slate-700 text-base leading-tight">
@@ -588,8 +630,8 @@ const LoansPage = () => {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="px-3 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
-                            Loan Number
+                          <th className="w-[92px] min-w-[92px] max-w-[92px] pl-1.5 pr-0 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)]">
+                            Loan No
                           </th>
                            <th className="px-3 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                             Customer Name
@@ -609,9 +651,6 @@ const LoansPage = () => {
                           </th>
                           <th className="px-3 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                             Tenure
-                          </th>
-                          <th className="px-3 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
-                            Status
                           </th>
                           <th className="px-3 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center whitespace-nowrap">
                             Client Response
@@ -659,7 +698,7 @@ const LoansPage = () => {
                               }`}
                             >
                               <td
-                                className={`px-3 py-3 whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
+                                className={`w-[92px] min-w-[92px] max-w-[92px] pl-1.5 pr-0 pt-1.5 pb-1 align-top whitespace-nowrap sticky left-0 z-10 transition-colors shadow-[10px_0_15px_-3px_rgba(0,0,0,0.05)] ${
                                   selectedRowId === loan._id
                                     ? "bg-blue-50/80"
                                     : loan.status?.isSeized && loan.status?.status?.toLowerCase() !== "closed"
@@ -669,12 +708,7 @@ const LoansPage = () => {
                                         : "bg-white hover:bg-slate-50"
                                 }`}
                               >
-                                <Link
-                                  href={`/admin/loans/edit/${loan._id || loan.id || loan.status?.id}`}
-                                  className="font-black text-slate-900 uppercase text-xs tracking-tight hover:text-primary hover:underline transition-all"
-                                >
-                                  {loan.loanTerms?.loanNumber}
-                                </Link>
+                                <LoanNoCell loan={loan} />
                               </td>
                                <td className="px-3 py-3 whitespace-nowrap font-extrabold text-slate-800 text-xs uppercase">
                                 {loan.customerDetails?.customerName}
@@ -718,29 +752,6 @@ const LoansPage = () => {
                               <td className="px-3 py-3 whitespace-nowrap text-center">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-black">
                                   {loan.loanTerms?.tenureMonths}M
-                                </span>
-                              </td>
-                              <td className="px-3 py-3 whitespace-nowrap text-center">
-                                <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
-                                    loan.status.status?.toLowerCase() === "closed"
-                                      ? "bg-slate-100 text-slate-500 border-slate-200"
-                                      : loan.status.status?.toLowerCase() === "for seizing"
-                                        ? "bg-amber-100 text-amber-600 border-amber-200"
-                                        : loan.status.isSeized ||
-                                            loan.status.status?.toLowerCase() === "seized"
-                                          ? "bg-red-100 text-red-600 border-red-200"
-                                          : "bg-green-100 text-green-600 border-green-200"
-                                  }`}
-                                >
-                                  {loan.status.status?.toLowerCase() === "closed"
-                                    ? "Closed"
-                                    : loan.status.status?.toLowerCase() === "for seizing"
-                                      ? "For Seizing"
-                                      : loan.status.isSeized ||
-                                          loan.status.status?.toLowerCase() === "seized"
-                                        ? "Seized"
-                                        : "Active"}
                                 </span>
                               </td>
                               <td className="px-3 py-3 text-center">

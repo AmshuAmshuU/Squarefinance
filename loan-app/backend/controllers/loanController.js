@@ -446,7 +446,7 @@ const getAllLoans = asyncHandler(async (req, res, next) => {
   } else {
     const findQuery = Loan.find(query)
       .select(
-        "loanNumber customerName mobileNumbers guarantorName guarantorMobileNumbers monthlyEMI tenureMonths status isSeized clientResponse nextFollowUpDate createdBy updatedBy createdAt principalAmount vehicleNumber chassisNumber engineNumber typeOfVehicle modelYear ywBoard dealerName dealerNumber hpEntry fcDate insuranceDate rtoWorkPending annualInterestRate processingFee emiStartDate emiEndDate customerPhoto",
+        "loanNumber customerName mobileNumbers guarantorName guarantorMobileNumbers monthlyEMI tenureMonths status isSeized clientResponse nextFollowUpDate createdBy updatedBy createdAt principalAmount vehicleNumber chassisNumber engineNumber typeOfVehicle modelYear ywBoard dealerName dealerNumber hpEntry fcDate insuranceDate rtoWorkPending annualInterestRate processingFee emiStartDate emiEndDate customerPhoto houseLocation.link",
       )
       .sort(sortConfig)
       .skip(skip)
@@ -472,6 +472,8 @@ const getAllLoans = asyncHandler(async (req, res, next) => {
         address: loan.address,
         ownRent: loan.ownRent,
         mobileNumbers: loan.mobileNumbers || [],
+        // Only a yes/no for the list's pin - the map link itself is not sent here
+        hasHouseLocation: !!(loan.houseLocation && loan.houseLocation.link),
         panNumber: loan.panNumber,
         aadharNumber: loan.aadharNumber,
         guarantorName: loan.guarantorName,
