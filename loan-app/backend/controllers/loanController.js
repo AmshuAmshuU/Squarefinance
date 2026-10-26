@@ -2881,6 +2881,7 @@ const getSeizedVehicles = asyncHandler(async (req, res, next) => {
         seizedDate: 1,
         seizedStatus: 1,
         hpEntry: 1,
+        modelYear: 1,
         // Since when the loan has been "For Seizing" (null for loans flagged
         // before this was recorded, or not currently For Seizing)
         forSeizingDate: {

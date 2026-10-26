@@ -469,11 +469,19 @@ const SeizedVehiclesPage = () => {
 
                               {/* 4. Vehicle Number */}
                               <td className="px-6 py-5 whitespace-nowrap">
-                                <span className="font-black text-slate-900 text-xs uppercase tracking-tight">
-                                  {loan.loanTerms?.vehicleNumber ||
-                                    loan.vehicleNumber ||
-                                    "-"}
-                                </span>
+                                <div className="inline-flex flex-col items-center">
+                                  <span className="font-black text-slate-900 text-xs uppercase tracking-tight">
+                                    {loan.loanTerms?.vehicleNumber ||
+                                      loan.vehicleNumber ||
+                                      "-"}
+                                  </span>
+                                  {/* Model year in brackets, centred under the number; nothing when not saved */}
+                                  {(loan.modelYear || "").trim() && (
+                                    <span className="mt-1 text-[10px] italic font-medium text-slate-400 leading-none">
+                                      ({loan.modelYear.trim()})
+                                    </span>
+                                  )}
+                                </div>
                               </td>
 
                               {/* 5. Amount (top) + Months (below) */}
