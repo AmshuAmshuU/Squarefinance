@@ -317,7 +317,7 @@ const DailyLoansList = ({ type, title }) => {
                         selectedRowId === loan._id
                           ? "bg-blue-50/80"
                           : loan.status === "Closed"
-                            ? "bg-slate-200/70 active:bg-slate-200"
+                            ? "bg-slate-200/70 closed-row-stripes active:bg-slate-200"
                             : "active:bg-slate-50"
                       }`}
                     >
@@ -326,7 +326,7 @@ const DailyLoansList = ({ type, title }) => {
                           selectedRowId === loan._id
                             ? "bg-blue-50/80"
                             : loan.status === "Closed"
-                              ? "bg-slate-200/70 group-hover:bg-slate-200 border-l-4 border-slate-500"
+                              ? "bg-slate-200/70 closed-row-stripes group-hover:bg-slate-200"
                               : "bg-white group-hover:bg-slate-50"
                         }`}
                       >
@@ -409,7 +409,7 @@ const DailyLoansList = ({ type, title }) => {
                           selectedRowId === loan._id
                             ? "bg-blue-50/80"
                             : loan.status === "Closed"
-                              ? "bg-slate-200/70 group-hover:bg-slate-200"
+                              ? "bg-slate-200/70 closed-row-stripes group-hover:bg-slate-200"
                               : "bg-white group-hover:bg-slate-50"
                         }`}
                       >
@@ -547,7 +547,7 @@ const DailyLoansList = ({ type, title }) => {
                       selectedRowId === loan._id
                         ? "bg-blue-50/80"
                         : loan.status === "Closed"
-                          ? "bg-slate-200/70 hover:bg-slate-200"
+                          ? "bg-slate-200/70 closed-row-stripes hover:bg-slate-200"
                           : "hover:bg-slate-50"
                     }`}
                   >
@@ -556,7 +556,7 @@ const DailyLoansList = ({ type, title }) => {
                         selectedRowId === loan._id
                           ? "bg-blue-50/80"
                           : loan.status === "Closed"
-                            ? "bg-slate-200/70 group-hover:bg-slate-200 border-l-4 border-slate-500"
+                            ? "bg-slate-200/70 closed-row-stripes group-hover:bg-slate-200"
                             : "bg-white group-hover:bg-slate-50"
                       }`}
                     >
@@ -640,7 +640,7 @@ const DailyLoansList = ({ type, title }) => {
                         selectedRowId === loan._id
                           ? "bg-blue-50/80"
                           : loan.status === "Closed"
-                            ? "bg-slate-200/70 group-hover:bg-slate-200"
+                            ? "bg-slate-200/70 closed-row-stripes group-hover:bg-slate-200"
                             : "bg-white group-hover:bg-slate-50"
                       }`}
                     >

@@ -433,7 +433,7 @@ const LoansPage = () => {
                                 selectedRowId === loan._id
                                   ? "bg-blue-50/80"
                                   : loan.status?.status?.toLowerCase() === "closed"
-                                    ? "bg-slate-200/70 active:bg-slate-200"
+                                    ? "bg-slate-200/70 closed-row-stripes active:bg-slate-200"
                                     : "active:bg-slate-50"
                               }`}
                             >
@@ -442,7 +442,7 @@ const LoansPage = () => {
                                   selectedRowId === loan._id
                                     ? "bg-blue-50/80"
                                     : loan.status?.status?.toLowerCase() === "closed"
-                                      ? "bg-slate-200/70 group-active:bg-slate-200 border-l-4 border-slate-500"
+                                      ? "bg-slate-200/70 closed-row-stripes group-active:bg-slate-200"
                                       : "bg-white group-active:bg-slate-50"
                                 }`}
                               >
@@ -520,7 +520,7 @@ const LoansPage = () => {
                                   selectedRowId === loan._id
                                     ? "bg-blue-50/80"
                                     : loan.status?.status?.toLowerCase() === "closed"
-                                      ? "bg-slate-200/70 group-active:bg-slate-200"
+                                      ? "bg-slate-200/70 closed-row-stripes group-active:bg-slate-200"
                                       : "bg-white group-active:bg-slate-50"
                                 }`}
                               >
@@ -693,7 +693,7 @@ const LoansPage = () => {
                                   : loan.status?.isSeized && loan.status?.status?.toLowerCase() !== "closed"
                                     ? "bg-red-50/50"
                                     : loan.status?.status?.toLowerCase() === "closed"
-                                      ? "bg-slate-200/70 hover:bg-slate-200"
+                                      ? "bg-slate-200/70 closed-row-stripes hover:bg-slate-200"
                                       : "hover:bg-slate-50"
                               }`}
                             >
@@ -704,7 +704,7 @@ const LoansPage = () => {
                                     : loan.status?.isSeized && loan.status?.status?.toLowerCase() !== "closed"
                                       ? "bg-red-50/50"
                                       : loan.status?.status?.toLowerCase() === "closed"
-                                        ? "bg-slate-200/70 hover:bg-slate-200 border-l-4 border-slate-500"
+                                        ? "bg-slate-200/70 closed-row-stripes hover:bg-slate-200"
                                         : "bg-white hover:bg-slate-50"
                                 }`}
                               >
