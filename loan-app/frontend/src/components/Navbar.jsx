@@ -2,8 +2,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, Sun, Moon } from "lucide-react";
+import { Bell, Sun, Moon, MonitorSmartphone } from "lucide-react";
 import { removeToken, getUserFromToken } from "../utils/auth";
+import apiHandler from "../services/api";
 import Logo from "./Logo";
 import { useUI } from "../context/UIContext";
 import { useNotifications } from "../context/NotificationContext";
@@ -32,6 +33,8 @@ const Navbar = () => {
   };
 
   const handleLogout = () => {
+    // also end this device's login on the server so My devices stays accurate
+    apiHandler("/api/auth/logout", { method: "POST", silent: true }).catch(() => {});
     removeToken();
     router.push("/admin/login");
   };
@@ -228,6 +231,17 @@ const Navbar = () => {
                       )}
                     </div>
                   )}
+
+                  <div className="px-2 pt-2">
+                    <Link
+                      href="/admin/my-devices"
+                      onClick={() => setShowDropdown(false)}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors uppercase tracking-wider"
+                    >
+                      <MonitorSmartphone className="w-4 h-4" />
+                      My devices
+                    </Link>
+                  </div>
 
                   <div className="px-2 py-2">
                     <button

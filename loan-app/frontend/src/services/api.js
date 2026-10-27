@@ -174,4 +174,7 @@ const logoutUser = () => {
   }
 };
 
+// Used by the quiet device update to move an older login onto a device session.
+export const refreshSession = () => attemptRefresh();
+
 export default apiHandler;

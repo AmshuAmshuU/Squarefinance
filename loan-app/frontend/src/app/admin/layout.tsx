@@ -3,6 +3,7 @@ import { UIProvider } from "../../context/UIContext";
 import { NotificationProvider } from "../../context/NotificationContext";
 import { LocationAlertProvider } from "../../context/LocationAlertContext";
 import NavTracker from "../../components/NavTracker";
+import DeviceLocationPinger from "../../components/DeviceLocationPinger";
 
 export default function AdminLayout({
   children,
@@ -16,6 +17,7 @@ export default function AdminLayout({
           <Suspense fallback={null}>
             <NavTracker />
           </Suspense>
+          <DeviceLocationPinger />
           <div className="flex-1 animate-fade-in w-full max-w-[800px] mx-auto sm:max-w-none sm:px-0">
             {children}
           </div>

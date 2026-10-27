@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
+const { isSessionValid } = require("../utils/sessionCache");
 
 const isAuthenticated = asyncHandler(async (req, res, next) => {
   const startAuth = performance.now();
@@ -29,6 +30,21 @@ const isAuthenticated = asyncHandler(async (req, res, next) => {
 
   if (!req.user) {
     return next(new ErrorHandler("User not found", 404));
+  }
+
+  // A deactivated account is locked out of every device straight away.
+  if (req.user.isActive === false) {
+    return next(new ErrorHandler("This account has been deactivated", 403));
+  }
+
+  // Logins made after the My devices update carry a device id; if that device
+  // was logged out (or its session ended) the token stops working at once.
+  // Older logins have no id and keep working until they next renew.
+  if (decodedData.sid) {
+    if (!(await isSessionValid(decodedData.sid, req.user._id))) {
+      return next(new ErrorHandler("This device was logged out. Please login again", 401));
+    }
+    req.sid = decodedData.sid;
   }
 
   const authDuration = (performance.now() - startAuth).toFixed(2);

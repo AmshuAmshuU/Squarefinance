@@ -2,6 +2,16 @@ const User = require("../models/User");
 const ErrorHandler = require("../utils/ErrorHandler");
 const asyncHandler = require("../utils/asyncHandler");
 const sendResponse = require("../utils/response");
+const Session = require("../models/Session");
+const { forgetSessions } = require("../utils/sessionCache");
+
+// End every device login of a user (used when the account is deactivated or deleted).
+const endAllSessions = async (userId) => {
+  const sessions = await Session.find({ user: userId }).select("sid").lean();
+  if (!sessions.length) return;
+  await Session.deleteMany({ user: userId });
+  forgetSessions(sessions.map((x) => x.sid));
+};
 
 // Create Employee
 const createEmployee = asyncHandler(async (req, res, next) => {
@@ -127,6 +137,7 @@ const deleteEmployee = asyncHandler(async (req, res, next) => {
   }
 
   await user.deleteOne();
+  await endAllSessions(user._id);
 
   return sendResponse(res, 200, "success", "Employee deleted successfully");
 });
@@ -141,6 +152,7 @@ const toggleEmployeeStatus = asyncHandler(async (req, res, next) => {
 
   user.isActive = !user.isActive;
   await user.save();
+  if (!user.isActive) await endAllSessions(user._id);
 
   return sendResponse(
     res,
