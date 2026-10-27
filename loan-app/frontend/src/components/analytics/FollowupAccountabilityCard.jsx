@@ -234,7 +234,7 @@ const FollowupAccountabilityCard = () => {
                           <td className="px-0 py-[3px] w-[64px] min-w-[64px] text-center align-middle">
                             <ListPhoto compact url={item.photoThumbUrl} />
                           </td>
-                          <td className="px-3 py-2.5 whitespace-nowrap">
+                          <td className="px-3 py-1 whitespace-nowrap">
                             {item.pendingAmount > 0 ? (
                               <>
                                 <p className="text-xs font-black text-red-500">
@@ -243,6 +243,12 @@ const FollowupAccountabilityCard = () => {
                                 <p className="text-[9px] font-bold text-slate-400 mt-0.5">
                                   Due {formatDate(item.pendingDueDate)}
                                 </p>
+                                {/* Total owed right now (every EMI due today or earlier, balance only) - just a quick figure for calls */}
+                                {item.totalDueNow > 0 && (
+                                  <p className="text-[9px] font-bold text-slate-400 mt-0.5">
+                                    (₹{item.totalDueNow.toLocaleString("en-IN")})
+                                  </p>
+                                )}
                               </>
                             ) : item.dueTodayAmount > 0 ? (
                               <>

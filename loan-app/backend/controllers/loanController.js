@@ -2307,6 +2307,32 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
             pendingEmis: pendingEmisExpr,
             dueTodayEmis: dueTodayEmisExpr,
             tenureOver: tenureOverField,
+            // Display-only helper for the Pending column: everything the customer owes right now -
+            // every not-fully-paid EMI due today or earlier, minus part-payments (Karthik, 2026-10-27:
+            // today's EMI counts too, so the number staff quote on a call includes it).
+            totalDueNow: {
+              $reduce: {
+                input: {
+                  $filter: {
+                    input: "$emis",
+                    as: "emi",
+                    cond: { $and: [{ $ne: ["$$emi.status", "Paid"] }, { $lte: ["$$emi.dueDate", todayEnd] }] },
+                  },
+                },
+                initialValue: 0,
+                in: {
+                  $add: [
+                    "$$value",
+                    {
+                      $max: [
+                        0,
+                        { $subtract: [{ $ifNull: [`$$this.${amountField}`, 0] }, { $ifNull: ["$$this.amountPaid", 0] }] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
           },
         },
         {
@@ -2324,6 +2350,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   pendingEmis: 1,
                   dueTodayEmis: 1,
                   tenureOver: 1,
+                  totalDueNow: 1,
                   customerPhoto: 1,
                 },
               },
@@ -2340,6 +2367,7 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   clientResponse: 1,
                   pendingEmis: 1,
                   tenureOver: 1,
+                  totalDueNow: 1,
                   customerPhoto: 1,
                 },
               },
