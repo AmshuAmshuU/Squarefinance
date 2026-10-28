@@ -13,6 +13,7 @@ export const SPACE_SCENE_RULES = [
   ["/admin/pending-payments", "andromeda"],
   ["/admin/followup-payments", "andromeda"],
   ["/admin/partial-payments", "andromeda"],
+  ["/admin/collections", "blackhole"], // black hole illustration (NASA)
   ["/admin/approvals", "whirlpool"],
   ["/admin/notifications", "whirlpool"],
   ["/admin/location-updates", "whirlpool"],

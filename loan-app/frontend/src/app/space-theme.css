@@ -20,7 +20,7 @@ html[data-theme="space"] body {
   background-color: transparent !important;
 }
 
-/* the photo (behind everything) and a soft slate wash over it */
+/* the photo, fixed behind everything, shown exactly as it is (no tint over it) */
 html[data-theme="space"] body::before {
   content: "";
   position: fixed;
@@ -30,14 +30,6 @@ html[data-theme="space"] body::before {
   background-repeat: no-repeat;
   background-position: center top;
   background-size: cover;
-}
-html[data-theme="space"] body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(rgba(15, 23, 42, 0.12), rgba(15, 23, 42, 0.42));
 }
 
 /* one photo per section; only the matching rule is ever downloaded */
@@ -82,6 +74,12 @@ html[data-space-scene="horizon"] body::before {
   background-image: image-set(url(/themes/space/horizon-p.avif) type("image/avif"), url(/themes/space/horizon-p.webp) type("image/webp"));
 }
 
+html[data-space-scene="blackhole"] body::before {
+  background-image: url(/themes/space/blackhole-p.webp);
+  background-image: -webkit-image-set(url(/themes/space/blackhole-p.avif) type("image/avif"), url(/themes/space/blackhole-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/space/blackhole-p.avif) type("image/avif"), url(/themes/space/blackhole-p.webp) type("image/webp"));
+}
+
 @media (min-aspect-ratio: 1/1) {
   html[data-space-scene="dashboard"] body::before {
     background-image: url(/themes/space/dashboard-l.webp);
@@ -123,6 +121,11 @@ html[data-space-scene="horizon"] body::before {
     background-image: -webkit-image-set(url(/themes/space/horizon-l.avif) type("image/avif"), url(/themes/space/horizon-l.webp) type("image/webp"));
     background-image: image-set(url(/themes/space/horizon-l.avif) type("image/avif"), url(/themes/space/horizon-l.webp) type("image/webp"));
   }
+  html[data-space-scene="blackhole"] body::before {
+    background-image: url(/themes/space/blackhole-l.webp);
+    background-image: -webkit-image-set(url(/themes/space/blackhole-l.avif) type("image/avif"), url(/themes/space/blackhole-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/space/blackhole-l.avif) type("image/avif"), url(/themes/space/blackhole-l.webp) type("image/webp"));
+  }
 }
 
 /* page wrappers let the photo show through */
@@ -133,12 +136,12 @@ html[data-theme="space"] .bg-\[\#f8fafc\] {
   background-color: transparent !important;
 }
 
-/* cards: dark mode's own slate (#1e293b), a little see-through */
+/* cards: dark mode's own slate (#1e293b), about 28% see-through */
 html[data-theme="space"] .bg-white,
 html[data-theme="space"] .bg-white\/60,
 html[data-theme="space"] .bg-white\/80,
 html[data-theme="space"] .bg-white\/95 {
-  background-color: rgba(30, 41, 59, 0.82) !important;
+  background-color: rgba(30, 41, 59, 0.72) !important;
 }
 /* rows, table heads, chips: dark mode's own lighter slate (#334155), a little see-through */
 html[data-theme="space"] .bg-slate-50,
@@ -148,12 +151,18 @@ html[data-theme="space"] .bg-slate-50\/30,
 html[data-theme="space"] .bg-slate-50\/40,
 html[data-theme="space"] .bg-slate-50\/50,
 html[data-theme="space"] .bg-slate-50\/80 {
-  background-color: rgba(51, 65, 85, 0.55) !important;
+  background-color: rgba(51, 65, 85, 0.5) !important;
 }
 html[data-theme="space"] .hover\:bg-slate-50:hover,
 html[data-theme="space"] .hover\:bg-slate-100:hover,
 html[data-theme="space"] .group:hover .group-hover\:bg-slate-50 {
-  background-color: rgba(51, 65, 85, 0.75) !important;
+  background-color: rgba(51, 65, 85, 0.7) !important;
+}
+
+/* the page body itself carries bg-slate-50: it must stay clear or it tints the whole photo */
+html[data-theme="space"] body,
+html[data-theme="space"] body.bg-slate-50 {
+  background-color: transparent !important;
 }
 
 /* things that must stay solid so what scrolls underneath never shows through:
@@ -177,10 +186,10 @@ html[data-theme="space"] .fixed .bg-slate-100 {
 
 /* the sidebar (desktop) and the menu drawer (phone): slightly see-through too */
 html[data-theme="space"] aside.sticky.bg-white {
-  background-color: rgba(30, 41, 59, 0.78) !important;
+  background-color: rgba(30, 41, 59, 0.5) !important;
 }
 html[data-theme="space"] .fixed aside.absolute.bg-white {
-  background-color: rgba(30, 41, 59, 0.9) !important;
+  background-color: rgba(30, 41, 59, 0.62) !important;
 }
 
 /* titles stay readable over the brighter parts of a photo */

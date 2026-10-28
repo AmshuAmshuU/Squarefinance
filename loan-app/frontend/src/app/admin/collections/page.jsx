@@ -670,22 +670,22 @@ const CollectionsPage = () => {
 
               {/* TABS */}
               <div className="mb-8 overflow-x-auto">
-                <div className="flex bg-white border border-slate-200 rounded-2xl p-1 shadow-sm w-max">
+                <div className="flex bg-white border border-slate-200 rounded-2xl p-1 shadow-sm w-full sm:w-max">
                    <button
                     onClick={() => setActiveTab("collections")}
-                    className={`px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === "collections" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
+                    className={`flex-1 sm:flex-none whitespace-nowrap px-2 sm:px-6 py-3 text-center text-[10px] min-[380px]:text-[11px] font-black uppercase tracking-wider sm:tracking-widest rounded-xl transition-all ${activeTab === "collections" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
                    >
                      Collections
                    </button>
                    <button
                     onClick={() => setActiveTab("loans")}
-                    className={`px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === "loans" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
+                    className={`flex-1 sm:flex-none whitespace-nowrap px-2 sm:px-6 py-3 text-center text-[10px] min-[380px]:text-[11px] font-black uppercase tracking-wider sm:tracking-widest rounded-xl transition-all ${activeTab === "loans" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
                    >
                      Loans Given
                    </button>
                    <button
                     onClick={() => setActiveTab("expenses")}
-                    className={`px-6 py-3 text-center text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === "expenses" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
+                    className={`flex-1 sm:flex-none whitespace-nowrap px-2 sm:px-6 py-3 text-center text-[10px] min-[380px]:text-[11px] font-black uppercase tracking-wider sm:tracking-widest rounded-xl transition-all ${activeTab === "expenses" ? "bg-primary text-white shadow-md shadow-blue-200" : "text-slate-500 hover:bg-slate-50"}`}
                    >
                      Expenses
                    </button>
@@ -705,7 +705,7 @@ const CollectionsPage = () => {
                           name="startDate"
                           value={filters.startDate}
                           onChange={handleFilterChange}
-                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700"
+                          className="w-[75%] min-w-0 appearance-none px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -715,7 +715,7 @@ const CollectionsPage = () => {
                           name="endDate"
                           value={filters.endDate}
                           onChange={handleFilterChange}
-                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700"
+                          className="w-[75%] min-w-0 appearance-none px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700"
                         />
                       </div>
                     </div>

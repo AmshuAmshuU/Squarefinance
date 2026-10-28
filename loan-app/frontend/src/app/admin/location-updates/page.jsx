@@ -12,7 +12,7 @@ import { getLocationUpdates } from "../../../services/locationUpdate.service";
 // has not seen each one. Each person's own "NEW" marks and red menu number
 // clear when THEY mark it seen.
 const LocationUpdatesPage = () => {
-  const { isDarkMode } = useUI();
+  const { isDarkMode, theme } = useUI();
   const { count, markSeen, markAllSeen } = useLocationAlerts();
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
@@ -23,7 +23,7 @@ const LocationUpdatesPage = () => {
   const [highlight, setHighlight] = useState("");
 
   const c = isDarkMode
-    ? { bg: "#0f172a", card: "#1e293b", border: "rgba(255,255,255,0.1)", text: "#f1f5f9", muted: "#94a3b8", newBg: "rgba(220,38,38,0.15)", newBorder: "#ef4444", ok: "#34d399", warn: "#fbbf24", btnBg: "rgba(59,130,246,0.2)", btnText: "#93c5fd", btnBorder: "rgba(255,255,255,0.18)" }
+    ? { bg: "#0f172a", card: theme === "space" ? "rgba(30,41,59,0.6)" : "#1e293b", border: "rgba(255,255,255,0.1)", text: "#f1f5f9", muted: "#94a3b8", newBg: "rgba(220,38,38,0.15)", newBorder: "#ef4444", ok: "#34d399", warn: "#fbbf24", btnBg: "rgba(59,130,246,0.2)", btnText: "#93c5fd", btnBorder: "rgba(255,255,255,0.18)" }
     : { bg: "#f8fafc", card: "#ffffff", border: "#e2e8f0", text: "#0f172a", muted: "#64748b", newBg: "#fef2f2", newBorder: "#ef4444", ok: "#059669", warn: "#d97706", btnBg: "#eff6ff", btnText: "#2563eb", btnBorder: "#cbd5e1" };
 
   const load = useCallback(async (p) => {
