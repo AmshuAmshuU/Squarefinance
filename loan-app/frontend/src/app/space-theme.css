@@ -1,0 +1,153 @@
+/* =====================================================================
+   Space theme (chosen from Theme in the user menu; remembered per device).
+   Everything is scoped under html[data-theme="space"], so with the Default
+   theme this file does nothing at all. The theme reuses the app's existing
+   dark styling (UIContext turns dark mode on) and adds: a NASA photo fixed
+   behind the page (a different one per section), see-through cards and a
+   dark top bar. No blur, no animation: it stays light on phones.
+   Photos: frontend/public/themes/space/*-p.webp (phone), *-l.webp (wide).
+   ===================================================================== */
+
+html[data-theme="space"] {
+  background-color: #03050f;
+  color-scheme: dark;
+}
+
+html[data-theme="space"] body {
+  background-color: transparent !important;
+  color: #e8ecff;
+}
+
+/* the photo (behind everything) and a soft dark wash over it */
+html[data-theme="space"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-color: #03050f;
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+}
+html[data-theme="space"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(rgba(3, 5, 16, 0.1), rgba(3, 5, 16, 0.42));
+}
+
+/* one photo per section; only the matching rule is ever downloaded */
+html[data-space-scene="dashboard"] body::before { background-image: url(/themes/space/dashboard-p.webp); }
+html[data-space-scene="moon"] body::before { background-image: url(/themes/space/moon-p.webp); }
+html[data-space-scene="saturn"] body::before { background-image: url(/themes/space/saturn-p.webp); }
+html[data-space-scene="jupiter"] body::before { background-image: url(/themes/space/jupiter-p.webp); }
+html[data-space-scene="mars"] body::before { background-image: url(/themes/space/mars-p.webp); }
+html[data-space-scene="andromeda"] body::before { background-image: url(/themes/space/andromeda-p.webp); }
+html[data-space-scene="whirlpool"] body::before { background-image: url(/themes/space/whirlpool-p.webp); }
+html[data-space-scene="horizon"] body::before { background-image: url(/themes/space/horizon-p.webp); }
+
+@media (min-aspect-ratio: 1/1) {
+  html[data-space-scene="dashboard"] body::before { background-image: url(/themes/space/dashboard-l.webp); }
+  html[data-space-scene="moon"] body::before { background-image: url(/themes/space/moon-l.webp); }
+  html[data-space-scene="saturn"] body::before { background-image: url(/themes/space/saturn-l.webp); }
+  html[data-space-scene="jupiter"] body::before { background-image: url(/themes/space/jupiter-l.webp); }
+  html[data-space-scene="mars"] body::before { background-image: url(/themes/space/mars-l.webp); }
+  html[data-space-scene="andromeda"] body::before { background-image: url(/themes/space/andromeda-l.webp); }
+  html[data-space-scene="whirlpool"] body::before { background-image: url(/themes/space/whirlpool-l.webp); }
+  html[data-space-scene="horizon"] body::before { background-image: url(/themes/space/horizon-l.webp); }
+}
+
+/* page wrappers let the photo show through */
+html[data-theme="space"] .min-h-screen,
+html[data-theme="space"] .bg-gray-50,
+html[data-theme="space"] .bg-\[\#F8FAFC\],
+html[data-theme="space"] .bg-\[\#f8fafc\] {
+  background-color: transparent !important;
+}
+
+/* cards: see-through dark glass (no blur, so it stays fast) */
+html[data-theme="space"] .bg-white,
+html[data-theme="space"] .bg-white\/60,
+html[data-theme="space"] .bg-white\/80,
+html[data-theme="space"] .bg-white\/95 {
+  background-color: rgba(7, 11, 32, 0.68) !important;
+}
+html[data-theme="space"] .bg-slate-50,
+html[data-theme="space"] .bg-slate-100,
+html[data-theme="space"] .bg-slate-50\/10,
+html[data-theme="space"] .bg-slate-50\/30,
+html[data-theme="space"] .bg-slate-50\/40,
+html[data-theme="space"] .bg-slate-50\/50,
+html[data-theme="space"] .bg-slate-50\/80 {
+  background-color: rgba(28, 38, 92, 0.36) !important;
+}
+
+/* hover washes */
+html[data-theme="space"] .hover\:bg-slate-50:hover,
+html[data-theme="space"] .hover\:bg-slate-100:hover,
+html[data-theme="space"] .group:hover .group-hover\:bg-slate-50 {
+  background-color: rgba(70, 92, 190, 0.28) !important;
+}
+
+/* things that must stay solid so what scrolls underneath never shows through:
+   popups, dropdowns, side drawers, sticky headers / sticky first columns */
+html[data-theme="space"] .fixed.bg-white,
+html[data-theme="space"] .fixed .bg-white,
+html[data-theme="space"] .absolute.bg-white,
+html[data-theme="space"] .shadow-xl.bg-white,
+html[data-theme="space"] .shadow-2xl.bg-white,
+html[data-theme="space"] .sticky.bg-white,
+html[data-theme="space"] .sticky.bg-slate-50,
+html[data-theme="space"] .sticky.bg-slate-100,
+html[data-theme="space"] .sticky[class*="bg-"] {
+  background-color: #0b1030 !important;
+}
+html[data-theme="space"] .fixed .bg-slate-50,
+html[data-theme="space"] .fixed .bg-slate-100 {
+  background-color: #141b48 !important;
+}
+
+/* top bar */
+html[data-theme="space"] nav,
+html[data-theme="space"] .navbar-dark-mode {
+  background-color: rgba(6, 10, 30, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* titles stay readable over bright parts of a photo */
+html[data-theme="space"] h1,
+html[data-theme="space"] h2 {
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+/* big glowing shadows read as white halos on a dark photo: use plain dark shadows instead */
+html[data-theme="space"] .shadow-lg,
+html[data-theme="space"] .shadow-xl,
+html[data-theme="space"] .shadow-2xl {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* pastel alert boxes / chips (red, amber, green, blue, purple) become dark tints */
+html[data-theme="space"] :is(.bg-red-50, .bg-rose-50, .bg-red-100, .bg-rose-100) {
+  background-color: rgba(239, 68, 68, 0.16) !important;
+}
+html[data-theme="space"] :is(.bg-amber-50, .bg-yellow-50, .bg-orange-50, .bg-amber-100, .bg-yellow-100, .bg-orange-100) {
+  background-color: rgba(245, 158, 11, 0.16) !important;
+}
+html[data-theme="space"] :is(.bg-green-50, .bg-emerald-50, .bg-teal-50, .bg-green-100, .bg-emerald-100, .bg-teal-100) {
+  background-color: rgba(34, 197, 94, 0.16) !important;
+}
+html[data-theme="space"] :is(.bg-blue-50, .bg-indigo-50, .bg-sky-50, .bg-cyan-50, .bg-blue-100, .bg-indigo-100, .bg-sky-100, .bg-cyan-100) {
+  background-color: rgba(59, 130, 246, 0.18) !important;
+}
+html[data-theme="space"] :is(.bg-purple-50, .bg-violet-50, .bg-pink-50, .bg-fuchsia-50, .bg-purple-100, .bg-violet-100, .bg-pink-100) {
+  background-color: rgba(168, 85, 247, 0.18) !important;
+}
+/* the dark text that went with those pastel boxes */
+html[data-theme="space"] :is(.text-red-700, .text-red-800, .text-red-900, .text-rose-700, .text-rose-800) { color: #fca5a5 !important; }
+html[data-theme="space"] :is(.text-amber-700, .text-amber-800, .text-amber-900, .text-yellow-700, .text-yellow-800, .text-orange-700, .text-orange-800) { color: #fcd34d !important; }
+html[data-theme="space"] :is(.text-green-700, .text-green-800, .text-green-900, .text-emerald-700, .text-emerald-800, .text-teal-700) { color: #86efac !important; }
+html[data-theme="space"] :is(.text-blue-700, .text-blue-800, .text-blue-900, .text-indigo-700, .text-indigo-800, .text-sky-700) { color: #93c5fd !important; }
+html[data-theme="space"] :is(.text-purple-700, .text-purple-800, .text-violet-700, .text-pink-700) { color: #d8b4fe !important; }

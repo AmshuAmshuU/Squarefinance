@@ -2,13 +2,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Bell, Sun, Moon, MonitorSmartphone } from "lucide-react";
+import { Bell, Sun, Moon, MonitorSmartphone, Palette } from "lucide-react";
 import { removeToken, getUserFromToken } from "../utils/auth";
 import apiHandler from "../services/api";
 import Logo from "./Logo";
 import { useUI } from "../context/UIContext";
 import { useNotifications } from "../context/NotificationContext";
 import NotificationDropdown from "./NotificationDropdown";
+import ThemeChooser from "./ThemeChooser";
 
 const Navbar = () => {
   const router = useRouter();
@@ -18,6 +19,7 @@ const Navbar = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [pushError, setPushError] = useState("");
+  const [showThemes, setShowThemes] = useState(false);
 
   const handleTogglePush = async () => {
     setPushError("");
@@ -241,6 +243,17 @@ const Navbar = () => {
                       <MonitorSmartphone className="w-4 h-4" />
                       My devices
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDropdown(false);
+                        setShowThemes(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-lg transition-colors uppercase tracking-wider"
+                    >
+                      <Palette className="w-4 h-4" />
+                      Theme
+                    </button>
                   </div>
 
                   <div className="px-2 py-2">
@@ -271,6 +284,7 @@ const Navbar = () => {
         </div>
       </div>
     </nav>
+    {showThemes && <ThemeChooser onClose={() => setShowThemes(false)} />}
     </>
   );
 };
