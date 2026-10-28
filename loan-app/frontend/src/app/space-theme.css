@@ -74,10 +74,10 @@ html[data-space-scene="horizon"] body::before {
   background-image: image-set(url(/themes/space/horizon-p.avif) type("image/avif"), url(/themes/space/horizon-p.webp) type("image/webp"));
 }
 
-html[data-space-scene="blackhole"] body::before {
-  background-image: url(/themes/space/blackhole-p.webp);
-  background-image: -webkit-image-set(url(/themes/space/blackhole-p.avif) type("image/avif"), url(/themes/space/blackhole-p.webp) type("image/webp"));
-  background-image: image-set(url(/themes/space/blackhole-p.avif) type("image/avif"), url(/themes/space/blackhole-p.webp) type("image/webp"));
+html[data-space-scene="planets"] body::before {
+  background-image: url(/themes/space/planets-p.webp);
+  background-image: -webkit-image-set(url(/themes/space/planets-p.avif) type("image/avif"), url(/themes/space/planets-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/space/planets-p.avif) type("image/avif"), url(/themes/space/planets-p.webp) type("image/webp"));
 }
 
 @media (min-aspect-ratio: 1/1) {
@@ -121,10 +121,10 @@ html[data-space-scene="blackhole"] body::before {
     background-image: -webkit-image-set(url(/themes/space/horizon-l.avif) type("image/avif"), url(/themes/space/horizon-l.webp) type("image/webp"));
     background-image: image-set(url(/themes/space/horizon-l.avif) type("image/avif"), url(/themes/space/horizon-l.webp) type("image/webp"));
   }
-  html[data-space-scene="blackhole"] body::before {
-    background-image: url(/themes/space/blackhole-l.webp);
-    background-image: -webkit-image-set(url(/themes/space/blackhole-l.avif) type("image/avif"), url(/themes/space/blackhole-l.webp) type("image/webp"));
-    background-image: image-set(url(/themes/space/blackhole-l.avif) type("image/avif"), url(/themes/space/blackhole-l.webp) type("image/webp"));
+  html[data-space-scene="planets"] body::before {
+    background-image: url(/themes/space/planets-l.webp);
+    background-image: -webkit-image-set(url(/themes/space/planets-l.avif) type("image/avif"), url(/themes/space/planets-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/space/planets-l.avif) type("image/avif"), url(/themes/space/planets-l.webp) type("image/webp"));
   }
 }
 
@@ -170,8 +170,6 @@ html[data-theme="space"] body.bg-slate-50 {
 html[data-theme="space"] .fixed.bg-white,
 html[data-theme="space"] .fixed .bg-white,
 html[data-theme="space"] .absolute.bg-white,
-html[data-theme="space"] .shadow-xl.bg-white,
-html[data-theme="space"] .shadow-2xl.bg-white,
 html[data-theme="space"] .sticky.bg-white,
 html[data-theme="space"] aside.bg-white {
   background-color: #1e293b !important;
@@ -182,6 +180,31 @@ html[data-theme="space"] .sticky[class*="bg-"]:not(.bg-white),
 html[data-theme="space"] .fixed .bg-slate-50,
 html[data-theme="space"] .fixed .bg-slate-100 {
   background-color: #334155 !important;
+}
+
+/* the big cards (dashboard, to-do, EMI calculator, analytics charts, the payments list ...) */
+html[data-theme="space"] .shadow-xl.bg-white,
+html[data-theme="space"] .shadow-2xl.bg-white {
+  background-color: rgba(30, 41, 59, 0.5) !important;
+}
+/* the Collections payments list stays a little more solid so the figures read comfortably */
+html[data-space-scene="planets"][data-theme="space"] .shadow-xl.bg-white {
+  background-color: rgba(30, 41, 59, 0.64) !important;
+}
+/* popups and dropdowns that also carry a big shadow stay solid */
+html[data-theme="space"] .fixed .shadow-xl.bg-white,
+html[data-theme="space"] .fixed .shadow-2xl.bg-white,
+html[data-theme="space"] .absolute.shadow-xl.bg-white,
+html[data-theme="space"] .absolute.shadow-2xl.bg-white {
+  background-color: #1e293b !important;
+}
+
+/* top bar: half see-through */
+html[data-theme="space"] nav,
+html[data-theme="space"] nav.navbar-dark-mode,
+html[data-theme="space"] nav.sticky[class*="bg-"].navbar-dark-mode,
+html[data-theme="space"] .navbar-dark-mode {
+  background-color: rgba(30, 41, 59, 0.5) !important;
 }
 
 /* the sidebar (desktop) and the menu drawer (phone): slightly see-through too */

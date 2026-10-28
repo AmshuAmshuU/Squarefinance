@@ -13,7 +13,7 @@ export const SPACE_SCENE_RULES = [
   ["/admin/pending-payments", "andromeda"],
   ["/admin/followup-payments", "andromeda"],
   ["/admin/partial-payments", "andromeda"],
-  ["/admin/collections", "blackhole"], // black hole illustration (NASA)
+  ["/admin/collections", "planets"], // the planets along their orbits, Saturn in the distance (NASA)
   ["/admin/approvals", "whirlpool"],
   ["/admin/notifications", "whirlpool"],
   ["/admin/location-updates", "whirlpool"],
