@@ -1,0 +1,268 @@
+/* =====================================================================
+   Desert / Rainforest / Island beach themes (chosen from Theme in the user menu;
+   remembered per device). Generated parts: the picture rules at the bottom.
+   Scoped under html[data-nature-scene] (set only when one of these three
+   themes is active), so with the Default or Space theme this file does nothing.
+   Same idea as Space: the page keeps the app's normal dark styling (Desert and
+   Rainforest) or its normal light styling (Island beach); only a fixed picture
+   is added behind the page and cards / rows / bars are made slightly see-through
+   in the theme's own colour. No blur, no animation.
+   Pictures: frontend/public/themes/<theme>/<a|b|c>-<p|l>.<avif|webp>
+   (p = phone, l = wide); only the current section's picture is downloaded.
+   ===================================================================== */
+
+/* colours per theme */
+html[data-theme="desert"] {
+  --n-page: #2a1a0e;
+  --n-card: rgba(54, 34, 20, 0.62);
+  --n-big: rgba(54, 34, 20, 0.52);
+  --n-row: rgba(92, 64, 42, 0.45);
+  --n-row-hover: rgba(92, 64, 42, 0.68);
+  --n-bar: rgba(54, 34, 20, 0.52);
+  --n-side: rgba(54, 34, 20, 0.52);
+  --n-drawer: rgba(54, 34, 20, 0.66);
+  --n-solid: #3a2616;
+  --n-solid2: #4d3320;
+  --n-title-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  --n-text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+  color-scheme: dark;
+}
+html[data-theme="rainforest"] {
+  --n-page: #06150f;
+  --n-card: rgba(7, 36, 28, 0.64);
+  --n-big: rgba(7, 36, 28, 0.54);
+  --n-row: rgba(24, 70, 55, 0.45);
+  --n-row-hover: rgba(24, 70, 55, 0.68);
+  --n-bar: rgba(7, 36, 28, 0.54);
+  --n-side: rgba(7, 36, 28, 0.54);
+  --n-drawer: rgba(7, 36, 28, 0.68);
+  --n-solid: #0c2a22;
+  --n-solid2: #164236;
+  --n-title-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  --n-text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+  color-scheme: dark;
+}
+html[data-theme="beach"] {
+  --n-page: #cfe6ee;
+  --n-card: rgba(255, 255, 255, 0.78);
+  --n-big: rgba(255, 255, 255, 0.72);
+  --n-row: rgba(241, 245, 249, 0.94);
+  --n-row-hover: rgba(226, 238, 244, 0.95);
+  --n-bar: rgba(255, 255, 255, 0.66);
+  --n-side: rgba(255, 255, 255, 0.66);
+  --n-drawer: rgba(255, 255, 255, 0.86);
+  --n-solid: #ffffff;
+  --n-solid2: #f1f5f9;
+  --n-title-shadow: 0 0 10px rgba(255, 255, 255, 0.95), 0 0 3px rgba(255, 255, 255, 0.9);
+  --n-text-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+  color-scheme: light;
+}
+
+html[data-nature-scene] {
+  background-color: var(--n-page);
+}
+
+/* the picture, fixed behind everything, shown as it is (the soft darkening / lightening is already in the picture) */
+html[data-nature-scene] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-color: var(--n-page);
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+}
+
+/* page wrappers let the picture show through */
+html[data-nature-scene] .min-h-screen,
+html[data-nature-scene] .bg-gray-50,
+html[data-nature-scene] .bg-\[\#F8FAFC\],
+html[data-nature-scene] .bg-\[\#f8fafc\] {
+  background-color: transparent !important;
+}
+
+/* cards */
+html[data-nature-scene] .bg-white,
+html[data-nature-scene] .bg-white\/60,
+html[data-nature-scene] .bg-white\/80,
+html[data-nature-scene] .bg-white\/95 {
+  background-color: var(--n-card) !important;
+}
+/* rows, table heads, chips */
+html[data-nature-scene] .bg-slate-50,
+html[data-nature-scene] .bg-slate-100,
+html[data-nature-scene] .bg-slate-50\/10,
+html[data-nature-scene] .bg-slate-50\/30,
+html[data-nature-scene] .bg-slate-50\/40,
+html[data-nature-scene] .bg-slate-50\/50,
+html[data-nature-scene] .bg-slate-50\/80 {
+  background-color: var(--n-row) !important;
+}
+html[data-nature-scene] .hover\:bg-slate-50:hover,
+html[data-nature-scene] .hover\:bg-slate-100:hover,
+html[data-nature-scene] .group:hover .group-hover\:bg-slate-50 {
+  background-color: var(--n-row-hover) !important;
+}
+
+/* the page body itself carries bg-slate-50: it must stay clear or it tints the whole picture */
+html[data-nature-scene] body,
+html[data-nature-scene] body.bg-slate-50 {
+  background-color: transparent !important;
+}
+
+/* things that must stay solid so what scrolls underneath never shows through:
+   popups, dropdowns, side drawers, the sidebar, sticky headers / sticky first columns */
+html[data-nature-scene] .fixed.bg-white,
+html[data-nature-scene] .fixed .bg-white,
+html[data-nature-scene] .absolute.bg-white,
+html[data-nature-scene] .sticky.bg-white,
+html[data-nature-scene] aside.bg-white {
+  background-color: var(--n-solid) !important;
+}
+html[data-nature-scene] .sticky.bg-slate-50,
+html[data-nature-scene] .sticky.bg-slate-100,
+html[data-nature-scene] .sticky[class*="bg-"]:not(.bg-white),
+html[data-nature-scene] .fixed .bg-slate-50,
+html[data-nature-scene] .fixed .bg-slate-100 {
+  background-color: var(--n-solid2) !important;
+}
+
+/* the big cards (dashboard, to-do, EMI calculator, analytics charts, the payments list ...) */
+html[data-nature-scene] .shadow-xl.bg-white,
+html[data-nature-scene] .shadow-2xl.bg-white {
+  background-color: var(--n-big) !important;
+}
+/* popups and dropdowns that also carry a big shadow stay solid */
+html[data-nature-scene] .fixed .shadow-xl.bg-white,
+html[data-nature-scene] .fixed .shadow-2xl.bg-white,
+html[data-nature-scene] .absolute.shadow-xl.bg-white,
+html[data-nature-scene] .absolute.shadow-2xl.bg-white {
+  background-color: var(--n-solid) !important;
+}
+
+/* top bar */
+html[data-nature-scene] nav,
+html[data-nature-scene] nav.navbar-dark-mode,
+html[data-nature-scene] nav.sticky[class*="bg-"].navbar-dark-mode,
+html[data-nature-scene] nav.sticky[class*="bg-"],
+html[data-nature-scene] .navbar-dark-mode {
+  background-color: var(--n-bar) !important;
+}
+
+/* the sidebar (desktop) and the menu drawer (phone) */
+html[data-nature-scene] aside.sticky.bg-white {
+  background-color: var(--n-side) !important;
+}
+html[data-nature-scene] .fixed aside.absolute.bg-white {
+  background-color: var(--n-drawer) !important;
+}
+
+/* titles and the grey captions under them stay readable over the busier parts of a picture */
+html[data-nature-scene] h1,
+html[data-nature-scene] h2 {
+  text-shadow: var(--n-title-shadow);
+}
+html[data-nature-scene] p {
+  text-shadow: var(--n-text-shadow);
+}
+/* the grey sub-title under a page heading sits straight on the picture: lighter in the two dark themes */
+html[data-theme="desert"] .text-secondary,
+html[data-theme="rainforest"] .text-secondary {
+  color: #dbe3ee !important;
+}
+
+/* ---------- pictures (generated) ---------- */
+html[data-theme="desert"][data-nature-scene="a"] body::before {
+  background-image: url(/themes/desert/a-p.webp);
+  background-image: -webkit-image-set(url(/themes/desert/a-p.avif) type("image/avif"), url(/themes/desert/a-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/desert/a-p.avif) type("image/avif"), url(/themes/desert/a-p.webp) type("image/webp"));
+}
+html[data-theme="desert"][data-nature-scene="b"] body::before {
+  background-image: url(/themes/desert/b-p.webp);
+  background-image: -webkit-image-set(url(/themes/desert/b-p.avif) type("image/avif"), url(/themes/desert/b-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/desert/b-p.avif) type("image/avif"), url(/themes/desert/b-p.webp) type("image/webp"));
+}
+html[data-theme="desert"][data-nature-scene="c"] body::before {
+  background-image: url(/themes/desert/c-p.webp);
+  background-image: -webkit-image-set(url(/themes/desert/c-p.avif) type("image/avif"), url(/themes/desert/c-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/desert/c-p.avif) type("image/avif"), url(/themes/desert/c-p.webp) type("image/webp"));
+}
+html[data-theme="rainforest"][data-nature-scene="a"] body::before {
+  background-image: url(/themes/rainforest/a-p.webp);
+  background-image: -webkit-image-set(url(/themes/rainforest/a-p.avif) type("image/avif"), url(/themes/rainforest/a-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/rainforest/a-p.avif) type("image/avif"), url(/themes/rainforest/a-p.webp) type("image/webp"));
+}
+html[data-theme="rainforest"][data-nature-scene="b"] body::before {
+  background-image: url(/themes/rainforest/b-p.webp);
+  background-image: -webkit-image-set(url(/themes/rainforest/b-p.avif) type("image/avif"), url(/themes/rainforest/b-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/rainforest/b-p.avif) type("image/avif"), url(/themes/rainforest/b-p.webp) type("image/webp"));
+}
+html[data-theme="rainforest"][data-nature-scene="c"] body::before {
+  background-image: url(/themes/rainforest/c-p.webp);
+  background-image: -webkit-image-set(url(/themes/rainforest/c-p.avif) type("image/avif"), url(/themes/rainforest/c-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/rainforest/c-p.avif) type("image/avif"), url(/themes/rainforest/c-p.webp) type("image/webp"));
+}
+html[data-theme="beach"][data-nature-scene="a"] body::before {
+  background-image: url(/themes/beach/a-p.webp);
+  background-image: -webkit-image-set(url(/themes/beach/a-p.avif) type("image/avif"), url(/themes/beach/a-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/beach/a-p.avif) type("image/avif"), url(/themes/beach/a-p.webp) type("image/webp"));
+}
+html[data-theme="beach"][data-nature-scene="b"] body::before {
+  background-image: url(/themes/beach/b-p.webp);
+  background-image: -webkit-image-set(url(/themes/beach/b-p.avif) type("image/avif"), url(/themes/beach/b-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/beach/b-p.avif) type("image/avif"), url(/themes/beach/b-p.webp) type("image/webp"));
+}
+html[data-theme="beach"][data-nature-scene="c"] body::before {
+  background-image: url(/themes/beach/c-p.webp);
+  background-image: -webkit-image-set(url(/themes/beach/c-p.avif) type("image/avif"), url(/themes/beach/c-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/beach/c-p.avif) type("image/avif"), url(/themes/beach/c-p.webp) type("image/webp"));
+}
+
+@media (min-aspect-ratio: 1/1) {
+  html[data-theme="desert"][data-nature-scene="a"] body::before {
+    background-image: url(/themes/desert/a-l.webp);
+    background-image: -webkit-image-set(url(/themes/desert/a-l.avif) type("image/avif"), url(/themes/desert/a-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/desert/a-l.avif) type("image/avif"), url(/themes/desert/a-l.webp) type("image/webp"));
+  }
+  html[data-theme="desert"][data-nature-scene="b"] body::before {
+    background-image: url(/themes/desert/b-l.webp);
+    background-image: -webkit-image-set(url(/themes/desert/b-l.avif) type("image/avif"), url(/themes/desert/b-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/desert/b-l.avif) type("image/avif"), url(/themes/desert/b-l.webp) type("image/webp"));
+  }
+  html[data-theme="desert"][data-nature-scene="c"] body::before {
+    background-image: url(/themes/desert/c-l.webp);
+    background-image: -webkit-image-set(url(/themes/desert/c-l.avif) type("image/avif"), url(/themes/desert/c-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/desert/c-l.avif) type("image/avif"), url(/themes/desert/c-l.webp) type("image/webp"));
+  }
+  html[data-theme="rainforest"][data-nature-scene="a"] body::before {
+    background-image: url(/themes/rainforest/a-l.webp);
+    background-image: -webkit-image-set(url(/themes/rainforest/a-l.avif) type("image/avif"), url(/themes/rainforest/a-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/rainforest/a-l.avif) type("image/avif"), url(/themes/rainforest/a-l.webp) type("image/webp"));
+  }
+  html[data-theme="rainforest"][data-nature-scene="b"] body::before {
+    background-image: url(/themes/rainforest/b-l.webp);
+    background-image: -webkit-image-set(url(/themes/rainforest/b-l.avif) type("image/avif"), url(/themes/rainforest/b-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/rainforest/b-l.avif) type("image/avif"), url(/themes/rainforest/b-l.webp) type("image/webp"));
+  }
+  html[data-theme="rainforest"][data-nature-scene="c"] body::before {
+    background-image: url(/themes/rainforest/c-l.webp);
+    background-image: -webkit-image-set(url(/themes/rainforest/c-l.avif) type("image/avif"), url(/themes/rainforest/c-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/rainforest/c-l.avif) type("image/avif"), url(/themes/rainforest/c-l.webp) type("image/webp"));
+  }
+  html[data-theme="beach"][data-nature-scene="a"] body::before {
+    background-image: url(/themes/beach/a-l.webp);
+    background-image: -webkit-image-set(url(/themes/beach/a-l.avif) type("image/avif"), url(/themes/beach/a-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/beach/a-l.avif) type("image/avif"), url(/themes/beach/a-l.webp) type("image/webp"));
+  }
+  html[data-theme="beach"][data-nature-scene="b"] body::before {
+    background-image: url(/themes/beach/b-l.webp);
+    background-image: -webkit-image-set(url(/themes/beach/b-l.avif) type("image/avif"), url(/themes/beach/b-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/beach/b-l.avif) type("image/avif"), url(/themes/beach/b-l.webp) type("image/webp"));
+  }
+  html[data-theme="beach"][data-nature-scene="c"] body::before {
+    background-image: url(/themes/beach/c-l.webp);
+    background-image: -webkit-image-set(url(/themes/beach/c-l.avif) type("image/avif"), url(/themes/beach/c-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/beach/c-l.avif) type("image/avif"), url(/themes/beach/c-l.webp) type("image/webp"));
+  }
+}

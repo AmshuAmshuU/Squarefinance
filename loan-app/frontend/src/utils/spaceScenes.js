@@ -36,3 +36,42 @@ export const isSpaceEligiblePath = (pathname) => {
   const p = pathname || "";
   return p.indexOf("/admin") === 0 && p !== "/admin/login";
 };
+
+// Themes the user can pick (stored per device in localStorage "sf_theme").
+export const THEME_IDS = ["default", "space", "desert", "rainforest", "beach"];
+// The three picture themes besides Space. Desert and Rainforest are dark (they switch on the app's dark
+// styling like Space does); Island beach is the one light theme.
+export const NATURE_THEMES = ["desert", "rainforest", "beach"];
+export const DARK_NATURE_THEMES = ["desert", "rainforest"];
+export const normalizeTheme = (t) => (THEME_IDS.indexOf(t) > 0 ? t : "default");
+
+// Each nature theme has three pictures, a / b / c, used on different parts of the app:
+//   a = dashboard + the follow-up, approval and notification pages
+//   b = the four loan lists and the other loan-detail pages
+//   c = everything else (analytics, collections, expenses, employees, to-do ...)
+export const NATURE_SCENE_RULES = [
+  ["/admin/dashboard", "a"],
+  ["/admin/pending-payments", "a"],
+  ["/admin/followup-payments", "a"],
+  ["/admin/partial-payments", "a"],
+  ["/admin/approvals", "a"],
+  ["/admin/notifications", "a"],
+  ["/admin/location-updates", "a"],
+  ["/admin/weekly-loans", "b"],
+  ["/admin/daily-loans", "b"],
+  ["/admin/interest-loan", "b"],
+  ["/admin/loans", "b"],
+  ["/admin/emi-details", "b"],
+  ["/admin/seized-vehicles", "b"],
+  ["/admin/expired", "b"],
+  ["/admin/foreclosure-payments", "b"],
+];
+export const DEFAULT_NATURE_SCENE = "c";
+
+export const natureSceneFor = (pathname) => {
+  const p = pathname || "";
+  for (const [prefix, scene] of NATURE_SCENE_RULES) {
+    if (p === prefix || p.indexOf(prefix + "/") === 0) return scene;
+  }
+  return DEFAULT_NATURE_SCENE;
+};

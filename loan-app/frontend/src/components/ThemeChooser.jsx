@@ -21,7 +21,7 @@ const ThemeChooser = ({ onClose }) => {
           selected ? "border-amber-300" : isDarkMode ? "border-white/10" : "border-slate-200"
         }`}
       >
-        <div className="rounded-xl overflow-hidden h-28">{preview}</div>
+        <div className="rounded-xl overflow-hidden h-24">{preview}</div>
         <div className="flex items-center justify-between px-1 pt-2 pb-0.5">
           <span className="text-sm font-black">{label}</span>
           {selected ? <Check className="w-4 h-4 text-amber-300" /> : <span className="text-[10px] opacity-60">{note}</span>}
@@ -33,7 +33,7 @@ const ThemeChooser = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60">
       <div
-        className={`w-full max-w-sm rounded-3xl shadow-2xl p-5 ${
+        className={`w-full max-w-sm max-h-[92vh] overflow-y-auto rounded-3xl shadow-2xl p-5 ${
           isDarkMode ? "bg-[#0c1130] text-slate-100" : "bg-white text-slate-900"
         }`}
         role="dialog"
@@ -59,9 +59,30 @@ const ThemeChooser = ({ onClose }) => {
             // eslint-disable-next-line @next/next/no-img-element
             <img src="/themes/space/tile.webp" alt="Space theme preview" className="h-full w-full object-cover" />,
           )}
+          {tile(
+            "desert",
+            "Desert",
+            "Dunes",
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/themes/desert/tile.webp" alt="Desert theme preview" className="h-full w-full object-cover" />,
+          )}
+          {tile(
+            "rainforest",
+            "Rainforest",
+            "Rain",
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/themes/rainforest/tile.webp" alt="Rainforest theme preview" className="h-full w-full object-cover" />,
+          )}
+          {tile(
+            "beach",
+            "Island beach",
+            "Sunny",
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/themes/beach/tile.webp" alt="Island beach theme preview" className="h-full w-full object-cover" />,
+          )}
         </div>
         <p className={`text-[11px] mt-3 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-          Space shows a different photo on each section of the app. Easy on the eyes at night.
+          Each theme shows a different photo on each section of the app. Island beach is the bright one; the others are easy on the eyes at night.
         </p>
         <div className="flex gap-3 mt-4">
           <button
