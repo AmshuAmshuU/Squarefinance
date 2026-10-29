@@ -38,11 +38,11 @@ export const isSpaceEligiblePath = (pathname) => {
 };
 
 // Themes the user can pick (stored per device in localStorage "sf_theme").
-export const THEME_IDS = ["default", "space", "desert", "rainforest", "beach"];
-// The three picture themes besides Space. Desert and Rainforest are dark (they switch on the app's dark
+export const THEME_IDS = ["default", "space", "desert", "rainforest", "beach", "supercars"];
+// The picture themes besides Space. Desert, Rainforest and Supercars are dark (they switch on the app's dark
 // styling like Space does); Island beach is the one light theme.
-export const NATURE_THEMES = ["desert", "rainforest", "beach"];
-export const DARK_NATURE_THEMES = ["desert", "rainforest"];
+export const NATURE_THEMES = ["desert", "rainforest", "beach", "supercars"];
+export const DARK_NATURE_THEMES = ["desert", "rainforest", "supercars"];
 export const normalizeTheme = (t) => (THEME_IDS.indexOf(t) > 0 ? t : "default");
 
 // Each nature theme has three pictures, a / b / c, used on different parts of the app:
