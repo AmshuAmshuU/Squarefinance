@@ -82,7 +82,7 @@ const Navbar = () => {
       {/* 🛺 Auto-rickshaw static mascot - screen-centred on tablets/computers */}
       <div className="hidden md:block absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none z-10">
         <img
-          src="/auto.png"
+          src="/auto-v2.png"
           alt="Square Finance Auto"
           style={{ width: "52px", height: "40px", objectFit: "contain", filter: "drop-shadow(1px 1px 2px rgba(0,0,0,0.12))" }}
         />
@@ -126,7 +126,7 @@ const Navbar = () => {
             there is no free space. */}
         <div className="md:hidden hidden min-[350px]:flex flex-1 min-w-0 justify-center px-1 pointer-events-none">
           <img
-            src="/auto.png"
+            src="/auto-v2.png"
             alt="Square Finance Auto"
             className="max-w-full"
             style={{ width: "52px", height: "40px", objectFit: "contain", filter: "drop-shadow(1px 1px 2px rgba(0,0,0,0.12))" }}
