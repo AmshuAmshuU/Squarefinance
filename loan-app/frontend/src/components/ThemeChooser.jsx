@@ -87,6 +87,13 @@ const ThemeChooser = ({ onClose }) => {
             // eslint-disable-next-line @next/next/no-img-element
             <img src="/themes/supercars/tile.webp" alt="Supercars theme preview" className="h-full w-full object-cover" />,
           )}
+          {tile(
+            "superbikes",
+            "Superbikes",
+            "Bikes",
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/themes/superbikes/tile.webp" alt="Superbikes theme preview" className="h-full w-full object-cover" />,
+          )}
         </div>
         <p className={`text-[11px] mt-3 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
           Each theme shows a different photo on each section of the app. Island beach is the bright one; the others are easy on the eyes at night.

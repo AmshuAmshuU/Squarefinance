@@ -6,9 +6,9 @@ import "./nature-themes.css";
 import { SPACE_SCENE_RULES, DEFAULT_SPACE_SCENE, NATURE_SCENE_RULES, DEFAULT_NATURE_SCENE } from "../utils/spaceScenes";
 
 // Runs before the page paints: if this device chose a picture theme (Space, Desert, Rainforest, Island
-// beach or Supercars), mark the page with it (and with the picture for this section) so there is no flash of the plain
+// beach, Supercars or Superbikes), mark the page with it (and with the picture for this section) so there is no flash of the plain
 // look. Mirrors UIContext + spaceScenes.js.
-const themeBootScript = `(function(){try{var p=location.pathname,t=localStorage.getItem('sf_theme');if(p.indexOf('/admin')!==0||p==='/admin/login')return;var d=document.documentElement;function pick(R,s){for(var i=0;i<R.length;i++){if(p===R[i][0]||p.indexOf(R[i][0]+'/')===0){return R[i][1]}}return s}if(t==='space'){d.setAttribute('data-theme','space');d.setAttribute('data-space-scene',pick(${JSON.stringify(SPACE_SCENE_RULES)},'${DEFAULT_SPACE_SCENE}'))}else if(t==='desert'||t==='rainforest'||t==='beach'||t==='supercars'){d.setAttribute('data-theme',t);d.setAttribute('data-nature-scene',pick(${JSON.stringify(NATURE_SCENE_RULES)},'${DEFAULT_NATURE_SCENE}'))}}catch(e){}})();`;
+const themeBootScript = `(function(){try{var p=location.pathname,t=localStorage.getItem('sf_theme');if(p.indexOf('/admin')!==0||p==='/admin/login')return;var d=document.documentElement;function pick(R,s){for(var i=0;i<R.length;i++){if(p===R[i][0]||p.indexOf(R[i][0]+'/')===0){return R[i][1]}}return s}if(t==='space'){d.setAttribute('data-theme','space');d.setAttribute('data-space-scene',pick(${JSON.stringify(SPACE_SCENE_RULES)},'${DEFAULT_SPACE_SCENE}'))}else if(t==='desert'||t==='rainforest'||t==='beach'||t==='supercars'||t==='superbikes'){d.setAttribute('data-theme',t);d.setAttribute('data-nature-scene',pick(${JSON.stringify(NATURE_SCENE_RULES)},'${DEFAULT_NATURE_SCENE}'))}}catch(e){}})();`;
 
 export const metadata: Metadata = {
   title: "Square Finance | Fast & Reliable Vehicle Loans in Bengaluru",

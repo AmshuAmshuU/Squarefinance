@@ -57,6 +57,21 @@ html[data-theme="supercars"] {
   --n-text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
   color-scheme: dark;
 }
+html[data-theme="superbikes"] {
+  --n-page: #060608;
+  --n-card: rgba(14, 15, 20, 0.64);
+  --n-big: rgba(14, 15, 20, 0.54);
+  --n-row: rgba(80, 84, 98, 0.4);
+  --n-row-hover: rgba(80, 84, 98, 0.62);
+  --n-bar: rgba(14, 15, 20, 0.58);
+  --n-side: rgba(14, 15, 20, 0.58);
+  --n-drawer: rgba(14, 15, 20, 0.74);
+  --n-solid: #15161b;
+  --n-solid2: #24262d;
+  --n-title-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  --n-text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+  color-scheme: dark;
+}
 html[data-theme="beach"] {
   --n-page: #cfe6ee;
   --n-card: rgba(255, 255, 255, 0.78);
@@ -184,7 +199,8 @@ html[data-nature-scene] p {
 /* the grey sub-title under a page heading sits straight on the picture: lighter in the two dark themes */
 html[data-theme="desert"] .text-secondary,
 html[data-theme="rainforest"] .text-secondary,
-html[data-theme="supercars"] .text-secondary {
+html[data-theme="supercars"] .text-secondary,
+html[data-theme="superbikes"] .text-secondary {
   color: #dbe3ee !important;
 }
 
@@ -314,5 +330,39 @@ html[data-theme="supercars"][data-nature-scene="c"] body::before {
     background-image: url(/themes/supercars/c-l.webp);
     background-image: -webkit-image-set(url(/themes/supercars/c-l.avif) type("image/avif"), url(/themes/supercars/c-l.webp) type("image/webp"));
     background-image: image-set(url(/themes/supercars/c-l.avif) type("image/avif"), url(/themes/supercars/c-l.webp) type("image/webp"));
+  }
+}
+
+html[data-theme="superbikes"][data-nature-scene="a"] body::before {
+  background-image: url(/themes/superbikes/a-p.webp);
+  background-image: -webkit-image-set(url(/themes/superbikes/a-p.avif) type("image/avif"), url(/themes/superbikes/a-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/superbikes/a-p.avif) type("image/avif"), url(/themes/superbikes/a-p.webp) type("image/webp"));
+}
+html[data-theme="superbikes"][data-nature-scene="b"] body::before {
+  background-image: url(/themes/superbikes/b-p.webp);
+  background-image: -webkit-image-set(url(/themes/superbikes/b-p.avif) type("image/avif"), url(/themes/superbikes/b-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/superbikes/b-p.avif) type("image/avif"), url(/themes/superbikes/b-p.webp) type("image/webp"));
+}
+html[data-theme="superbikes"][data-nature-scene="c"] body::before {
+  background-image: url(/themes/superbikes/c-p.webp);
+  background-image: -webkit-image-set(url(/themes/superbikes/c-p.avif) type("image/avif"), url(/themes/superbikes/c-p.webp) type("image/webp"));
+  background-image: image-set(url(/themes/superbikes/c-p.avif) type("image/avif"), url(/themes/superbikes/c-p.webp) type("image/webp"));
+}
+
+@media (min-aspect-ratio: 1/1) {
+  html[data-theme="superbikes"][data-nature-scene="a"] body::before {
+    background-image: url(/themes/superbikes/a-l.webp);
+    background-image: -webkit-image-set(url(/themes/superbikes/a-l.avif) type("image/avif"), url(/themes/superbikes/a-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/superbikes/a-l.avif) type("image/avif"), url(/themes/superbikes/a-l.webp) type("image/webp"));
+  }
+  html[data-theme="superbikes"][data-nature-scene="b"] body::before {
+    background-image: url(/themes/superbikes/b-l.webp);
+    background-image: -webkit-image-set(url(/themes/superbikes/b-l.avif) type("image/avif"), url(/themes/superbikes/b-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/superbikes/b-l.avif) type("image/avif"), url(/themes/superbikes/b-l.webp) type("image/webp"));
+  }
+  html[data-theme="superbikes"][data-nature-scene="c"] body::before {
+    background-image: url(/themes/superbikes/c-l.webp);
+    background-image: -webkit-image-set(url(/themes/superbikes/c-l.avif) type("image/avif"), url(/themes/superbikes/c-l.webp) type("image/webp"));
+    background-image: image-set(url(/themes/superbikes/c-l.avif) type("image/avif"), url(/themes/superbikes/c-l.webp) type("image/webp"));
   }
 }
