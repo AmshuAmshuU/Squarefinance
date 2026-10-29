@@ -179,7 +179,7 @@ const FollowupAccountabilityCard = () => {
                     <tbody className="divide-y divide-slate-50">
                       {activeItems.map((item) => (
                         <tr key={item._id} className="hover:bg-slate-50 transition-colors group">
-                          <td className="px-3 py-2.5">
+                          <td className={`px-3 ${item.loanType === "Vehicle" && item.vehicleNumber ? "py-2" : "py-2.5"}`}>
                             <div className="flex items-center gap-1.5">
                               <Link
                                 href={`${LOAN_TYPE_ROUTES[item.loanType] || "/admin/loans/edit"}/${item._id}`}
@@ -192,6 +192,12 @@ const FollowupAccountabilityCard = () => {
                             <p className="text-[10px] font-bold text-slate-500 mt-0.5 max-w-[110px] truncate">
                               {item.customerName || "-"}
                             </p>
+                            {/* Vehicle loans only: the number sits right under the name, same size and colour, without making the row taller */}
+                            {item.loanType === "Vehicle" && item.vehicleNumber && (
+                              <p className="text-[10px] leading-[11px] font-bold italic text-slate-500 max-w-[110px] truncate">
+                                ({item.vehicleNumber})
+                              </p>
+                            )}
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex flex-col gap-0.5">

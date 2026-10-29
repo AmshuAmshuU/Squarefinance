@@ -2352,6 +2352,9 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   tenureOver: 1,
                   totalDueNow: 1,
                   customerPhoto: 1,
+                  // vehicle number is shown under the name on the dashboard (Vehicle loans only - the other
+                  // three loan types have no such field)
+                  ...(loanType === "Vehicle" && { vehicleNumber: 1 }),
                 },
               },
             ],
@@ -2369,6 +2372,9 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
                   tenureOver: 1,
                   totalDueNow: 1,
                   customerPhoto: 1,
+                  // vehicle number is shown under the name on the dashboard (Vehicle loans only - the other
+                  // three loan types have no such field)
+                  ...(loanType === "Vehicle" && { vehicleNumber: 1 }),
                 },
               },
             ],
