@@ -1,7 +1,7 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { getTodayCollectionSummary } from "../../services/loan.service";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 const ROWS = [
   { key: "vehicle", label: "Vehicle" },
@@ -20,43 +20,48 @@ const formatAmount = (n) => {
   return `₹${Math.round(amount)}`;
 };
 
+// Closed until someone presses "Check" - the figures are only worked out on that
+// click (not every time the dashboard opens), since this card is rarely looked at.
 const TodayCollectionCard = () => {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
 
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        setLoading(true);
-        const res = await getTodayCollectionSummary();
-        if (res.data) setData(res.data);
-      } catch (err) {
-        setError(err.message || "Failed to load today's collection summary");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSummary();
-  }, []);
+  const handleCheck = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getTodayCollectionSummary();
+      if (res.data) setData(res.data);
+    } catch (err) {
+      setError(err.message || "Failed to load today's collection summary");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="today-collection-card bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-100/50 overflow-hidden">
-      <div className="p-6 border-b border-slate-100 bg-slate-50/30">
-        <h3 className="text-lg font-black text-slate-900 tracking-tight">Today&apos;s Collections</h3>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-          Due vs paid, right now
-        </p>
+      <div className={`p-6 bg-slate-50/30 flex items-center justify-between gap-3 ${data || error ? "border-b border-slate-100" : ""}`}>
+        <div>
+          <h3 className="text-lg font-black text-slate-900 tracking-tight">Today&apos;s Collections</h3>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            Due vs paid, right now
+          </p>
+        </div>
+        <button
+          onClick={handleCheck}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all disabled:opacity-50 shrink-0"
+        >
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+          {data ? "Refresh" : "Check"}
+        </button>
       </div>
 
-      {loading ? (
-        <div className="p-12 flex flex-col items-center justify-center">
-          <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
-          <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Loading...</p>
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="p-8 text-center text-red-500 text-xs font-bold uppercase tracking-tight">{error}</div>
-      ) : (
+      ) : !data ? null : (
         <div className="overflow-x-auto">
           <table className="w-full text-left" style={{ tableLayout: "fixed" }}>
             <thead>
