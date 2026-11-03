@@ -564,13 +564,12 @@ const LoanForm = ({
     const principal = parseFloat(formik.values.loanTerms.principalAmount) || 0;
     const tenure = parseInt(formik.values.loanTerms.tenureMonths) || 0;
 
-    // A loan closed via foreclosure is fully settled - the EMI-derived
-    // figure below reflects EMIs that were never individually collected
-    // because the loan was paid off in one lump sum, so show 0 instead.
-    if (
-      formik.values.status.status === "Closed" &&
-      formik.values.status.foreclosureDetails?.foreclosureAmount
-    ) {
+    // A Closed loan has nothing left outstanding - whether it was foreclosed
+    // (paid off in one lump sum) or the vehicle was sold (the sale settles it,
+    // whatever the gap between the sale price and the balance). The EMI-derived
+    // figure below reflects EMIs that were never individually collected, so
+    // show 0 instead.
+    if (formik.values.status.status === "Closed") {
       setRemainingPrincipalAmount(0);
       return;
     }
