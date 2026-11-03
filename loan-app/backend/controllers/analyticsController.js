@@ -1077,7 +1077,60 @@ const interestPortionExpr = {
   ],
 };
 
-// Profit per date bucket (the 9 profit components, bucketed by `groupFormat`).
+// Vehicle sale gain / loss, recognised on the sale date: what the vehicle fetched
+// minus the principal still unpaid on that loan at the sale (positive = gain,
+// negative = loss). Karthik's rule (2026-11-04): once a vehicle is sold nothing
+// stays "remaining", and the gap between the sale price and the balance is the
+// outcome. Principal repaid so far = each genuinely-paid EMI's principal share,
+// pro rata to what was actually paid (capped at one full EMI). Bulk-closed
+// leftover EMIs (closedWithoutPayment) never count as repaid. The sale amount
+// is soldDetails.totalAmount (falling back to sellAmount) - the same figure
+// Total Collected and the loan ROI use.
+const vehicleSaleGainPipeline = (startDate, endDate, groupId) => [
+  { $match: { seizedStatus: "Sold", "soldDetails.soldDate": { $gte: startDate, $lte: endDate } } },
+  {
+    $lookup: {
+      from: "emis",
+      let: { loanId: "$_id" },
+      pipeline: [
+        { $match: { $expr: { $and: [{ $eq: ["$loanId", "$$loanId"] }, { $eq: ["$loanModel", "Loan"] }] }, amountPaid: { $gt: 0 }, closedWithoutPayment: { $ne: true } } },
+        { $project: { amountPaid: 1, emiAmount: 1 } },
+      ],
+      as: "paidEmis",
+    },
+  },
+  {
+    $addFields: {
+      principalRepaid: {
+        $sum: {
+          $map: {
+            input: "$paidEmis",
+            as: "e",
+            in: {
+              $multiply: [
+                { $cond: [{ $gt: ["$$e.emiAmount", 0] }, { $min: [1, { $divide: ["$$e.amountPaid", "$$e.emiAmount"] }] }, 0] },
+                { $divide: [{ $ifNull: ["$principalAmount", 0] }, { $max: [{ $ifNull: ["$tenureMonths", 1] }, 1] }] },
+              ],
+            },
+          },
+        },
+      },
+    },
+  },
+  {
+    $addFields: {
+      saleGain: {
+        $subtract: [
+          { $ifNull: ["$soldDetails.totalAmount", "$soldDetails.sellAmount", 0] },
+          { $subtract: [{ $ifNull: ["$principalAmount", 0] }, "$principalRepaid"] },
+        ],
+      },
+    },
+  },
+  { $group: { _id: groupId, total: { $sum: "$saleGain" } } },
+];
+
+// Profit per date bucket (the 10 profit components, bucketed by `groupFormat`).
 // Shared by getProfitStats (Profit Trend chart) and getTrendStats (the profit
 // line on the Total Growth Trend chart) so both always use the identical profit
 // definition. Returns { "2026-09": 475000, ... }.
@@ -1092,6 +1145,7 @@ const profitTrendMap = async (startDate, endDate, groupFormat) => {
     weeklyForeclosureTrend,
     dailyForeclosureTrend,
     interestEmiProfitTrend,
+    vehicleSaleGainTrend,
   ] = await Promise.all([
     EMI.aggregate([
       { $match: { loanModel: "Loan", status: "Paid", closedWithoutPayment: { $ne: true }, paymentDate: { $gte: startDate, $lte: endDate } } },
@@ -1146,6 +1200,7 @@ const profitTrendMap = async (startDate, endDate, groupFormat) => {
       { $match: { status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
       { $group: { _id: { $dateToString: { format: groupFormat, date: "$paymentDate" } }, total: { $sum: "$interestAmount" } } },
     ]),
+    Loan.aggregate(vehicleSaleGainPipeline(startDate, endDate, { $dateToString: { format: groupFormat, date: "$soldDetails.soldDate" } })),
   ]);
 
   const trendMap = {};
@@ -1159,6 +1214,7 @@ const profitTrendMap = async (startDate, endDate, groupFormat) => {
     weeklyForeclosureTrend,
     dailyForeclosureTrend,
     interestEmiProfitTrend,
+    vehicleSaleGainTrend,
   ].forEach((resultSet) => {
     resultSet.forEach((item) => {
       if (!item._id) return;
@@ -1185,6 +1241,7 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
     weeklyForeclosure,
     dailyForeclosure,
     interestEmiProfit,
+    vehicleSaleGain,
 
     // ---- Expected profit next month (range-independent) ----
     expectedVehicle,
@@ -1258,6 +1315,8 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
       { $match: { status: "Paid", paymentDate: { $gte: startDate, $lte: endDate } } },
       { $group: { _id: null, total: { $sum: "$interestAmount" } } },
     ]),
+    // Vehicle sale gain / loss (sale price minus the principal still unpaid), on the sale date
+    Loan.aggregate(vehicleSaleGainPipeline(startDate, endDate, null)),
 
     // Expected profit next month - Vehicle: interest portion of every Active or For Seizing loan's EMI
     // (For Seizing counted since 2026-10-23, Karthik: the customer still owes; Seized is excluded)
@@ -1275,7 +1334,7 @@ const getProfitStats = asyncHandler(async (req, res, next) => {
   ]);
 
   const breakdown = {
-    monthly: Math.round(sumTotal(vehicleEmiInterest) + sumTotal(vehicleProcessingFee) + sumTotal(vehicleForeclosure) + sumTotal(vehicleOverdue)),
+    monthly: Math.round(sumTotal(vehicleEmiInterest) + sumTotal(vehicleProcessingFee) + sumTotal(vehicleForeclosure) + sumTotal(vehicleOverdue) + sumTotal(vehicleSaleGain)),
     weekly: Math.round(sumTotal(weeklyProcessingFee) + sumTotal(weeklyForeclosure)),
     daily: Math.round(sumTotal(dailyProcessingFee) + sumTotal(dailyForeclosure)),
     interest: Math.round(sumTotal(interestEmiProfit)),
@@ -2075,6 +2134,7 @@ const snapshotAfterStats = (req, res, next) => {
 };
 
 module.exports = {
+  computeMonthActual,
   recordMonthlySnapshot,
   snapshotAfterStats,
   SNAPSHOT_START_MONTH,
