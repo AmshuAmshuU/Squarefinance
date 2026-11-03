@@ -176,10 +176,15 @@ function vehicleLoanFlows(loan, emis, asOfDate = new Date()) {
   const effectiveClosureDate = isClosed ? (forecloseDate || soldDate || latestPaidEmiDate(emis)) : null;
   const wasStillOpen = !isClosed || !effectiveClosureDate || asOfDate < effectiveClosureDate;
 
+  // A loan that is Closed today but was still open as of asOfDate (foreclosed / sold LATER): its remaining
+  // EMIs are flagged closedWithoutPayment today, but back then they were still genuinely expected. Dropping
+  // them while the settlement (dated after asOfDate) is not counted made every past date look too low.
+  const closedLater = isClosed && !!effectiveClosureDate && asOfDate < effectiveClosureDate;
+
   if (wasStillOpen) {
     for (const emi of emis) {
       const wasPaidByThen = emi.status === "Paid" && !emi.closedWithoutPayment && emi.amountPaid && emi.paymentDate && new Date(emi.paymentDate) <= asOfDate;
-      if (wasPaidByThen || emi.closedWithoutPayment) continue; // already counted, or a phantom bulk-close entry
+      if (wasPaidByThen || (emi.closedWithoutPayment && !closedLater)) continue; // already counted, or a phantom bulk-close entry
       // Always the EMI's own due date here; computeROI() moves any that are
       // already past asOfDate (overdue, unpaid) onto asOfDate itself.
       future.push({ date: emi.dueDate ? new Date(emi.dueDate) : asOfDate, amount: emi.emiAmount || 0 });
@@ -218,10 +223,13 @@ function weeklyDailyLoanFlows(loan, emis, asOfDate = new Date()) {
   const effectiveClosureDate = isClosed ? (forecloseDate || latestPaidEmiDate(emis)) : null;
   const wasStillOpen = !isClosed || !effectiveClosureDate || asOfDate < effectiveClosureDate;
 
+  // Same as the vehicle builder: EMIs bulk-closed by a LATER foreclosure were still expected as of asOfDate
+  const closedLater = isClosed && !!effectiveClosureDate && asOfDate < effectiveClosureDate;
+
   if (wasStillOpen) {
     for (const emi of emis) {
       const wasPaidByThen = emi.status === "Paid" && !emi.closedWithoutPayment && emi.amountPaid && emi.paymentDate && new Date(emi.paymentDate) <= asOfDate;
-      if (wasPaidByThen || emi.closedWithoutPayment) continue;
+      if (wasPaidByThen || (emi.closedWithoutPayment && !closedLater)) continue;
       future.push({ date: emi.dueDate ? new Date(emi.dueDate) : asOfDate, amount: emi.emiAmount || 0 });
     }
   }
