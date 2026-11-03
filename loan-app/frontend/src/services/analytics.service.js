@@ -59,6 +59,11 @@ export const getMonthlyCollection = async (year, month) => {
   return await apiHandler(`/api/analytics/monthly-collection?year=${year}&month=${month}`);
 };
 
+// Which loans make up a red "Short" amount: type = vehicle | weekly | daily | interest
+export const getMonthlyCollectionShortfall = async (year, month, type) => {
+  return await apiHandler(`/api/analytics/monthly-collection-shortfall?year=${year}&month=${month}&type=${type}`);
+};
+
 // Every month in the range ("3" | "6" | "12" | "all") in one call - the Collection Efficiency graph
 export const getMonthlyCollectionTrend = async (months) => {
   return await apiHandler(`/api/analytics/monthly-collection-trend?months=${months}`);

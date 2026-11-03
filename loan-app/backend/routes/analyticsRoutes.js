@@ -96,6 +96,16 @@ router.get(
   analyticsController.getMonthlyCollectionSummary
 );
 
+// Collection Efficiency card - which loans make up a red "Short" amount (read-only),
+// same access as the card itself.
+router.get(
+  "/monthly-collection-shortfall",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN", "EMPLOYEE"),
+  requireAnalyticsViewPermission,
+  analyticsController.getMonthlyCollectionShortfall
+);
+
 // Collection Efficiency graph - every month in the chosen range in one call,
 // same access as the card itself.
 router.get(

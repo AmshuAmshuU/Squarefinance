@@ -62,6 +62,14 @@ export const readSnapshot = (key) => {
   }
 };
 
+// Save a snapshot right now. useListMemory saves after React re-renders, which can be too late when the
+// very same click leaves the page (e.g. tapping a loan inside a popup) - call this in that click handler.
+export const saveSnapshotNow = (key, snapshot) => {
+  try {
+    sessionStorage.setItem(snapKey(key), JSON.stringify(snapshot));
+  } catch {}
+};
+
 // Call from a list page. `key` = the list's own route (e.g. "/admin/loans"),
 // `snapshot` = a plain object of what should survive (search, filters, page),
 // `ready` = true once the list has finished loading (scroll is restored then).

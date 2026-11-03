@@ -1680,6 +1680,102 @@ const getMonthlyCollectionSummary = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Collection Efficiency card - tap a red "Short" amount: which loans of that
+// type make it up. Read-only, same month window and same closed-loan rule as
+// getMonthlyCollectionSummary (so the numbers can never disagree with the card).
+// Per loan: shortfall = what was due that month minus what has been paid
+// against those EMIs so far (paid later still counts). Loans that paid ahead
+// (more than was due) are folded into one "paid ahead" figure, because the
+// card's Short for a type is the type's due minus its paid in total - so the
+// listed shortfalls minus the paid-ahead amount add up exactly to that number.
+const getMonthlyCollectionShortfall = asyncHandler(async (req, res, next) => {
+  const ErrorHandler = require("../utils/ErrorHandler");
+  const [cy, cm] = getTodayIST().split("-").map(Number);
+  const year = parseInt(req.query.year, 10) || cy;
+  const month = parseInt(req.query.month, 10) || cm;
+  const type = String(req.query.type || "");
+  if (month < 1 || month > 12 || year < 2000 || year > 2100) {
+    return next(new ErrorHandler("Invalid year or month", 400));
+  }
+  if (!["vehicle", "weekly", "daily", "interest"].includes(type)) {
+    return next(new ErrorHandler("Invalid loan type", 400));
+  }
+  const pad = (n) => String(n).padStart(2, "0");
+  const ny = month === 12 ? year + 1 : year;
+  const nm = month === 12 ? 1 : month + 1;
+  const range = {
+    $gte: new Date(`${year}-${pad(month)}-01T00:00:00+05:30`),
+    $lt: new Date(`${ny}-${pad(nm)}-01T00:00:00+05:30`),
+  };
+
+  const [emis, interestEmis, closedV, closedW, closedD, closedI] = await Promise.all([
+    type === "interest" ? [] : EMI.find({ dueDate: range }).select("loanId loanModel emiAmount amountPaid status closedWithoutPayment dueDate").lean(),
+    type === "interest" ? InterestEMI.find({ dueDate: range }).select("interestLoanId interestAmount amountPaid status dueDate").lean() : [],
+    Loan.find({ status: "Closed" }).select("foreclosureDate soldDetails.soldDate").lean(),
+    WeeklyLoan.find({ status: "Closed" }).select("foreclosureDate").lean(),
+    DailyLoan.find({ status: "Closed" }).select("foreclosureDate").lean(),
+    InterestLoan.find({ status: "Closed" }).select("_id").lean(),
+  ]);
+
+  const settledOn = new Map();
+  closedV.forEach((l) => settledOn.set(String(l._id), l.foreclosureDate || l.soldDetails?.soldDate || null));
+  closedW.forEach((l) => settledOn.set(String(l._id), l.foreclosureDate || null));
+  closedD.forEach((l) => settledOn.set(String(l._id), l.foreclosureDate || null));
+  closedI.forEach((l) => settledOn.set(String(l._id), null));
+
+  const isCounted = (e, loanId) => {
+    if (!settledOn.has(loanId)) return true;
+    if (e.status !== "Paid" || e.closedWithoutPayment) return false;
+    const on = settledOn.get(loanId);
+    return !(on && new Date(e.dueDate) > new Date(on));
+  };
+
+  const modelToType = { Loan: "vehicle", WeeklyLoan: "weekly", DailyLoan: "daily" };
+  const perLoan = new Map();
+  const add = (loanId, expected, collected) => {
+    const cur = perLoan.get(loanId) || { expected: 0, collected: 0 };
+    cur.expected += expected || 0;
+    cur.collected += collected || 0;
+    perLoan.set(loanId, cur);
+  };
+  for (const e of emis) {
+    if (modelToType[e.loanModel || "Loan"] !== type || !isCounted(e, String(e.loanId))) continue;
+    add(String(e.loanId), e.emiAmount, e.amountPaid);
+  }
+  for (const e of interestEmis) {
+    if (!isCounted(e, String(e.interestLoanId))) continue;
+    add(String(e.interestLoanId), e.interestAmount, e.amountPaid);
+  }
+
+  const Model = { vehicle: Loan, weekly: WeeklyLoan, daily: DailyLoan, interest: InterestLoan }[type];
+  const loans = await Model.find({ _id: { $in: [...perLoan.keys()] } }).select("loanNumber customerName").lean();
+  const info = new Map(loans.map((l) => [String(l._id), l]));
+
+  const rows = [];
+  let paidAhead = 0;
+  let netShort = 0;
+  for (const [loanId, v] of perLoan) {
+    const diff = v.expected - v.collected;
+    netShort += diff;
+    if (diff > 0) {
+      const l = info.get(loanId);
+      rows.push({ loanId, loanNumber: l?.loanNumber || "", customerName: l?.customerName || "", short: diff });
+    } else if (diff < 0) {
+      paidAhead += -diff;
+    }
+  }
+  rows.sort((a, b) => b.short - a.short || String(a.loanNumber).localeCompare(String(b.loanNumber), undefined, { numeric: true }));
+
+  sendResponse(res, 200, "success", "Monthly collection shortfall fetched", null, {
+    year,
+    month,
+    type,
+    rows,
+    paidAhead,
+    total: Math.max(0, netShort),
+  });
+});
+
 // Analytics "Book growth" card (SUPER_ADMIN/ADMIN, on-demand): per period
 // bucket and per loan type - money lent out, total collected (the
 // Collections-tab events plus Vehicle/Weekly/Daily processing fees, so All
@@ -2140,6 +2236,7 @@ module.exports = {
   SNAPSHOT_START_MONTH,
   getExpenseTrend,
   getMonthlyCollectionSummary,
+  getMonthlyCollectionShortfall,
   getMonthlyCollectionTrend,
   getBookGrowth,
   getAnalyticsStats,

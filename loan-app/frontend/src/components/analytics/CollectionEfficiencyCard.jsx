@@ -1,9 +1,12 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
-import { getMonthlyCollection, getMonthlyCollectionTrend } from "../../services/analytics.service";
+import Link from "next/link";
+import { createPortal } from "react-dom";
+import { ChevronDown, Loader2, X } from "lucide-react";
+import { getMonthlyCollection, getMonthlyCollectionShortfall, getMonthlyCollectionTrend } from "../../services/analytics.service";
 import { getTodayIST } from "../../utils/dateUtils";
 import { useUI } from "../../context/UIContext";
+import { readSnapshot, saveSnapshotNow, useListMemory } from "../../utils/backNavigation";
 
 const ROWS = [
   { key: "vehicle", label: "Vehicle" },
@@ -11,6 +14,19 @@ const ROWS = [
   { key: "daily", label: "Daily" },
   { key: "interest", label: "Interest" },
 ];
+
+// Same pages the dashboard follow-ups open (the loan in edit mode)
+const LOAN_EDIT_PATH = {
+  vehicle: "/admin/loans/edit/",
+  weekly: "/admin/weekly-loans/edit/",
+  daily: "/admin/daily-loans/edit/",
+  interest: "/admin/interest-loan/edit/",
+};
+
+// Back from a loan returns here (NavTracker remembers this page); the snapshot below brings the card back exactly as it was left
+const PAGE_KEY = "/admin/analytics";
+
+const fullAmount = (n) => `₹${Math.round(n || 0).toLocaleString("en-IN")}`;
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -66,9 +82,21 @@ const efficiency = (row) => (row && row.expected > 0 ? (row.collected / row.expe
 const CollectionEfficiencyCard = () => {
   const { isDarkMode: isDark } = useUI();
   const [currentYear, currentMonth] = getTodayIST().split("-").map(Number);
-  const [range, setRange] = useState("6");
-  const [year, setYear] = useState(currentYear);
-  const [month, setMonth] = useState(currentMonth);
+  // Only present when the page was just opened by Back from a loan
+  const restored = useRef(undefined);
+  if (restored.current === undefined) restored.current = readSnapshot(PAGE_KEY) || null;
+  const snap = restored.current;
+  const [range, setRange] = useState(snap?.range || "6");
+  const [year, setYear] = useState(snap?.year || currentYear);
+  const [month, setMonth] = useState(snap?.month || currentMonth);
+  const [popupType, setPopupType] = useState(snap?.popupType || null);
+  const [popupRow, setPopupRow] = useState(snap?.popupRow || null);
+  const [popupScroll, setPopupScroll] = useState(snap?.popupScroll || 0);
+  const [popup, setPopup] = useState(null);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupError, setPopupError] = useState(null);
+  const popupListRef = useRef(null);
+  const pendingPopupScroll = useRef(snap?.popupType ? snap.popupScroll || 0 : null);
   const [series, setSeries] = useState([]);
   const [seriesLoading, setSeriesLoading] = useState(true);
   const [seriesError, setSeriesError] = useState(false);
@@ -133,6 +161,67 @@ const CollectionEfficiencyCard = () => {
     setMonth(m.month);
   };
 
+  // Back from a loan: put the whole page back (scroll) with the card as it was left
+  useListMemory(PAGE_KEY, { range, year, month, popupType, popupRow, popupScroll }, !seriesLoading);
+
+  // The "who is short" list for the tapped type
+  useEffect(() => {
+    if (!popupType) return undefined;
+    let cancelled = false;
+    setPopup(null);
+    setPopupError(null);
+    setPopupLoading(true);
+    getMonthlyCollectionShortfall(year, month, popupType)
+      .then((res) => {
+        if (!cancelled) setPopup(res.data || null);
+      })
+      .catch((err) => {
+        if (!cancelled) setPopupError(err.message || "Failed to load the list");
+      })
+      .finally(() => {
+        if (!cancelled) setPopupLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [popupType, year, month]);
+
+  // Once the list is there, put it back at the same scroll position (only after coming Back)
+  useEffect(() => {
+    if (!popup || popupLoading || pendingPopupScroll.current === null) return;
+    const y = pendingPopupScroll.current;
+    pendingPopupScroll.current = null;
+    if (popupListRef.current) popupListRef.current.scrollTop = y;
+  }, [popup, popupLoading]);
+
+  // Popup open: page behind it does not scroll, Esc closes it
+  useEffect(() => {
+    if (!popupType) return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e) => {
+      if (e.key === "Escape") closePopup();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [popupType]);
+
+  const openPopup = (type) => {
+    pendingPopupScroll.current = null;
+    setPopupRow(null);
+    setPopupScroll(0);
+    setPopupType(type);
+  };
+  const closePopup = () => {
+    setPopupType(null);
+    setPopupRow(null);
+    setPopupScroll(0);
+    setPopup(null);
+  };
+
   const selectClass =
     "flex-1 min-w-0 appearance-none pl-3 pr-7 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer hover:bg-slate-100/50";
 
@@ -144,6 +233,11 @@ const CollectionEfficiencyCard = () => {
   const mutedColor = isDark ? "#94a3b8" : "#94a3b8";
   const subColor = isDark ? "#cbd5e1" : "#475569";
   const ringColor = isDark ? "#f1f5f9" : "#0f172a";
+
+  // The popup lives on document.body (outside the card), so it carries its own light / dark colours
+  const pop = isDark
+    ? { bg: "#1e293b", text: "#f1f5f9", name: "#cbd5e1", muted: "#94a3b8", line: "rgba(255,255,255,0.08)", chip: "rgba(255,255,255,0.1)", foot: "rgba(255,255,255,0.04)", link: "#7db4ff", red: "#f87171", mark: "rgba(251,191,36,0.16)" }
+    : { bg: "#ffffff", text: "#0f172a", name: "#334155", muted: "#94a3b8", line: "#f1f5f9", chip: "#f1f5f9", foot: "#f8fafc", link: "#2563eb", red: "#dc2626", mark: "#fffbeb" };
 
   const paidPercent = (row) => {
     const pct = efficiency(row);
@@ -323,7 +417,19 @@ const CollectionEfficiencyCard = () => {
                         {paidPercent(row)}
                       </td>
                       <td className={`px-1 sm:px-6 py-1.5 text-xs font-bold text-right whitespace-nowrap ${row.short > 0 ? "text-red-600" : "text-slate-400"}`}>
-                        {formatAmount(row.short)}
+                        {row.short > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => openPopup(key)}
+                            aria-label={`Show the ${label.toLowerCase()} loans that are short`}
+                            className="font-bold underline decoration-dotted underline-offset-4 cursor-pointer"
+                            style={{ touchAction: "manipulation" }}
+                          >
+                            {formatAmount(row.short)}
+                          </button>
+                        ) : (
+                          formatAmount(row.short)
+                        )}
                       </td>
                     </tr>
                   );
@@ -348,6 +454,101 @@ const CollectionEfficiencyCard = () => {
           </p>
         </>
       )}
+
+      {popupType &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center bg-slate-900/50 sm:p-4"
+            onClick={closePopup}
+            role="presentation"
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Loans that are short"
+              className="w-full sm:max-w-md max-h-[85vh] flex flex-col rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
+              style={{ background: pop.bg, color: pop.text }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3"
+                style={{ borderBottom: `1px solid ${pop.line}` }}>
+                <div className="min-w-0">
+                  <h4 className="text-sm font-black tracking-tight" style={{ color: pop.text }}>
+                    {ROWS.find((r) => r.key === popupType)?.label} loans · {MONTHS[month - 1]} {year}
+                  </h4>
+                  <p className="text-[10px] font-bold uppercase tracking-wide mt-0.5" style={{ color: pop.muted }}>Still unpaid today</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closePopup}
+                  aria-label="Close"
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full cursor-pointer"
+                  style={{ background: pop.chip, color: pop.muted }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div
+                ref={popupListRef}
+                className="flex-1 overflow-y-auto"
+                onScroll={(e) => setPopupScroll(Math.round(e.currentTarget.scrollTop))}
+              >
+                {popupLoading ? (
+                  <div className="p-10 flex flex-col items-center justify-center">
+                    <Loader2 className="w-6 h-6 text-primary animate-spin mb-2" />
+                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest">Loading...</p>
+                  </div>
+                ) : popupError ? (
+                  <div className="p-8 text-center text-red-500 text-xs font-bold uppercase tracking-tight">{popupError}</div>
+                ) : popup && popup.rows.length === 0 ? (
+                  <div className="p-8 text-center text-xs font-bold" style={{ color: pop.muted }}>No loan is short for this month.</div>
+                ) : popup ? (
+                  <ul>
+                    {popup.rows.map((r) => (
+                      <li
+                        key={r.loanId}
+                        className="flex items-center gap-3 px-4 py-2.5"
+                        style={{ borderTop: `1px solid ${pop.line}`, background: popupRow === r.loanId ? pop.mark : "transparent" }}
+                      >
+                        <Link
+                          href={`${LOAN_EDIT_PATH[popupType]}${r.loanId}`}
+                          onClick={() => {
+                            // Saved right now (not after the re-render) because this same tap leaves the page
+                            const y = Math.round(popupListRef.current?.scrollTop || 0);
+                            saveSnapshotNow(PAGE_KEY, { range, year, month, popupType, popupRow: r.loanId, popupScroll: y });
+                            setPopupRow(r.loanId);
+                          }}
+                          className="shrink-0 min-w-[40px] text-xs font-black underline underline-offset-2"
+                          style={{ color: pop.link }}
+                        >
+                          {r.loanNumber || "—"}
+                        </Link>
+                        <span className="flex-1 min-w-0 truncate text-xs font-bold uppercase" style={{ color: pop.name }}>{r.customerName}</span>
+                        <span className="shrink-0 text-xs font-black" style={{ color: pop.red }}>{fullAmount(r.short)}</span>
+                      </li>
+                    ))}
+                    {popup.paidAhead > 0 && (
+                      <li className="flex items-center justify-between gap-3 px-4 py-2.5" style={{ borderTop: `1px solid ${pop.line}` }}>
+                        <span className="text-[11px] font-bold" style={{ color: pop.muted }}>Paid ahead on other loans</span>
+                        <span className="text-[11px] font-black" style={{ color: pop.muted }}>−{fullAmount(popup.paidAhead)}</span>
+                      </li>
+                    )}
+                  </ul>
+                ) : null}
+              </div>
+
+              {popup && !popupLoading && !popupError && (
+                <div className="flex items-center justify-between gap-3 px-4 py-3" style={{ borderTop: `1px solid ${pop.line}`, background: pop.foot }}>
+                  <span className="text-xs font-black" style={{ color: pop.text }}>Total short</span>
+                  <span className="text-sm font-black" style={{ color: pop.red }}>{fullAmount(popup.total)}</span>
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };
