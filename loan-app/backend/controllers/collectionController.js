@@ -88,6 +88,7 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
     emiNo: e.emiNo || "-",
     isFinalEmi: !!e.isFinalEmi,
     customerName: e.customerName || "Unknown",
+    vehicleNumber: e.vehicleNumber || "",
     emiAmount: e.emiAmount || 0,
     overdueAmount: e.overdueAmount || 0,
     totalAmount: e.totalAmount || 0,

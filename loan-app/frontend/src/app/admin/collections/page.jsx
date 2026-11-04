@@ -344,7 +344,13 @@ const CollectionsPage = () => {
                   </svg>
                 )}
               </td>
-              <td className="px-4 py-4 text-xs font-bold text-slate-600 uppercase whitespace-nowrap truncate max-w-[150px]">{item.customerName}</td>
+              {/* Vehicle loans: the vehicle number sits right under the name, so the cell uses less vertical padding to keep the row height unchanged */}
+              <td className={`px-4 ${item.loanModel === "Loan" && item.vehicleNumber ? "py-2.5" : "py-4"} text-xs font-bold text-slate-600 uppercase whitespace-nowrap truncate max-w-[150px]`}>
+                {item.customerName}
+                {item.loanModel === "Loan" && item.vehicleNumber && (
+                  <span className="block text-[10px] leading-[11px] font-bold italic normal-case text-slate-400 truncate">({item.vehicleNumber})</span>
+                )}
+              </td>
               <td className={`px-4 py-4 text-xs text-right font-black whitespace-nowrap ${amountClass(item.paymentType)}`}>
                 ₹{(item.totalAmount ?? item.amount ?? 0).toLocaleString()}
               </td>

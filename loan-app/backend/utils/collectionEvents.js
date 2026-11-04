@@ -57,7 +57,7 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
     // it's not shown anywhere - foreclosure/soldDetails have no per-event
     // timestamp of their own, so the loan document's own last-saved time
     // is the best available stand-in for "when this was actually entered".
-    Loan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode soldDetails updatedAt").lean(),
+    Loan.find({}).select("loanNumber customerName vehicleNumber foreclosureDate foreclosureAmount foreclosedBy paymentMode soldDetails updatedAt").lean(),
     // updatedBy is required here even though paymentHistory entries carry
     // their own addedBy - overdue entries have no per-entry attribution
     // field, so addEmiEvents() below falls back to the EMI's own updatedBy
@@ -115,6 +115,7 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
           loanModel,
           loanNumber: loan.loanNumber,
           customerName: loan.customerName,
+          vehicleNumber: loanModel === "Loan" ? loan.vehicleNumber : undefined, // shown under the name on the Collections page
           emiNo: emi.emiNumber,
           emiAmount: ph.amount,
           overdueAmount: 0,
@@ -137,6 +138,7 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
           loanModel,
           loanNumber: loan.loanNumber,
           customerName: loan.customerName,
+          vehicleNumber: loanModel === "Loan" ? loan.vehicleNumber : undefined, // shown under the name on the Collections page
           emiNo: emi.emiNumber,
           emiAmount: 0,
           overdueAmount: ov.amount,
@@ -162,7 +164,7 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
     addEmiEvents(loan, "Loan", "Monthly", vehicleEmisByLoan[String(loan._id)] || []);
     if (loan.foreclosureDate && loan.foreclosureAmount) {
       events.push({
-        loanId: loan._id, loanModel: "Loan", loanNumber: loan.loanNumber, customerName: loan.customerName,
+        loanId: loan._id, loanModel: "Loan", loanNumber: loan.loanNumber, customerName: loan.customerName, vehicleNumber: loan.vehicleNumber,
         emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: loan.foreclosureAmount,
         paymentType: "Foreclosure", paymentMode: loan.paymentMode || "",
         date: loan.foreclosureDate, sortAt: loan.updatedAt || loan.foreclosureDate,
@@ -171,7 +173,7 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
     }
     if (loan.soldDetails?.totalAmount && loan.soldDetails?.soldDate) {
       events.push({
-        loanId: loan._id, loanModel: "Loan", loanNumber: loan.loanNumber, customerName: loan.customerName,
+        loanId: loan._id, loanModel: "Loan", loanNumber: loan.loanNumber, customerName: loan.customerName, vehicleNumber: loan.vehicleNumber,
         emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: loan.soldDetails.totalAmount,
         paymentType: "Vehicle Sale", paymentMode: loan.soldDetails.paymentMode || "",
         date: loan.soldDetails.soldDate, sortAt: loan.updatedAt || loan.soldDetails.soldDate,
