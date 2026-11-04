@@ -1601,6 +1601,15 @@ const getPartners = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Collection Efficiency: what counts as "paid" for one EMI. On a CLOSED loan an EMI that the card still
+// counts (marked Paid, not a bulk-closed leftover, due on or before the settlement) was settled when the
+// loan was closed - the customer cleared everything - so it counts as fully paid even when the EMI's own
+// amountPaid is lower (balance cleared by the foreclosure/closing payment, e.g. loan 52 EMI 3 paid 3,400 of
+// 5,400) or higher (a whole-loan payoff keyed against one EMI, e.g. D1 EMI 76 holding 25,000 - capped, and
+// its leftover EMIs, marked Paid with nothing recorded, are filled instead, so the lump is spread over the
+// months it covered). Open loans still use amountPaid exactly as before.
+const emiPaidForCard = (loanIsClosed, due, amountPaid) => (loanIsClosed ? due || 0 : amountPaid || 0);
+
 // Analytics "Collection efficiency" card (open to every role that can see
 // Analytics): for a chosen calendar month (IST), per loan type, what was due
 // vs how much of THOSE SPECIFIC EMIs has been paid - same idea as the
@@ -1659,12 +1668,12 @@ const getMonthlyCollectionSummary = asyncHandler(async (req, res, next) => {
     const type = modelToType[e.loanModel || "Loan"];
     if (!type || !isCounted(e, String(e.loanId))) continue;
     acc[type].expected += e.emiAmount || 0;
-    acc[type].collected += e.amountPaid || 0;
+    acc[type].collected += emiPaidForCard(settledOn.has(String(e.loanId)), e.emiAmount, e.amountPaid);
   }
   for (const e of interestEmis) {
     if (!isCounted(e, String(e.interestLoanId))) continue;
     acc.interest.expected += e.interestAmount || 0;
-    acc.interest.collected += e.amountPaid || 0;
+    acc.interest.collected += emiPaidForCard(settledOn.has(String(e.interestLoanId)), e.interestAmount, e.amountPaid);
   }
 
   const finish = (a) => ({ expected: a.expected, collected: a.collected, short: Math.max(0, a.expected - a.collected) });
@@ -1740,11 +1749,11 @@ const getMonthlyCollectionShortfall = asyncHandler(async (req, res, next) => {
   };
   for (const e of emis) {
     if (modelToType[e.loanModel || "Loan"] !== type || !isCounted(e, String(e.loanId))) continue;
-    add(String(e.loanId), e.emiAmount, e.amountPaid);
+    add(String(e.loanId), e.emiAmount, emiPaidForCard(settledOn.has(String(e.loanId)), e.emiAmount, e.amountPaid));
   }
   for (const e of interestEmis) {
     if (!isCounted(e, String(e.interestLoanId))) continue;
-    add(String(e.interestLoanId), e.interestAmount, e.amountPaid);
+    add(String(e.interestLoanId), e.interestAmount, emiPaidForCard(settledOn.has(String(e.interestLoanId)), e.interestAmount, e.amountPaid));
   }
 
   const Model = { vehicle: Loan, weekly: WeeklyLoan, daily: DailyLoan, interest: InterestLoan }[type];
@@ -2014,13 +2023,13 @@ const getMonthlyCollectionTrend = asyncHandler(async (req, res, next) => {
     const type = modelToType[e.loanModel || "Loan"];
     if (!acc || !type || !isCounted(e, String(e.loanId))) continue;
     acc[type].expected += e.emiAmount || 0;
-    acc[type].collected += e.amountPaid || 0;
+    acc[type].collected += emiPaidForCard(settledOn.has(String(e.loanId)), e.emiAmount, e.amountPaid);
   }
   for (const e of interestEmis) {
     const acc = byMonth[monthKeyIST(e.dueDate)];
     if (!acc || !isCounted(e, String(e.interestLoanId))) continue;
     acc.interest.expected += e.interestAmount || 0;
-    acc.interest.collected += e.amountPaid || 0;
+    acc.interest.collected += emiPaidForCard(settledOn.has(String(e.interestLoanId)), e.interestAmount, e.amountPaid);
   }
 
   const finish = (a) => ({ expected: a.expected, collected: a.collected, short: Math.max(0, a.expected - a.collected) });
