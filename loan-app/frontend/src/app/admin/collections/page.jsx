@@ -348,7 +348,7 @@ const CollectionsPage = () => {
               <td className={`px-4 ${item.loanModel === "Loan" && item.vehicleNumber ? "py-2.5" : "py-4"} text-xs font-bold text-slate-600 uppercase whitespace-nowrap truncate max-w-[150px]`}>
                 {item.customerName}
                 {item.loanModel === "Loan" && item.vehicleNumber && (
-                  <span className="block text-[10px] leading-[11px] font-bold italic normal-case text-slate-400 truncate">({item.vehicleNumber})</span>
+                  <span className="block text-[10px] leading-[11px] font-bold italic normal-case truncate">({item.vehicleNumber})</span>
                 )}
               </td>
               <td className={`px-4 py-4 text-xs text-right font-black whitespace-nowrap ${amountClass(item.paymentType)}`}>
