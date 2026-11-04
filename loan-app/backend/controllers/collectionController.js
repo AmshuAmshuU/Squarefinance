@@ -69,6 +69,16 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
   const total = events.length;
   const grandTotalAmount = events.reduce((acc, e) => acc + (e.totalAmount || 0), 0);
 
+  // Cash vs online split of the same total (shown beside the green Total Collection figure). Modes are stored
+  // with mixed spelling (Cash / CASH, Online / ONLINE, PhonePe, GPay), so they are compared upper-cased: CASH is
+  // cash, CHEQUE is cheque, everything else (Online, PhonePe, GPay, UPI, no mode recorded) counts as online.
+  const modeSplit = { cash: 0, online: 0, cheque: 0 };
+  for (const e of events) {
+    const mode = String(e.paymentMode || "").trim().toUpperCase();
+    const key = mode === "CASH" ? "cash" : mode === "CHEQUE" ? "cheque" : "online";
+    modeSplit[key] += e.totalAmount || 0;
+  }
+
   const pageEvents = events.slice(skip, skip + limitNum);
 
   const formattedTransactions = pageEvents.map((e) => ({
@@ -98,7 +108,10 @@ const getCollectionTransactions = asyncHandler(async (req, res, next) => {
       transactions: formattedTransactions,
       totalCollectedAmount: formattedTransactions.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0),
       summary: {
-        totalAmount: grandTotalAmount
+        totalAmount: grandTotalAmount,
+        cashAmount: modeSplit.cash,
+        onlineAmount: modeSplit.online,
+        chequeAmount: modeSplit.cheque,
       },
       pagination: {
         total,

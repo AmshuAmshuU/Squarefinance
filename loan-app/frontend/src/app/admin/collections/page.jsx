@@ -39,6 +39,8 @@ const CollectionsPage = () => {
     loans: 0,
     expenses: 0
   });
+  // Cash / online split of the Total Collection figure (shown in brackets beside it)
+  const [collectionSplit, setCollectionSplit] = useState({ cash: 0, online: 0, cheque: 0 });
 
   // Collections category breakdown - open to all roles, fetched on-demand
   // only when the card is expanded, never prefetched alongside the main list.
@@ -69,6 +71,11 @@ const CollectionsPage = () => {
         setCollections(res.data.transactions || []);
         if (res.data.summary) {
           setSummaryTotals(prev => ({ ...prev, collections: res.data.summary.totalAmount }));
+          setCollectionSplit({
+            cash: res.data.summary.cashAmount || 0,
+            online: res.data.summary.onlineAmount || 0,
+            cheque: res.data.summary.chequeAmount || 0,
+          });
         }
         if (res.data.pagination) {
           setPagination(prev => ({
@@ -584,7 +591,14 @@ const CollectionsPage = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 9l6 6 6-6" />
                           </svg>
                         </div>
-                        <span className="text-2xl font-black text-emerald-600 tracking-tighter mt-0.5">₹{summaryTotals.collections.toLocaleString()}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-2xl font-black text-emerald-600 tracking-tighter">₹{summaryTotals.collections.toLocaleString()}</span>
+                          <span className="flex flex-col text-[9px] leading-[11px] font-bold text-slate-400 whitespace-nowrap">
+                            <span>(Cash ₹{collectionSplit.cash.toLocaleString()})</span>
+                            <span>(Online ₹{collectionSplit.online.toLocaleString()})</span>
+                            {collectionSplit.cheque > 0 && <span>(Cheque ₹{collectionSplit.cheque.toLocaleString()})</span>}
+                          </span>
+                        </div>
                       </div>
                       {breakdownOpen && (
                         <div className="border-t border-slate-100">
