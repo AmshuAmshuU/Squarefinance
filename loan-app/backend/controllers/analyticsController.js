@@ -1514,9 +1514,17 @@ const getBusinessROI = asyncHandler(async (req, res, next) => {
 // "we put in 1.55cr in total, expenses included":
 //   Cash on hand = Our Investment - (Disbursed + Expenses - Collected)
 //   Company Valuation = Outstanding Loan Book + Cash on hand
-// Future fresh partner capital is deliberately not handled here yet.
-const OUR_INVESTMENT_FROZEN_AMOUNT = 15500000; // Rs 1,55,00,000
-const OUR_INVESTMENT_FROZEN_DATE = "2026-09-25";
+// Fresh partner capital (2026-11-07): the 1.55cr became 1.65cr when Rs 10,00,000 from a 60-month credit line
+// (EMI Rs 23,500) was put into the business by the partners in their existing share percentages, so stakes
+// did not change. Every change to the agreed capital is kept in OUR_INVESTMENT_HISTORY (oldest first) so the
+// card can always show what the figure was on which date; the LAST entry is the current Our Investment.
+// To record a future change, append one entry - nothing else needs editing.
+const OUR_INVESTMENT_HISTORY = [
+  { date: "2026-09-25", amount: 15500000, note: "Agreed by the partners - capital contributions stopped" },
+  { date: "2026-11-07", amount: 16500000, note: "Rs 10,00,000 added from the 60-month credit line, in the partners' existing share percentages" },
+];
+const OUR_INVESTMENT_FROZEN_AMOUNT = OUR_INVESTMENT_HISTORY[OUR_INVESTMENT_HISTORY.length - 1].amount;
+const OUR_INVESTMENT_FROZEN_DATE = OUR_INVESTMENT_HISTORY[OUR_INVESTMENT_HISTORY.length - 1].date;
 
 // Always "as of now" - no historical date picker (unlike ROI), since this
 // is meant as a regular here-and-now check-in, not a historical lookback.
@@ -1546,6 +1554,7 @@ const computeCompanyValuation = async () => {
     cashOnHand,
     ourInvestment,
     ourInvestmentFrozenDate: OUR_INVESTMENT_FROZEN_DATE,
+    ourInvestmentHistory: OUR_INVESTMENT_HISTORY,
     growthMultiple,
     totalCollected: roi.collectedSoFar,
     totalDisbursed: roi.disbursed,

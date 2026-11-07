@@ -255,7 +255,9 @@ const addAnalyticsSummarySheet = (workbook, summary = {}, extras = null) => {
       dataRow(["Company Valuation", money(v.companyValuation)], { bold: true });
       dataRow(["Outstanding Loan Book", money(v.outstandingLoanBook)]);
       dataRow(["Cash on Hand", money(v.cashOnHand)]);
-      dataRow([`Our Investment (frozen as of ${v.ourInvestmentFrozenDate})`, money(v.ourInvestment)]);
+      dataRow([`Our Investment (fixed as of ${v.ourInvestmentFrozenDate})`, money(v.ourInvestment)]);
+      // Earlier agreed figures, newest first, so the record of what was decided on which date is in the report too
+      (v.ourInvestmentHistory || []).slice(0, -1).reverse().forEach((h) => dataRow([`   Earlier: ${h.date}`, money(h.amount)]));
       const gm = dataRow(["Growth Multiple", v.growthMultiple == null ? "N/A" : Math.round(v.growthMultiple * 100) / 100]);
       if (typeof gm.getCell(2).value === "number") gm.getCell(2).numFmt = '0.00"x"';
       dataRow(["Total Disbursed", money(v.totalDisbursed)]);
