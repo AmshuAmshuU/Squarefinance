@@ -110,6 +110,13 @@ export const getTodayCollectionSummary = async () => {
   });
 };
 
+// Which loans make up a green Paid amount on the Today's Collections card: type = vehicle | weekly | daily | interest
+export const getTodayCollectionPaid = async (type) => {
+  return await apiHandler(`/api/loans/today-collection-paid?type=${type}`, {
+    method: "GET",
+  });
+};
+
 export const getPendingEmiDetails = async (id) => {
   return await apiHandler(`/api/loans/pending-details/${id}`, {
     method: "GET",

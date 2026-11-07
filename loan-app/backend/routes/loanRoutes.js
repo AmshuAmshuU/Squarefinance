@@ -14,6 +14,7 @@ const {
   getFollowupDashboardSummary,
   getRtoWorkDashboardSummary,
   getTodayCollectionSummary,
+  getTodayCollectionPaid,
   getPendingEmiDetails,
   updatePaymentStatus,
   getForeclosureLoans,
@@ -90,6 +91,7 @@ router.get("/followups", getFollowupLoans);
 router.get("/followup-summary", getFollowupDashboardSummary);
 router.get("/rto-work-summary", getRtoWorkDashboardSummary);
 router.get("/today-collection-summary", getTodayCollectionSummary);
+router.get("/today-collection-paid", getTodayCollectionPaid);
 router.get("/foreclosure", getForeclosureLoans);
 router.get("/seized-vehicles", getSeizedVehicles);
 router.patch(

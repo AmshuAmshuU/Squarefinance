@@ -1,7 +1,9 @@
 "use client";
-import React, { useState } from "react";
-import { getTodayCollectionSummary } from "../../services/loan.service";
+import React, { useEffect, useState } from "react";
+import { getTodayCollectionSummary, getTodayCollectionPaid } from "../../services/loan.service";
 import { Loader2, RefreshCw } from "lucide-react";
+import LoanListPopup from "./LoanListPopup";
+import { readSnapshot } from "../../utils/backNavigation";
 
 const ROWS = [
   { key: "vehicle", label: "Vehicle" },
@@ -9,6 +11,31 @@ const ROWS = [
   { key: "daily", label: "Daily" },
   { key: "interest", label: "Interest" },
 ];
+
+// Same pages the dashboard follow-ups open (the loan in edit mode)
+const LOAN_EDIT_PATH = {
+  vehicle: "/admin/loans/edit/",
+  weekly: "/admin/weekly-loans/edit/",
+  daily: "/admin/daily-loans/edit/",
+  interest: "/admin/interest-loan/edit/",
+};
+
+// Back from a loan returns to the dashboard: the card reopens as it was left (checked, popup open, same place in
+// the list). Kept in its own sessionStorage slot, because the follow-ups card already owns the page's snapshot.
+const MEMORY_KEY = "sf_dash_collections";
+const readMemory = () => {
+  try {
+    if (!readSnapshot("/admin/dashboard")) return null; // only when this page was just opened by Back
+    return JSON.parse(sessionStorage.getItem(MEMORY_KEY));
+  } catch {
+    return null;
+  }
+};
+const writeMemory = (value) => {
+  try {
+    sessionStorage.setItem(MEMORY_KEY, JSON.stringify(value));
+  } catch {}
+};
 
 // Abbreviated for mobile - a full "₹42,300" forces horizontal scroll on a
 // phone-width screen once all 4 columns are shown side by side. Karthik's
@@ -26,6 +53,13 @@ const TodayCollectionCard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [memory] = useState(readMemory);
+  const [popupType, setPopupType] = useState(memory?.popupType || null);
+  const [popupRow, setPopupRow] = useState(memory?.popupRow || null);
+  const [popupScroll, setPopupScroll] = useState(memory?.popupScroll || 0);
+  const [popup, setPopup] = useState(null);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupError, setPopupError] = useState(null);
 
   const handleCheck = async () => {
     try {
@@ -38,6 +72,50 @@ const TodayCollectionCard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Coming back from a loan: run the check again straight away so the card (and popup) are there as left
+  useEffect(() => {
+    if (memory?.checked) handleCheck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    writeMemory({ checked: !!data, popupType, popupRow, popupScroll });
+  }, [data, popupType, popupRow, popupScroll]);
+
+  // The "who paid" list for the tapped type
+  useEffect(() => {
+    if (!popupType) return undefined;
+    let cancelled = false;
+    setPopup(null);
+    setPopupError(null);
+    setPopupLoading(true);
+    getTodayCollectionPaid(popupType)
+      .then((res) => {
+        if (!cancelled) setPopup(res.data || null);
+      })
+      .catch((err) => {
+        if (!cancelled) setPopupError(err.message || "Failed to load the list");
+      })
+      .finally(() => {
+        if (!cancelled) setPopupLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [popupType]);
+
+  const openPopup = (type) => {
+    setPopupRow(null);
+    setPopupScroll(0);
+    setPopupType(type);
+  };
+  const closePopup = () => {
+    setPopupType(null);
+    setPopupRow(null);
+    setPopupScroll(0);
+    setPopup(null);
   };
 
   return (
@@ -82,7 +160,19 @@ const TodayCollectionCard = () => {
                       {formatAmount(row.expected)}
                     </td>
                     <td className="px-3 sm:px-6 py-3 text-xs font-bold text-emerald-600 text-right">
-                      {formatAmount(row.collected)}
+                      {row.collected > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => openPopup(key)}
+                          aria-label={`Show the ${label.toLowerCase()} loans that paid`}
+                          className="font-bold underline decoration-dotted underline-offset-4 cursor-pointer"
+                          style={{ touchAction: "manipulation" }}
+                        >
+                          {formatAmount(row.collected)}
+                        </button>
+                      ) : (
+                        formatAmount(row.collected)
+                      )}
                     </td>
                     <td className={`px-3 sm:px-6 py-3 text-xs font-bold text-right ${row.short > 0 ? "text-red-600" : "text-slate-400"}`}>
                       {formatAmount(row.short)}
@@ -105,6 +195,31 @@ const TodayCollectionCard = () => {
             </tbody>
           </table>
         </div>
+      )}
+
+      {popupType && (
+        <LoanListPopup
+          title={`${ROWS.find((r) => r.key === popupType)?.label} loans · Today`}
+          subtitle="Paid against today's EMIs"
+          loading={popupLoading}
+          error={popupError}
+          rows={popup?.rows || null}
+          amountKey="paid"
+          amountColor="green"
+          footerLabel="Total paid"
+          footerAmount={popup?.total}
+          emptyText="Nothing has been paid against today's EMIs yet."
+          editPathFor={(id) => `${LOAN_EDIT_PATH[popupType]}${id}`}
+          markedId={popupRow}
+          initialScroll={memory?.popupType ? memory.popupScroll || 0 : 0}
+          onScroll={setPopupScroll}
+          onOpenLoan={(r, y) => {
+            // Saved right now (not after the re-render) because this same tap leaves the page
+            writeMemory({ checked: true, popupType, popupRow: r.loanId, popupScroll: y });
+            setPopupRow(r.loanId);
+          }}
+          onClose={closePopup}
+        />
       )}
 
       <style jsx global>{`

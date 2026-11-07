@@ -2529,6 +2529,57 @@ const getTodayCollectionSummary = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Dashboard "Today's Collections" card - tap a green Paid amount: which loans make it up. Read-only, same
+// day window and same closed-loan exclusion as getTodayCollectionSummary above, so the rows always add up
+// to exactly the amount that was tapped (Paid = what has been paid against the EMIs due today).
+const getTodayCollectionPaid = asyncHandler(async (req, res, next) => {
+  const InterestEMI = require("../models/InterestEMI");
+  const type = String(req.query.type || "");
+  if (!["vehicle", "weekly", "daily", "interest"].includes(type)) {
+    return next(new ErrorHandler("Invalid loan type", 400));
+  }
+
+  const istDateStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const startOfToday = new Date(`${istDateStr}T00:00:00+05:30`);
+  const startOfTomorrow = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+  const todayRange = { $gte: startOfToday, $lt: startOfTomorrow };
+
+  const Model = { vehicle: Loan, weekly: WeeklyLoan, daily: DailyLoan, interest: InterestLoan }[type];
+  const closedIds = (await Model.find({ status: "Closed" }, "_id").lean()).map((l) => l._id);
+
+  const isInterest = type === "interest";
+  const EmiModel = isInterest ? InterestEMI : EMI;
+  const loanIdField = isInterest ? "interestLoanId" : "loanId";
+  const match = {
+    dueDate: todayRange,
+    amountPaid: { $gt: 0 },
+    [loanIdField]: { $nin: closedIds },
+  };
+  if (!isInterest) match.loanModel = { vehicle: "Loan", weekly: "WeeklyLoan", daily: "DailyLoan" }[type];
+
+  const grouped = await EmiModel.aggregate([
+    { $match: match },
+    { $group: { _id: "$" + loanIdField, paid: { $sum: "$amountPaid" } } },
+  ]);
+
+  const loans = await Model.find({ _id: { $in: grouped.map((g) => g._id) } }).select("loanNumber customerName").lean();
+  const info = new Map(loans.map((l) => [String(l._id), l]));
+  const rows = grouped
+    .map((g) => ({
+      loanId: String(g._id),
+      loanNumber: info.get(String(g._id))?.loanNumber || "",
+      customerName: info.get(String(g._id))?.customerName || "",
+      paid: g.paid,
+    }))
+    .sort((a, b) => b.paid - a.paid || String(a.loanNumber).localeCompare(String(b.loanNumber), undefined, { numeric: true }));
+
+  sendResponse(res, 200, "success", "Today's paid amounts fetched successfully", null, {
+    type,
+    rows,
+    total: rows.reduce((sum, r) => sum + r.paid, 0),
+  });
+});
+
 const updateFollowup = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { loanModel, clientResponse, nextFollowUpDate } = req.body;
@@ -3336,6 +3387,7 @@ module.exports = {
   getFollowupDashboardSummary,
   getRtoWorkDashboardSummary,
   getTodayCollectionSummary,
+  getTodayCollectionPaid,
   getPendingEmiDetails,
   updatePaymentStatus,
   getForeclosureLoans,
