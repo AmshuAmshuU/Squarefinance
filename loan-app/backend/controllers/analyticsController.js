@@ -396,11 +396,17 @@ const getAnalyticsStats = asyncHandler(async (req, res, next) => {
   // needs it inside this call (the Excel report) asks with ?paymentMode=1.
   let paymentModeStats;
   if (req.query?.paymentMode === "1") {
-    const [collectionModes] = await Promise.all([
-      Payment.aggregate([
-        { $group: { _id: { $cond: [{ $eq: ["$mode", "Cash"] }, "cash", "account"] }, total: { $sum: "$totalAmount" } } }
-      ])
-    ]);
+    // Collection side: what was paid in cash vs everything else, taken from the same collection events the
+    // Collections page shows (utils/collectionEvents.js) and classified the same way (CASH in any spelling = cash,
+    // anything else = account). It used to sum the separate Payment records and test the mode text exactly
+    // ("Cash"), so every "CASH" record (400 of them, about Rs 12.6 L) and every mixed "Cash, Online" record landed
+    // in the account side, and duplicate Payment records (e.g. repeated foreclosures) were counted twice (2026-11-13).
+    const { getAllCollectionEvents } = require("../utils/collectionEvents");
+    const modeEvents = await getAllCollectionEvents({});
+    const accountFromEvents = modeEvents
+      .filter((e) => String(e.paymentMode || "").trim().toUpperCase() !== "CASH")
+      .reduce((sum, e) => sum + (e.totalAmount || 0), 0);
+    const collectionModes = [{ _id: "account", total: accountFromEvents }];
 
     const [dMonthly, dDaily, dWeekly, dInterest] = await Promise.all([
       Loan.find({}, "disbursement paymentMode principalAmount"),
