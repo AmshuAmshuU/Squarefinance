@@ -1054,6 +1054,14 @@ const getProfitDateRange = (interval, customStart, customEnd) => {
   } else if (interval === "yearly") {
     startDate = normalizeToMidnight(new Date(Date.UTC(istY - 1, istM - 1, istD)));
     groupFormat = "%Y-%m";
+  } else if (interval === "thismonth") {
+    // 1st of the current IST calendar month up to now (the Profit card's "This Month" - same as picking
+    // that range by hand with Custom Range)
+    startDate = normalizeToMidnight(new Date(Date.UTC(istY, istM - 1, 1)));
+    groupFormat = "%Y-%m-%d";
+  } else if (interval === "today") {
+    // Today only (IST day) - startDate / endDate above are already today's start and end
+    groupFormat = "%Y-%m-%d";
   } else if (interval === "custom" && customStart && customEnd) {
     startDate = normalizeToMidnight(new Date(customStart));
     endDate = normalizeToEndOfDay(new Date(customEnd));

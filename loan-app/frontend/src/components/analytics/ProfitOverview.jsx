@@ -32,6 +32,8 @@ const intervalOptions = [
   { label: "Last 3 Months", value: "3months" },
   { label: "Last 6 Months", value: "6months" },
   { label: "Last 1 Year", value: "yearly" },
+  { label: "This Month", value: "thismonth" },
+  { label: "Today", value: "today" },
   { label: "Custom Range", value: "custom" },
 ];
 
