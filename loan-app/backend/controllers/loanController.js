@@ -1541,12 +1541,10 @@ const getPendingPayments = asyncHandler(async (req, res, next) => {
               cond: {
                 $and: [
                   { $ne: ["$$emi.status", "Paid"] },
-                  {
-                    $or: [
-                      { $eq: ["$$emi.status", "Partially Paid"] },
-                      { $lte: ["$$emi.dueDate", now] },
-                    ],
-                  },
+                  // Only an EMI whose due date has arrived is pending. A part payment made ahead on an EMI that
+                  // is not due yet (customer paid a little extra towards next month - loan 194, Nov 2026) leaves
+                  // nothing due, so it must not put the loan on this list.
+                  { $lte: ["$$emi.dueDate", now] },
                   status === "Pending"
                     ? { $in: ["$$emi.status", ["Pending", "Overdue"]] }
                     : status
@@ -1765,10 +1763,10 @@ const getPendingEmiDetails = asyncHandler(async (req, res, next) => {
       $match: {
         loanId: new mongoose.Types.ObjectId(currentEmi.loanId),
         status: { $ne: "Paid" },
-        // Relax dueDate check for Partially Paid or the specific EMI being viewed
+        // Relax the dueDate check only for the specific EMI being viewed (a part payment ahead on an EMI
+        // that is not due yet is not "pending" - same rule as the Pending Payments list)
         $or: [
           { dueDate: { $lte: now } },
-          { status: "Partially Paid" },
           { _id: new mongoose.Types.ObjectId(id) },
         ],
       },
@@ -2167,18 +2165,15 @@ const getFollowupDashboardSummary = asyncHandler(async (req, res, next) => {
   ];
 
   // Same "pending" definition already used for hasPendingEmi below - not yet
-  // Paid, and either genuinely overdue (past due date) or already
-  // Partially Paid. A future-scheduled EMI that simply hasn't come due yet
-  // doesn't count.
+  // Paid, and its due date has arrived (Partially Paid included). A
+  // future-scheduled EMI that simply hasn't come due yet doesn't count, even
+  // when the customer already paid part of it ahead of time (loan 194, Nov
+  // 2026: a small extra payment towards next month's EMI wrongly put the loan
+  // in "old followups" with nothing actually due).
   const pendingEmiCond = {
     $and: [
       { $ne: ["$$emi.status", "Paid"] },
-      {
-        $or: [
-          { $eq: ["$$emi.status", "Partially Paid"] },
-          { $lte: ["$$emi.dueDate", now] },
-        ],
-      },
+      { $lte: ["$$emi.dueDate", now] },
     ],
   };
 
