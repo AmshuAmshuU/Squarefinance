@@ -16,6 +16,7 @@ const sendResponse = require("../utils/response");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { normalizeHouseLocation } = require("../utils/houseLocation");
 const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
+const { foreclosureModeFromBreakdown } = require("../utils/foreclosureMode");
 
 // Create Daily Loan
 exports.createDailyLoan = asyncHandler(async (req, res, next) => {
@@ -816,6 +817,9 @@ exports.forecloseDailyLoan = asyncHandler(async (req, res, next) => {
 
   const pDate = paymentDate ? new Date(paymentDate) : new Date();
 
+  // The mode shown on Collections comes from what was actually chosen per payment row (see utils/foreclosureMode.js)
+  const recordedMode = foreclosureModeFromBreakdown(paymentBreakdown, paymentMode, chequeNumber);
+
   await EMI.updateMany(
     { loanId: id, loanModel: "DailyLoan", status: { $ne: "Paid" } },
     { $set: { status: "Paid", paymentDate: pDate, closedWithoutPayment: true } },
@@ -838,8 +842,8 @@ exports.forecloseDailyLoan = asyncHandler(async (req, res, next) => {
       remainingEmis: 0,
       paidEmis: loan.totalEmis,
       totalCollected: Math.ceil((loan.totalCollected || 0) + totalReceived),
-      paymentMode: paymentMode || "Online",
-      chequeNumber: paymentMode === "Cheque" ? chequeNumber : undefined,
+      paymentMode: recordedMode.paymentMode,
+      chequeNumber: recordedMode.paymentMode === "Cheque" ? recordedMode.chequeNumber : undefined,
       updatedBy: req.user._id,
     },
     { new: true, runValidators: true },

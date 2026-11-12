@@ -17,6 +17,7 @@ const { addDays } = require("date-fns");
 const { generateLocationToken } = require("../utils/customerLocation");
 const { normalizeHouseLocation } = require("../utils/houseLocation");
 const { getTodayIST, normalizeToMidnight, normalizeToEndOfDay } = require("../utils/dateUtils");
+const { foreclosureModeFromBreakdown } = require("../utils/foreclosureMode");
 
 // Create Weekly Loan
 exports.createWeeklyLoan = asyncHandler(async (req, res, next) => {
@@ -893,6 +894,9 @@ exports.forecloseWeeklyLoan = asyncHandler(async (req, res, next) => {
 
   const pDate = paymentDate ? new Date(paymentDate) : new Date();
 
+  // The mode shown on Collections comes from what was actually chosen per payment row (see utils/foreclosureMode.js)
+  const recordedMode = foreclosureModeFromBreakdown(paymentBreakdown, paymentMode, chequeNumber);
+
   // 1. Close out any remaining (not-yet-paid) EMIs so the schedule displays
   // cleanly - flagged closedWithoutPayment so profit calculation never
   // counts these as genuinely collected. Same reasoning as Vehicle's
@@ -920,8 +924,8 @@ exports.forecloseWeeklyLoan = asyncHandler(async (req, res, next) => {
       remainingEmis: 0,
       paidEmis: loan.totalEmis,
       totalCollected: Math.ceil((loan.totalCollected || 0) + totalReceived),
-      paymentMode: paymentMode || "Online",
-      chequeNumber: paymentMode === "Cheque" ? chequeNumber : undefined,
+      paymentMode: recordedMode.paymentMode,
+      chequeNumber: recordedMode.paymentMode === "Cheque" ? recordedMode.chequeNumber : undefined,
       updatedBy: req.user._id,
     },
     { new: true, runValidators: true },

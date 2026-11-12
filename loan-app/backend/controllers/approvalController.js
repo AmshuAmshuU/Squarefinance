@@ -340,8 +340,10 @@ const processApproval = asyncHandler(async (req, res, next) => {
         loan.odAmount = od || 0;
         loan.miscellaneousFee = miscellaneousFee || 0;
         loan.remainingPrincipal = 0;
-        loan.paymentMode = paymentMode || "Online";
-        loan.chequeNumber = paymentMode === "Cheque" ? chequeNumber : undefined;
+        // Mode from what was chosen per payment row, not the screen's default top-level value (see utils/foreclosureMode.js)
+        const recordedMode = require("../utils/foreclosureMode").foreclosureModeFromBreakdown(paymentBreakdown, paymentMode, chequeNumber);
+        loan.paymentMode = recordedMode.paymentMode;
+        loan.chequeNumber = recordedMode.paymentMode === "Cheque" ? recordedMode.chequeNumber : undefined;
         
         loan.approvedBy = req.user._id;
         loan.approvedAt = Date.now();

@@ -2856,6 +2856,9 @@ const forecloseLoan = asyncHandler(async (req, res, next) => {
 
   const pDate = paymentDate ? new Date(paymentDate) : new Date();
 
+  // The mode shown on Collections comes from what was actually chosen per payment row (see utils/foreclosureMode.js)
+  const recordedMode = require("../utils/foreclosureMode").foreclosureModeFromBreakdown(paymentBreakdown, paymentMode, chequeNumber);
+
   // 1. Update Loan status to Closed
   const updatedLoan = await Loan.findByIdAndUpdate(
     id,
@@ -2871,8 +2874,8 @@ const forecloseLoan = asyncHandler(async (req, res, next) => {
       odAmount: od || 0,
       miscellaneousFee: miscellaneousFee || 0,
       remainingPrincipal: 0,
-      paymentMode: paymentMode || "Online",
-      chequeNumber: paymentMode === "Cheque" ? chequeNumber : undefined,
+      paymentMode: recordedMode.paymentMode,
+      chequeNumber: recordedMode.paymentMode === "Cheque" ? recordedMode.chequeNumber : undefined,
     },
     { new: true },
   )
