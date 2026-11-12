@@ -5,6 +5,7 @@ import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import StatsCard from "../../../components/analytics/StatsCard";
+import MonthlyEmiExpectedCard from "../../../components/analytics/MonthlyEmiExpectedCard";
 import {
   TrendingUp,
   IndianRupee,
@@ -464,11 +465,10 @@ const AnalyticsPage = () => {
                     </tfoot>
                   </table>
                 </div>
-                <StatsCard
+                <MonthlyEmiExpectedCard
                   title="Monthly EMI Expected"
                   value={`₹${(stats?.cards?.totalMonthlyEmiExpected || 0).toLocaleString("en-IN")}`}
                   icon={<IndianRupee className="w-6 h-6" />}
-                  color="success"
                   breakdown={[
                     { label: "Vehicle", value: stats?.cards?.monthlyEmiBreakdown?.monthly || 0 },
                     { label: "Weekly", value: stats?.cards?.monthlyEmiBreakdown?.weekly || 0 },
