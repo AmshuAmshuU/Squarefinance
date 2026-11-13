@@ -1454,6 +1454,97 @@ const buildAllLoanFlowsFresh = async (asOfDate) => {
   return { allHist, allFuture, allPending, earliestDate, byType };
 };
 
+// Profit Overview card, "Today" option only - tap a green per-type profit number: every item that makes it up.
+// Read-only, same IST day window and same rules as getProfitStats (so the rows always add up to exactly the number
+// that was tapped). type = monthly (Vehicle) | weekly | daily | interest.
+const getProfitDetailsToday = asyncHandler(async (req, res, next) => {
+  const ErrorHandler = require("../utils/ErrorHandler");
+  const type = String(req.query.type || "");
+  if (!["monthly", "weekly", "daily", "interest"].includes(type)) {
+    return next(new ErrorHandler("Invalid loan type", 400));
+  }
+  const startDate = normalizeToMidnight(new Date());
+  const endDate = normalizeToEndOfDay(new Date());
+  const inToday = { $gte: startDate, $lte: endDate };
+  const rows = [];
+  const loanInfo = async (Model, ids, fields) => {
+    const docs = await Model.find({ _id: { $in: ids } }).select(fields).lean();
+    return new Map(docs.map((d) => [String(d._id), d]));
+  };
+
+  if (type === "monthly" || type === "weekly" || type === "daily") {
+    const Model = { monthly: Loan, weekly: WeeklyLoan, daily: DailyLoan }[type];
+
+    // Processing fee on loans disbursed today
+    const disbursed = await Model.find({ dateLoanDisbursed: inToday, processingFee: { $gt: 0 } }).select("loanNumber customerName processingFee").lean();
+    disbursed.forEach((l) =>
+      rows.push({ group: "Processing fees", loanId: String(l._id), loanNumber: l.loanNumber, customerName: l.customerName, detail: "Processing fee on the loan given today", amount: l.processingFee }),
+    );
+
+    // Foreclosure charge + misc fee (+ OD at foreclosure, Vehicle only) on loans foreclosed today
+    const fore = await Model.find({ foreclosureDate: inToday }).select("loanNumber customerName foreclosureChargeAmount miscellaneousFee odAmount").lean();
+    fore.forEach((l) => {
+      const parts = [];
+      if (l.foreclosureChargeAmount) parts.push(`charge ₹${Math.round(l.foreclosureChargeAmount).toLocaleString("en-IN")}`);
+      if (l.miscellaneousFee) parts.push(`misc ₹${Math.round(l.miscellaneousFee).toLocaleString("en-IN")}`);
+      if (type === "monthly" && l.odAmount) parts.push(`OD ₹${Math.round(l.odAmount).toLocaleString("en-IN")}`);
+      const amount = (l.foreclosureChargeAmount || 0) + (l.miscellaneousFee || 0) + (type === "monthly" ? l.odAmount || 0 : 0);
+      if (amount) rows.push({ group: "Foreclosure charges", loanId: String(l._id), loanNumber: l.loanNumber, customerName: l.customerName, detail: `Foreclosed today: ${parts.join(" + ")}`, amount });
+    });
+
+    if (type === "monthly") {
+      // Interest part of EMIs that became fully Paid today (not bulk-closed leftovers)
+      const emis = await EMI.find({ loanModel: "Loan", status: "Paid", closedWithoutPayment: { $ne: true }, paymentDate: inToday }).select("loanId emiNumber").sort({ emiNumber: 1 }).lean();
+      const loans = await loanInfo(Loan, emis.map((e) => e.loanId), "loanNumber customerName principalAmount annualInterestRate");
+      emis.forEach((e) => {
+        const l = loans.get(String(e.loanId));
+        if (!l) return;
+        const rate = l.annualInterestRate || 0;
+        rows.push({
+          group: "EMI interest (EMIs fully paid today)",
+          loanId: String(l._id),
+          loanNumber: l.loanNumber,
+          customerName: l.customerName,
+          detail: `EMI ${e.emiNumber} · ₹${Math.round(l.principalAmount || 0).toLocaleString("en-IN")} × ${rate}%`,
+          amount: (l.principalAmount || 0) * (rate / 100),
+        });
+      });
+
+      // Overdue (OD) money collected today
+      const odEmis = await EMI.find({ loanModel: "Loan", "overdue.date": inToday }).select("loanId emiNumber overdue").lean();
+      const odLoans = await loanInfo(Loan, odEmis.map((e) => e.loanId), "loanNumber customerName");
+      odEmis.forEach((e) => {
+        const l = odLoans.get(String(e.loanId));
+        (e.overdue || []).forEach((o) => {
+          if (!l || !o.amount || !o.date || o.date < startDate || o.date > endDate) return;
+          rows.push({ group: "Overdue (OD) collected today", loanId: String(l._id), loanNumber: l.loanNumber, customerName: l.customerName, detail: `EMI ${e.emiNumber} · ${o.mode || ""}`.trim(), amount: o.amount });
+        });
+      });
+
+      // Vehicle sale gain / loss for vehicles sold today
+      const sales = await Loan.aggregate(vehicleSaleGainPipeline(startDate, endDate, "$_id"));
+      const saleLoans = await loanInfo(Loan, sales.map((s) => s._id), "loanNumber customerName");
+      sales.forEach((s) => {
+        const l = saleLoans.get(String(s._id));
+        if (l) rows.push({ group: "Vehicle sale gain / loss", loanId: String(l._id), loanNumber: l.loanNumber, customerName: l.customerName, detail: "Sale price minus principal still unpaid", amount: s.total });
+      });
+    }
+  } else {
+    // Interest loans: the full interest of every interest EMI that became fully Paid today
+    const emis = await InterestEMI.find({ status: "Paid", paymentDate: inToday }).select("interestLoanId emiNumber interestAmount").lean();
+    const loans = await loanInfo(InterestLoan, emis.map((e) => e.interestLoanId), "loanNumber customerName");
+    emis.forEach((e) => {
+      const l = loans.get(String(e.interestLoanId));
+      if (l) rows.push({ group: "Interest EMIs paid today", loanId: String(l._id), loanNumber: l.loanNumber, customerName: l.customerName, detail: `EMI ${e.emiNumber}`, amount: e.interestAmount || 0 });
+    });
+  }
+
+  const order = ["EMI interest (EMIs fully paid today)", "Processing fees", "Foreclosure charges", "Overdue (OD) collected today", "Vehicle sale gain / loss", "Interest EMIs paid today"];
+  rows.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || b.amount - a.amount);
+  const total = Math.round(rows.reduce((s, r) => s + r.amount, 0));
+  sendResponse(res, 200, "success", "Today's profit details fetched", null, { type, total, rows: rows.map((r) => ({ ...r, amount: Math.round(r.amount) })) });
+});
+
 // Kept for 45 seconds per "as of" day (see utils/shortCache.js) so ROI,
 // Company Valuation and Partners - which all need this same ledger - don't each
 // re-read the whole loan book. `cacheKey` is "now" for the live (today) view or
@@ -2262,6 +2353,7 @@ const snapshotAfterStats = (req, res, next) => {
 };
 
 module.exports = {
+  getProfitDetailsToday,
   computeMonthActual,
   recordMonthlySnapshot,
   snapshotAfterStats,

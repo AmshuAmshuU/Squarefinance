@@ -29,6 +29,11 @@ export const getProfitStats = async (interval, startDate, endDate) => {
   return await apiHandler(url);
 };
 
+// Profit Overview "Today" option: the items behind a green per-type number (type = monthly | weekly | daily | interest)
+export const getProfitDetailsToday = async (type) => {
+  return await apiHandler(`/api/analytics/profit-details-today?type=${type}`);
+};
+
 export const getExpenseTrend = async (interval, startDate, endDate) => {
   let url = `/api/analytics/expense-trend?interval=${interval}`;
   if (startDate) url += `&startDate=${startDate}`;

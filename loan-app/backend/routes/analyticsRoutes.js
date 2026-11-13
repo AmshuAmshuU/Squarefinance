@@ -134,6 +134,14 @@ router.get(
   analyticsController.getProfitStats
 );
 
+// Profit Overview "Today" option: what makes up each green number (read-only)
+router.get(
+  "/profit-details-today",
+  isAuthenticated,
+  authorizeRoles("SUPER_ADMIN", "ADMIN"),
+  analyticsController.getProfitDetailsToday
+);
+
 router.get(
   "/roi",
   isAuthenticated,

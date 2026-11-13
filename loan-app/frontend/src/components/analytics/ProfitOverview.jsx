@@ -14,9 +14,11 @@ import {
   ReferenceLine,
 } from "recharts";
 import { IndianRupee, TrendingUp, Filter, Calendar, Loader2 } from "lucide-react";
-import { getProfitStats } from "../../services/analytics.service";
+import { getProfitStats, getProfitDetailsToday } from "../../services/analytics.service";
 import { getTodayIST, getISTDateNDaysAgo } from "../../utils/dateUtils";
 import { useUI } from "../../context/UIContext";
+import ProfitDetailPopup from "./ProfitDetailPopup";
+import { readSnapshot } from "../../utils/backNavigation";
 
 const TYPE_ROWS = [
   { label: "Vehicle", key: "monthly", color: "bg-purple-400" },
@@ -36,6 +38,31 @@ const intervalOptions = [
   { label: "Today", value: "today" },
   { label: "Custom Range", value: "custom" },
 ];
+
+// Same pages the dashboard follow-ups open (the loan in edit mode)
+const LOAN_EDIT_PATH = {
+  monthly: "/admin/loans/edit/",
+  weekly: "/admin/weekly-loans/edit/",
+  daily: "/admin/daily-loans/edit/",
+  interest: "/admin/interest-loan/edit/",
+};
+
+// Back from a loan returns to Analytics with the "Today" view and its popup as they were left. Own sessionStorage slot,
+// used only when the page was just opened by Back (the Collection Efficiency card owns the page's snapshot).
+const MEMORY_KEY = "sf_profit_today";
+const readMemory = () => {
+  try {
+    if (!readSnapshot("/admin/analytics")) return null;
+    return JSON.parse(sessionStorage.getItem(MEMORY_KEY));
+  } catch {
+    return null;
+  }
+};
+const writeMemory = (value) => {
+  try {
+    sessionStorage.setItem(MEMORY_KEY, JSON.stringify(value));
+  } catch {}
+};
 
 const formatCurrency = (value) =>
   `₹${Math.round(value || 0).toLocaleString("en-IN")}`;
@@ -126,7 +153,15 @@ const CumulativeTooltip = ({ active, payload, label }) => {
 
 const ProfitOverview = () => {
   const { isDarkMode } = useUI();
-  const [interval, setIntervalValue] = useState("all");
+  const [memory] = useState(readMemory);
+  const [interval, setIntervalValue] = useState(memory?.popupType ? "today" : "all");
+  // Today only: tap a green per-type number to see the items behind it
+  const [popupType, setPopupType] = useState(memory?.popupType || null);
+  const [popupRow, setPopupRow] = useState(memory?.popupRow || null);
+  const [popupScroll, setPopupScroll] = useState(memory?.popupScroll || 0);
+  const [popup, setPopup] = useState(null);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [popupError, setPopupError] = useState(null);
   const [customDates, setCustomDates] = useState({
     start: getISTDateNDaysAgo(30),
     end: getTodayIST(),
@@ -158,6 +193,48 @@ const ProfitOverview = () => {
   useEffect(() => {
     fetchProfit();
   }, [fetchProfit]);
+
+  // The popup only exists for the Today option
+  useEffect(() => {
+    if (interval !== "today") setPopupType(null);
+  }, [interval]);
+
+  useEffect(() => {
+    writeMemory({ popupType, popupRow, popupScroll });
+  }, [popupType, popupRow, popupScroll]);
+
+  useEffect(() => {
+    if (!popupType) return undefined;
+    let cancelled = false;
+    setPopup(null);
+    setPopupError(null);
+    setPopupLoading(true);
+    getProfitDetailsToday(popupType)
+      .then((res) => {
+        if (!cancelled) setPopup(res.data || null);
+      })
+      .catch((err) => {
+        if (!cancelled) setPopupError(err.message || "Failed to load the details");
+      })
+      .finally(() => {
+        if (!cancelled) setPopupLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [popupType]);
+
+  const openPopup = (type) => {
+    setPopupRow(null);
+    setPopupScroll(0);
+    setPopupType(type);
+  };
+  const closePopup = () => {
+    setPopupType(null);
+    setPopupRow(null);
+    setPopupScroll(0);
+    setPopup(null);
+  };
 
   // Each bar's colour comes from how it compares with the bar plotted just before it
   const profitBars = useMemo(() => {
@@ -269,7 +346,19 @@ const ProfitOverview = () => {
                       </span>
                     </td>
                     <td className="py-1.5 text-right font-black text-emerald-600">
-                      {formatCurrency(value)}
+                      {interval === "today" && value !== 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => openPopup(row.key)}
+                          aria-label={`Show what makes up today's ${row.label.toLowerCase()} profit`}
+                          className="font-black underline decoration-dotted underline-offset-4 cursor-pointer"
+                          style={{ touchAction: "manipulation" }}
+                        >
+                          {formatCurrency(value)}
+                        </button>
+                      ) : (
+                        formatCurrency(value)
+                      )}
                     </td>
                   </tr>
                 );
@@ -288,6 +377,27 @@ const ProfitOverview = () => {
             <p className="text-[9px] text-red-500 mt-2 font-bold uppercase tracking-tight">
               {error}
             </p>
+          )}
+          {popupType && interval === "today" && (
+            <ProfitDetailPopup
+              title={`${TYPE_ROWS.find((r) => r.key === popupType)?.label} profit · Today`}
+              subtitle="What makes up this number"
+              loading={popupLoading}
+              error={popupError}
+              rows={popup?.rows || null}
+              total={popup?.total}
+              editPathFor={(id) => `${LOAN_EDIT_PATH[popupType]}${id}`}
+              markedKey={popupRow}
+              initialScroll={memory?.popupType ? memory.popupScroll || 0 : 0}
+              onScroll={setPopupScroll}
+              onOpenLoan={(r, y) => {
+                // Saved right now (not after the re-render) because this same tap leaves the page
+                const key = `${r.group}|${r.loanId}|${(popup?.rows || []).findIndex((x) => x.group === r.group && x.loanId === r.loanId && x.amount === r.amount)}`;
+                writeMemory({ popupType, popupRow: key, popupScroll: y });
+                setPopupRow(key);
+              }}
+              onClose={closePopup}
+            />
           )}
         </div>
 
