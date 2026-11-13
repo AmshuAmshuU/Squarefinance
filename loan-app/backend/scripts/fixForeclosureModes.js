@@ -1,4 +1,6 @@
 // Fixes the payment mode shown on Collections for PAST foreclosures.
+// (Run on production 2026-11-13. SUPERSEDED by separateForeclosureMode.js - foreclosure modes now live in their own
+//  field, foreclosurePaymentMode; do not run this one again, it would write the old paymentMode field.)
 //
 // Until 2026-11-13 a foreclosure saved the loan with the foreclosure screen's default mode ("Online") instead of the
 // mode chosen on the payment row, so cash foreclosures showed as Online (or as nothing, on the oldest ones). The mode that

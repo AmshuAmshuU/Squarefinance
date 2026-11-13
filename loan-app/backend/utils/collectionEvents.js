@@ -57,7 +57,7 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
     // it's not shown anywhere - foreclosure/soldDetails have no per-event
     // timestamp of their own, so the loan document's own last-saved time
     // is the best available stand-in for "when this was actually entered".
-    Loan.find({}).select("loanNumber customerName vehicleNumber foreclosureDate foreclosureAmount foreclosedBy paymentMode soldDetails updatedAt").lean(),
+    Loan.find({}).select("loanNumber customerName vehicleNumber foreclosureDate foreclosureAmount foreclosedBy paymentMode foreclosurePaymentMode soldDetails updatedAt").lean(),
     // updatedBy is required here even though paymentHistory entries carry
     // their own addedBy - overdue entries have no per-entry attribution
     // field, so addEmiEvents() below falls back to the EMI's own updatedBy
@@ -66,9 +66,9 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
     // collected it (found 2026-08-08, loan 16 EMI 11). updatedAt is the
     // same story as above, for Overdue-type events' ordering.
     EMI.find({ loanModel: "Loan" }).select("loanId emiNumber status paymentHistory overdue updatedBy updatedAt").lean(),
-    WeeklyLoan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode updatedAt").lean(),
+    WeeklyLoan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode foreclosurePaymentMode updatedAt").lean(),
     EMI.find({ loanModel: "WeeklyLoan" }).select("loanId emiNumber status paymentHistory overdue updatedBy updatedAt").lean(),
-    DailyLoan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode updatedAt").lean(),
+    DailyLoan.find({}).select("loanNumber customerName foreclosureDate foreclosureAmount foreclosedBy paymentMode foreclosurePaymentMode updatedAt").lean(),
     EMI.find({ loanModel: "DailyLoan" }).select("loanId emiNumber status paymentHistory overdue updatedBy updatedAt").lean(),
     InterestLoan.find({}).select("loanNumber customerName principalPayments").lean(),
     InterestEMI.find({}).select("interestLoanId emiNumber paymentHistory overdue updatedBy updatedAt").lean(),
@@ -166,7 +166,7 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
       events.push({
         loanId: loan._id, loanModel: "Loan", loanNumber: loan.loanNumber, customerName: loan.customerName, vehicleNumber: loan.vehicleNumber,
         emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: loan.foreclosureAmount,
-        paymentType: "Foreclosure", paymentMode: loan.paymentMode || "",
+        paymentType: "Foreclosure", paymentMode: loan.foreclosurePaymentMode || loan.paymentMode || "",
         date: loan.foreclosureDate, sortAt: loan.updatedAt || loan.foreclosureDate,
         updatedBy: nameOf(loan.foreclosedBy),
       });
@@ -189,7 +189,7 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
       events.push({
         loanId: loan._id, loanModel: "WeeklyLoan", loanNumber: loan.loanNumber, customerName: loan.customerName,
         emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: loan.foreclosureAmount,
-        paymentType: "Foreclosure", paymentMode: loan.paymentMode || "",
+        paymentType: "Foreclosure", paymentMode: loan.foreclosurePaymentMode || loan.paymentMode || "",
         date: loan.foreclosureDate, sortAt: loan.updatedAt || loan.foreclosureDate,
         updatedBy: nameOf(loan.foreclosedBy),
       });
@@ -203,7 +203,7 @@ async function getAllCollectionEventsFresh({ startDate, endDate } = {}) {
       events.push({
         loanId: loan._id, loanModel: "DailyLoan", loanNumber: loan.loanNumber, customerName: loan.customerName,
         emiNo: "-", emiAmount: 0, overdueAmount: 0, totalAmount: loan.foreclosureAmount,
-        paymentType: "Foreclosure", paymentMode: loan.paymentMode || "",
+        paymentType: "Foreclosure", paymentMode: loan.foreclosurePaymentMode || loan.paymentMode || "",
         date: loan.foreclosureDate, sortAt: loan.updatedAt || loan.foreclosureDate,
         updatedBy: nameOf(loan.foreclosedBy),
       });

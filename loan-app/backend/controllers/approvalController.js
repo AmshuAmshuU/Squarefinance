@@ -342,8 +342,7 @@ const processApproval = asyncHandler(async (req, res, next) => {
         loan.remainingPrincipal = 0;
         // Mode from what was chosen per payment row, not the screen's default top-level value (see utils/foreclosureMode.js)
         const recordedMode = require("../utils/foreclosureMode").foreclosureModeFromBreakdown(paymentBreakdown, paymentMode, chequeNumber);
-        loan.paymentMode = recordedMode.paymentMode;
-        loan.chequeNumber = recordedMode.paymentMode === "Cheque" ? recordedMode.chequeNumber : undefined;
+        loan.foreclosurePaymentMode = recordedMode.paymentMode; // not paymentMode: that is how the loan was originally paid out
         
         loan.approvedBy = req.user._id;
         loan.approvedAt = Date.now();

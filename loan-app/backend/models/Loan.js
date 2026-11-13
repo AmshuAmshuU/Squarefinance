@@ -237,6 +237,12 @@ const loanSchema = new mongoose.Schema(
     foreclosureAmount: {
       type: Number,
     },
+    // How the foreclosure money was paid (Cash / Online / Cheque). Kept apart from paymentMode, which is how the loan was
+    // originally paid out - a foreclosure used to overwrite that (2026-11-14).
+    foreclosurePaymentMode: {
+      type: String,
+      enum: ["Cash", "Online", "Cheque"],
+    },
     foreclosureChargeAmount: {
       type: Number,
       default: 0,

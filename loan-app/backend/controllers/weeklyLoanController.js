@@ -924,8 +924,7 @@ exports.forecloseWeeklyLoan = asyncHandler(async (req, res, next) => {
       remainingEmis: 0,
       paidEmis: loan.totalEmis,
       totalCollected: Math.ceil((loan.totalCollected || 0) + totalReceived),
-      paymentMode: recordedMode.paymentMode,
-      chequeNumber: recordedMode.paymentMode === "Cheque" ? recordedMode.chequeNumber : undefined,
+      foreclosurePaymentMode: recordedMode.paymentMode, // not paymentMode: that is how the loan was originally paid out
       updatedBy: req.user._id,
     },
     { new: true, runValidators: true },

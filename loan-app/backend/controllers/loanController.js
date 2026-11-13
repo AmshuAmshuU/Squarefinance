@@ -2874,8 +2874,7 @@ const forecloseLoan = asyncHandler(async (req, res, next) => {
       odAmount: od || 0,
       miscellaneousFee: miscellaneousFee || 0,
       remainingPrincipal: 0,
-      paymentMode: recordedMode.paymentMode,
-      chequeNumber: recordedMode.paymentMode === "Cheque" ? recordedMode.chequeNumber : undefined,
+      foreclosurePaymentMode: recordedMode.paymentMode, // not paymentMode: that is how the loan was originally paid out
     },
     { new: true },
   )
