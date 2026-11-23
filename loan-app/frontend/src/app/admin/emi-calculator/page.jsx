@@ -26,6 +26,33 @@ const calculateTenure = (principal, emi, rate) => {
   return (principal / denominator).toFixed(2);
 };
 
+// XIRR (yearly) of lending `principal` and getting `emi` back every month for `tenure` months, from the lender's side:
+// the principal goes out on day 0, then one EMI a month. A tenure that is not a whole number (the exact tenure the
+// calculator works out from a target EMI, e.g. 12.67) ends with a part EMI, so the total paid is exactly EMI x tenure.
+// EMIs fall 30.4375 days apart on a 365-day year - the same convention as the XIRR on the loan pages and Analytics.
+// Processing fee and overdue are not in these four fields, so they are not counted. Returns a percentage, or null when it
+// can't be worked out.
+const calculateXirr = (principal, tenure, emi) => {
+  const P = parseFloat(principal) || 0;
+  const T = parseFloat(tenure) || 0;
+  const E = parseFloat(emi) || 0;
+  if (!(P > 0 && T > 0 && E > 0)) return null;
+  const whole = Math.floor(T + 1e-9);
+  const part = T - whole;
+  const flows = Array(whole).fill(E);
+  if (part > 1e-6) flows.push(E * part);
+  const pv = (r) => flows.reduce((sum, f, k) => sum + f / Math.pow(1 + r, ((k + 1) * 30.4375) / 365), 0) - P;
+  let lo = -0.5;
+  let hi = 50;
+  if (pv(lo) * pv(hi) > 0) return null;
+  for (let n = 0; n < 200; n++) {
+    const mid = (lo + hi) / 2;
+    if (pv(lo) * pv(mid) <= 0) hi = mid;
+    else lo = mid;
+  }
+  return ((lo + hi) / 2) * 100;
+};
+
 const EmiCalculatorPage = () => {
   const { isDarkMode } = useUI();
   const [principal, setPrincipal] = useState("100000");
@@ -66,6 +93,7 @@ const EmiCalculatorPage = () => {
     recompute(principal, rate, tenure, v, "emi");
   };
 
+  const xirr = calculateXirr(principal, tenure, emi);
   const tenureIsAuto = lastEdited === "emi";
   const emiIsAuto = lastEdited === "tenure";
 
@@ -168,6 +196,16 @@ const EmiCalculatorPage = () => {
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
+                </div>
+
+                <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">XIRR (per year)</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                      The yearly return on these four values - the principal going out, the EMI coming in every month. No processing fee or overdue.
+                    </p>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-black text-slate-900 shrink-0">{xirr === null ? "—" : `${xirr.toFixed(1)}%`}</p>
                 </div>
 
                 <p className="text-[10px] text-slate-400 mt-6 italic">
