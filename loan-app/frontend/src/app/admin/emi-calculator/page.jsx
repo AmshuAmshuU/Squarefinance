@@ -4,6 +4,7 @@ import AuthGuard from "../../../components/AuthGuard";
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
 import { useUI } from "../../../context/UIContext";
+import { getTodayIST } from "../../../utils/dateUtils";
 
 // Mirrors the Vehicle loan flat-interest formula exactly:
 // EMI = Principal/Tenure + Principal x Rate/100 (see CLAUDE.md - the flat
@@ -27,21 +28,31 @@ const calculateTenure = (principal, emi, rate) => {
 };
 
 // XIRR (yearly) of lending `principal` and getting `emi` back every month for `tenure` months, from the lender's side:
-// the principal goes out on day 0, then one EMI a month. A tenure that is not a whole number (the exact tenure the
+// the principal goes out on day 0 and the processing fee comes in on that same day (like a newly created loan), then one
+// EMI a month. A tenure that is not a whole number (the exact tenure the
 // calculator works out from a target EMI, e.g. 12.67) ends with a part EMI, so the total paid is exactly EMI x tenure.
-// EMIs fall 30.4375 days apart on a 365-day year - the same convention as the XIRR on the loan pages and Analytics.
-// Processing fee and overdue are not in these four fields, so they are not counted. Returns a percentage, or null when it
-// can't be worked out.
-const calculateXirr = (principal, tenure, emi) => {
+// The EMIs fall on the same day of each following month, counting from today, and the years are 365 days - the same
+// way a loan created today is worked out on the loan pages and in Analytics, so the figure matches what the new loan
+// will show. Overdue is not part of these values, so it is not counted. Returns a percentage, or null when it can't be
+// worked out.
+const calculateXirr = (principal, tenure, emi, fee, todayStr = getTodayIST()) => {
   const P = parseFloat(principal) || 0;
   const T = parseFloat(tenure) || 0;
   const E = parseFloat(emi) || 0;
-  if (!(P > 0 && T > 0 && E > 0)) return null;
+  const F = Math.max(0, parseFloat(fee) || 0);
+  if (!(P > 0 && T > 0 && E > 0) || F >= P) return null;
   const whole = Math.floor(T + 1e-9);
   const part = T - whole;
   const flows = Array(whole).fill(E);
   if (part > 1e-6) flows.push(E * part);
-  const pv = (r) => flows.reduce((sum, f, k) => sum + f / Math.pow(1 + r, ((k + 1) * 30.4375) / 365), 0) - P;
+  const [y, mo, d] = todayStr.split("-").map(Number);
+  const start = Date.UTC(y, mo - 1, d);
+  const years = flows.map((_, k) => {
+    const due = new Date(start);
+    due.setUTCMonth(due.getUTCMonth() + k + 1);
+    return (due.getTime() - start) / (365 * 24 * 60 * 60 * 1000);
+  });
+  const pv = (r) => flows.reduce((sum, f, k) => sum + f / Math.pow(1 + r, years[k]), 0) - (P - F);
   let lo = -0.5;
   let hi = 50;
   if (pv(lo) * pv(hi) > 0) return null;
@@ -60,6 +71,7 @@ const EmiCalculatorPage = () => {
   const [tenure, setTenure] = useState("12");
   const [emi, setEmi] = useState(String(calculateEmi(100000, 12, 2)));
   const [lastEdited, setLastEdited] = useState("tenure");
+  const [processingFee, setProcessingFee] = useState("1000");
 
   const recompute = (nextPrincipal, nextRate, nextTenure, nextEmi, editedField) => {
     const P = parseFloat(nextPrincipal) || 0;
@@ -93,7 +105,7 @@ const EmiCalculatorPage = () => {
     recompute(principal, rate, tenure, v, "emi");
   };
 
-  const xirr = calculateXirr(principal, tenure, emi);
+  const xirr = calculateXirr(principal, tenure, emi, processingFee);
   const tenureIsAuto = lastEdited === "emi";
   const emiIsAuto = lastEdited === "tenure";
 
@@ -198,11 +210,26 @@ const EmiCalculatorPage = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                      Processing fee (₹)
+                    </label>
+                    <input
+                      type="number"
+                      value={processingFee}
+                      onChange={(e) => setProcessingFee(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-snug self-end pb-3">Collected on day 1 and counted in the XIRR. Only used for the XIRR.</p>
+                </div>
+
+                <div className="mt-4 rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">XIRR (per year)</p>
                     <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
-                      The yearly return on these four values - the principal going out, the EMI coming in every month. No processing fee or overdue.
+                      The yearly return on these values - the principal going out and the processing fee coming in on day 1, then the EMI every month. No overdue.
                     </p>
                   </div>
                   <p className="text-xl sm:text-2xl font-black text-slate-900 shrink-0">{xirr === null ? "—" : `${xirr.toFixed(1)}%`}</p>
